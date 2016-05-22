@@ -714,12 +714,12 @@ function OMVC() {
 				myAttitude.Roll = 90;
 				myAttitude.Pitch = 0;
 				myAttitude.Yaw = 0;
-				fov = 70;
+				fov = 90;
 				self.omvr.setFov(fov);
 				operationMode = OperationModeEnum.Dive;
 				break;
 			case "drive":
-				fov = 70;
+				fov = 90;
 				self.omvr.setFov(fov);
 				operationMode = OperationModeEnum.Drive;
 				break;
