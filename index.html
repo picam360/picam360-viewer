@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="viewport"
+	content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+
+<!-- JS dependencies (order matters!) -->
+<script src="lib/angular/angular.js"></script>
+<script src="lib/onsen/js/onsenui.js"></script>
+<script src="js/jquery-1.11.3.min.js" type="text/javascript"></script>
+<script type="text/javascript" src="js/three.js"></script>
+<script type="text/javascript" src="js/StereoEffect.js"></script>
+<script type="text/javascript" src="js/omvr.min.js"></script>
+<script type="text/javascript" src="js/moment.js"></script>
+
+<!-- CSS dependencies -->
+<link rel="stylesheet" href="lib/onsen/css/onsenui.css" />
+<link rel="stylesheet" href="lib/onsen/css/onsen-css-components-dark-theme.css" />
+<link rel="stylesheet" href="css/index.css" />
+
+<!-- CSP support mode (required for Windows Universal apps) -->
+<link rel="stylesheet" href="lib/angular/angular-csp.css" />
+
+<title>Picam360</title>
+</head>
+<body ontouchmove="event.preventDefault()">
+	<ons-sliding-menu menu-page="menu.html" main-page="main.html" side="left" var="menu" type="push" max-slide-distance="260px" swipeable="true">
+	</ons-sliding-menu>
+
+	<ons-template id="menu.html"> <ons-page modifier="menu-page"> <ons-toolbar>
+	<div class="right">
+		<ons-toolbar-button ng-click="menu.closeMenu()"> <ons-icon icon="fa-times" size="28px" fixed-width="false"></ons-icon> </ons-toolbar-button>
+	</div>
+	</ons-toolbar> <ons-list> <ons-list-item class="menu-item">
+	<div class="button-bar" style="width: 240px;">
+		<div class="button-bar__item">
+			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('hobby')" checked>
+			<button class="button-bar__button">Hobby</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('dive')">
+			<button class="button-bar__button">Dive</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('drive')">
+			<button class="button-bar__button">Drive</button>
+		</div>
+	</div>
+	</ons-list-item> <ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>InfoBox</ons-col> <ons-col align="right"> <ons-switch
+		var="swInfoBox" onchange="omvc.setInfoboxEnabled(swInfoBox.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item" id="infoTypeBox">
+	<div class="button-bar" style="width: 240px;">
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkAttitudeInfo"
+				onclick="omvc.setInfoType('attitude', document.getElementById('chkAttitudeInfo').checked)">
+			<button class="button-bar__button">Attitude</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkActuatorInfo"
+				onclick="omvc.setInfoType('actuator', document.getElementById('chkActuatorInfo').checked)">
+			<button class="button-bar__button">Actuator</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkDebugInfo" onclick="omvc.setInfoType('debug', document.getElementById('chkDebugInfo').checked)">
+			<button class="button-bar__button">Debug</button>
+		</div>
+	</div>
+	</ons-list-item> 
+	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
+		align="right"> <ons-switch var="swStereoView" onchange="omvc.omvr.setStereoEnabled(swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
+	<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
+		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button> </ons-col> <ons-col>Record 
+		<div style=”width:10px”><input style=”width:10px” type="number" value="0" class="text-input" id="frame_duration" /> </div>
+		</ons-col> <ons-col
+		align="right"> <ons-switch var="swRecord" onchange="omvc.record(swRecord.isChecked());"></ons-switch>
+		<div id="movie_download_box"><a href="img/picam360.mp4" download="picam360.mp4" target="_blank" id="movie_download_link"><img width="40" src="img/movie_icon.png"/></a></div> 
+		</ons-col> </ons-row></ons-list-item>
+		 <ons-list-item class="menu-item" id="serviceCallBox">
+	<div class="button-bar" style="width: 240px;">
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkLevel">
+			<button class="button-bar__button">Level</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkArm">
+			<button class="button-bar__button">Arm</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkConnect">
+			<button class="button-bar__button">Connect</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="chkProxy">
+			<button class="button-bar__button">Proxy</button>
+		</div>
+	</div>
+	</ons-list-item> <ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
+		fixed-width="true"></ons-icon> About </ons-list-item></ons-list></ons-page> </ons-template>
+
+	<ons-template id="main.html"> <ons-navigator animation="slide" var="app.navi"> <ons-page>
+	<div class="main_view" id="container">
+		<canvas id="vrCanvas"></canvas>
+		<div id="overlay">
+			<div id="fpsMsgBox">
+				FPS:
+				<span id="fpsMsg"></span>
+			</div>
+			<div id="controlMsgBox">
+				Control:
+				<span id="controlMsg"></span>
+			</div>
+			<div id="actuatorMsgBox">
+				Actuator:
+				<span id="actuatorMsg"></span>
+			</div>
+			<div id="attitudeMsgBox">
+				Attitude:
+				<span id="attitudeMsg"></span>
+			</div>
+			<div id="debugMsgBox">
+				DebugMsg:
+				<span id="debugMsg"></span>
+			</div>
+		</div>
+	</div>
+	</ons-page> </ons-navigator> </ons-template>
+
+	<ons-template id="about.html"> <ons-page> <ons-toolbar>
+	<div class="left">
+		<ons-back-button>戻る</ons-back-button>
+	</div>
+	<div class="center">About</div>
+	</ons-toolbar> <ons-row style="margin-top: 100px; text-align: center;"> <ons-col> OVMCockpit </ons-col> </ons-row> </ons-page> </ons-template>
+
+	<script type="text/javascript" src="js/omvc.js?cache=no"></script>
+	<script type="text/javascript" src="js/index.js?cache=no"></script>
+	<script type="text/javascript" src="js/gamepad.js?cache=no"></script>
+
+	<!-- --------------- App init --------------- -->
+
+	<script>
+		ons.bootstrap();
+		ons.ready(function() {
+			omvc.init();
+		});
+	</script>
+</body>
+</html>
