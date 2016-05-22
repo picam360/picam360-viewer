@@ -609,9 +609,6 @@ function OMVC() {
 				sz = ev.clientY;
 				swipeable = (sx < 50);
 				menu.setSwipeable(swipeable);
-				if(!swipeable && ev.clientX > menu.width) {
-					menu.closeMenu();
-				}
 			};
 			var mousemoveFunc = function(ev) {
 				if(ev.type == "touchmove") {
