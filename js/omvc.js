@@ -27,6 +27,12 @@ function OMVC() {
 		Pitch : 0,
 		Yaw : 0
 	};
+	
+	var viewOffset = {
+		Roll : 0,
+		Pitch : 0,
+		Yaw : 0
+	};
 
 	var vehicleAttitude = {
 		Roll : 0,
@@ -107,6 +113,7 @@ function OMVC() {
 			self.initOmvr();
 			self.initGamepadEventLisener();
 			self.initKeyboardEventLisener();
+			self.initDeviceOrientationEventLisener();
 			self.initMouseEventLisener();
 			self.initViewEventLisener();
 
@@ -534,20 +541,85 @@ function OMVC() {
 			}
 			return false;
 		},
+		
+		initDeviceOrientationEventLisener : function() {
+			window.addEventListener('deviceorientation', function(attitude){
+				if(attitude['detail']) {
+					attitude = attitude['detail'];
+				}
+				if(attitude.alpha != null) {
+					var roll = 0;
+					var pitch = 0;
+					var yaw = 0;
+					switch(window.orientation){
+					case 0:
+						var quat_correct = new THREE.Quaternion().setFromEuler(
+							new THREE.Euler(
+								THREE.Math.degToRad(0), 
+								THREE.Math.degToRad(0), 
+								THREE.Math.degToRad(90),
+							"ZYX"));
+						var quaternion = new THREE.Quaternion().setFromEuler(
+							new THREE.Euler(
+								THREE.Math.degToRad(attitude.gamma),
+								THREE.Math.degToRad(attitude.beta),
+								THREE.Math.degToRad(-attitude.webkitCompassHeading),
+							"ZYX"));
+						quaternion.multiply(quat_correct);
+						var euler = new THREE.Euler().setFromQuaternion(quaternion, "ZYX");
+						roll = THREE.Math.radToDeg(euler.x);
+						pitch = THREE.Math.radToDeg(euler.y);
+						//yaw = THREE.Math.radToDeg(euler.z);//unstable, attitude.alpha is also unstable
+						yaw = -attitude.webkitCompassHeading;
+						break;
+					case 90:
+						roll = -attitude.gamma;
+						pitch = -attitude.beta;
+						yaw = attitude.alpha + 180;
+						break;
+					case -90:
+						roll = attitude.gamma;
+						pitch = attitude.beta;
+						yaw = attitude.alpha;
+						break;
+					default:
+						return;
+					}
+					self.setMyAttitude({
+						Roll : roll,
+						Pitch : pitch,
+						Yaw : yaw,
+						Timestamp : 0
+					});
+				}
+			});
+		},
 
 		initMouseEventLisener : function() {
 			var down = false;
+			var swipeable = false;
 			var sx = 0, sz = 0;
-			window.onmousedown = function(ev) {
+			var mousedownFunc = function(ev) {
+				if(ev.type == "touchstart") {
+					ev.clientX = ev.pageX;
+					ev.clientY = ev.pageY;
+				}
 				down = true;
 				sx = ev.clientX;
 				sz = ev.clientY;
+				swipeable = (sx < 50);
+				menu.setSwipeable(swipeable);
+				if(!swipeable && ev.clientX > menu.width) {
+					menu.closeMenu();
+				}
 			};
-			window.onmouseup = function() {
-				down = false;
-			};
-			window.onmousemove = function(ev) {
-				if (!down || ev.button != 1) {
+			var mousemoveFunc = function(ev) {
+				if(ev.type == "touchmove") {
+					ev.clientX = ev.pageX;
+					ev.clientY = ev.pageY;
+					ev.button = 0;
+				}
+				if (!down || swipeable || ev.button != 0) {
 					return;
 				}
 				var dx = -(ev.clientX - sx);
@@ -555,18 +627,22 @@ function OMVC() {
 				sx -= dx;
 				sz -= dz;
 
-				var theta = dx / 10;
-				var phi = -dz / 10;
-
-				var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(phi), THREE.Math.degToRad(-theta), THREE.Math.degToRad(0), "ZYX"));
-				var quaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(myAttitude.Roll), THREE.Math.degToRad(-myAttitude.Pitch), THREE.Math.degToRad(myAttitude.Yaw),
-						"ZYX"));
-				quaternion.multiply(quat_correct);
-				var euler = new THREE.Euler().setFromQuaternion(quaternion, "ZYX");
-				myAttitude.Roll = THREE.Math.radToDeg(euler.x);
-				myAttitude.Pitch = THREE.Math.radToDeg(-euler.y);
-				myAttitude.Yaw = THREE.Math.radToDeg(euler.z);
+				var theta = dx * fov / 300;
+				var phi = -dz * fov / 300;
+				
+				viewOffset.Roll += phi;
+				viewOffset.Pitch = 0;
+				viewOffset.Yaw += theta;
 			}
+			var mouseupFunc = function() {
+				down = false;
+			};
+			document.addEventListener("touchstart", mousedownFunc);
+			document.addEventListener("touchmove", mousemoveFunc);
+			document.addEventListener("touchend", mouseupFunc);
+			document.addEventListener("mousedown", mousedownFunc);
+			document.addEventListener("mousemove", mousemoveFunc);
+			document.addEventListener("mouseup", mouseupFunc);
 		},
 
 		initViewEventLisener : function() {
@@ -591,9 +667,25 @@ function OMVC() {
 		},
 
 		animate : function(elapsedTime) {
+			var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Roll), THREE.Math.degToRad(0), THREE.Math.degToRad(0), "ZYX"));
+			var quaternion = 
+				new THREE.Quaternion().setFromEuler(
+					new THREE.Euler(
+						THREE.Math.degToRad(myAttitude.Roll),
+						THREE.Math.degToRad(-myAttitude.Pitch),
+						THREE.Math.degToRad(myAttitude.Yaw - viewOffset.Yaw),
+					"ZYX"));
+			quaternion.multiply(quat_correct);
+			var euler = new THREE.Euler().setFromQuaternion(quaternion, "ZYX");
+			var _myAttitude = {
+				Roll : THREE.Math.radToDeg(euler.x),
+				Pitch : THREE.Math.radToDeg(-euler.y),
+				Yaw : THREE.Math.radToDeg(euler.z)
+			};
+			
 			switch (operationMode) {
 			case OperationModeEnum.Drive:
-				self.omvr.setMyAttitude(myAttitude);
+				self.omvr.setMyAttitude(_myAttitude);
 				self.omvr.setVehicleAttitude({
 					Roll : 90,
 					Pitch : 0,
@@ -614,7 +706,7 @@ function OMVC() {
 				break;
 			case OperationModeEnum.Dive:
 			default:
-				self.omvr.setMyAttitude(myAttitude);
+				self.omvr.setMyAttitude(_myAttitude);
 				self.omvr.setVehicleAttitude(vehicleAttitude);
 				break;
 			}

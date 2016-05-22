@@ -28,56 +28,6 @@ var app = {
 		//	alert(window.orientation);
 		//});
 		
-		window.addEventListener('deviceorientation', function(attitude){
-			if(attitude['detail']) {
-				attitude = attitude['detail'];
-			}
-			if(attitude.alpha != null) {
-				var roll = 0;
-				var pitch = 0;
-				var yaw = 0;
-				switch(window.orientation){
-				case 0:
-					var quat_correct = new THREE.Quaternion().setFromEuler(
-						new THREE.Euler(
-							THREE.Math.degToRad(0), 
-							THREE.Math.degToRad(0), 
-							THREE.Math.degToRad(90),
-						"ZYX"));
-					var quaternion = new THREE.Quaternion().setFromEuler(
-						new THREE.Euler(
-							THREE.Math.degToRad(attitude.gamma),
-							THREE.Math.degToRad(attitude.beta),
-							THREE.Math.degToRad(-attitude.webkitCompassHeading),
-						"ZYX"));
-					quaternion.multiply(quat_correct);
-					var euler = new THREE.Euler().setFromQuaternion(quaternion, "ZYX");
-					roll = THREE.Math.radToDeg(euler.x);
-					pitch = THREE.Math.radToDeg(euler.y);
-					//yaw = THREE.Math.radToDeg(euler.z);//unstable, attitude.alpha is also unstable
-					yaw = -attitude.webkitCompassHeading;
-					break;
-				case 90:
-					roll = -attitude.gamma;
-					pitch = -attitude.beta;
-					yaw = attitude.alpha + 180;
-					break;
-				case -90:
-					roll = attitude.gamma;
-					pitch = attitude.beta;
-					yaw = attitude.alpha;
-					break;
-				default:
-					return;
-				}
-				omvc.setMyAttitude({
-					Roll : roll,
-					Pitch : pitch,
-					Yaw : yaw,
-					Timestamp : 0
-				});
-			}
-		});
 		window.addEventListener('message', function(event){
 			var args = JSON.parse(event.data);
 			if(!args['function']){
