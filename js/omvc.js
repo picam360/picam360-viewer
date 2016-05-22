@@ -77,6 +77,10 @@ function OMVC() {
 	if(query['default-image-url'] && !query['socket']) {
 		query['socket'] = "off";
 	}
+	
+	function splitExt(filename) {
+	    return filename.split(/\.(?=[^.]+$)/);
+	}
 
 	document.getElementById("overlay").style.display = "none";
 	document.getElementById("infoTypeBox").style.display = "none";
@@ -163,7 +167,7 @@ function OMVC() {
 			var requestAttitude = false;
 			var canvas = document.getElementById('vrCanvas');
 			self.omvr.init(canvas);
-			self.omvr.setTexture(defaultImageUrl, imageUrl, true, false, null, {
+			self.omvr.setTexture(defaultImageUrl, null, imageUrl, null, true, false, null, {
 				Roll : 90,
 				Pitch : 0,
 				Yaw : 90
@@ -840,6 +844,15 @@ function OMVC() {
 		
 		snap : function() {
 			downloadAsFile('picam360.jpeg', 'img/picam360.jpeg');
+		},
+		
+		selectFile : function(file) {
+			var url = URL.createObjectURL(file);
+			self.omvr.setTexture(url, file.type.split('/')[0], null, null, true, false, null, {
+				Roll : 90,
+				Pitch : 0,
+				Yaw : 90
+			});
 		}
 	};
 	return self;

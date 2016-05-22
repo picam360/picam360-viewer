@@ -89,7 +89,7 @@
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
 		align="right"> <ons-switch var="swStereoView" onchange="omvc.omvr.setStereoEnabled(swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
 	<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button> </ons-col> <ons-col>Record 
+		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button></ons-col> <ons-col>Record 
 		<div style=”width:10px”><input style=”width:10px” type="number" value="0" class="text-input" id="frame_duration" /> </div>
 		</ons-col> <ons-col
 		align="right"> <ons-switch var="swRecord" onchange="omvc.record(swRecord.isChecked());"></ons-switch>
@@ -114,6 +114,8 @@
 			<button class="button-bar__button">Proxy</button>
 		</div>
 	</div>
+		<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
+		align="center"> <input type="file" id="fileselect" onchange="omvc.selectFile(this.files[0])"> </ons-col> </ons-row></ons-list-item>
 	</ons-list-item> <ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
 		fixed-width="true"></ons-icon> About </ons-list-item></ons-list></ons-page> </ons-template>
 
