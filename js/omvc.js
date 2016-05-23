@@ -104,7 +104,7 @@ function OMVC() {
 
 	var recording = false;
 	
-	var server_url = window.location.href;
+	var server_url = window.location.href.split('?')[0];
 	
 	var fov = 60;
 
@@ -164,6 +164,9 @@ function OMVC() {
 				defaultImageUrl = query['default-image-url'];
 				imageUrl = "";
 			}
+			if(query['image-url']) {
+				imageUrl = query['image-url'];
+			}
 			var requestAttitude = false;
 			var canvas = document.getElementById('vrCanvas');
 			self.omvr.init(canvas);
@@ -179,6 +182,7 @@ function OMVC() {
 				socket = io.connect(server_url);
 				// サーバから受け取るイベント
 				socket.on('connect', function() {
+					self.omvr.checkImageLastUpdate = false;
 					setInterval(function() {
 						var _starttime = new Date();
 						console.log('ping!!');
