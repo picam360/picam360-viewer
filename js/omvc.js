@@ -124,6 +124,22 @@ function OMVC() {
 			self.setOperationMode("dive");
 			self.animate(0);
 			
+			if(query['view-offset']) {
+				var split_values = query['view-offset'].split(',');
+				viewOffset.Roll = Number(split_values[0]);
+				viewOffset.Pitch = Number(split_values[1]);
+				viewOffset.Yaw = Number(split_values[2]);
+			}
+			if(query['fov']) {
+				fov = Number(query['fov']);
+				self.omvr.setFov(fov);
+			}
+			if(query['auto-scroll'] == 'on') {
+				setInterval(function(){					
+					viewOffset.Yaw += fov/100;
+				},100);
+			}
+			
 			var _fov = 70;
 			function gestureStartHandler(e) {
 				_fov = fov;
