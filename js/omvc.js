@@ -139,6 +139,9 @@ function OMVC() {
 					viewOffset.Yaw += fov/100;
 				},100);
 			}
+			if(query['check-image-delay']) {
+				self.omvr.checkImageDelay = Number(query['check-image-delay']);
+			}			
 			
 			var _fov = 70;
 			function gestureStartHandler(e) {
