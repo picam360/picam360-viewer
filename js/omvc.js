@@ -880,14 +880,6 @@ function OMVC() {
 				Pitch : 0,
 				Yaw : 90
 			});
-			var phi = 0;
-			setInterval(function(){		
-				phi += 0.1;
-				var theta = 90*Math.sin(8*phi*Math.PI/180);
-				myAttitude.Roll = phi;
-				myAttitude.Pitch = 0;
-				myAttitude.Yaw = theta;
-			}, 25);
 		}
 	};
 	return self;
