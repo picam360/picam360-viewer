@@ -101,6 +101,8 @@ function OMVC() {
 	var command_processing = false;
 
 	var ledValue = 0;
+	
+	var autoscroll = true;
 
 	var recording = false;
 	
@@ -135,8 +137,9 @@ function OMVC() {
 				self.omvr.setFov(fov);
 			}
 			if(query['auto-scroll'] == 'on') {
-				setInterval(function(){					
-					viewOffset.Yaw += fov/100;
+				setInterval(function(){
+					if(autoscroll)
+						viewOffset.Yaw += fov/100;
 				},100);
 			}
 			if(query['check-image-delay']) {
@@ -657,6 +660,7 @@ function OMVC() {
 				viewOffset.Roll += phi;
 				viewOffset.Pitch = 0;
 				viewOffset.Yaw += theta;
+				autoscroll = false;
 			}
 			var mouseupFunc = function() {
 				down = false;
@@ -876,6 +880,14 @@ function OMVC() {
 				Pitch : 0,
 				Yaw : 90
 			});
+			var phi = 0;
+			setInterval(function(){		
+				phi += 0.1;
+				var theta = 90*Math.sin(8*phi*Math.PI/180);
+				myAttitude.Roll = phi;
+				myAttitude.Pitch = 0;
+				myAttitude.Yaw = theta;
+			}, 25);
 		}
 	};
 	return self;
