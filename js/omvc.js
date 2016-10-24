@@ -195,7 +195,7 @@ function OMVC() {
 			self.omvr.setTexture(defaultImageUrl, null, imageUrl, null, true, false, null, {
 				Roll : 90,
 				Pitch : 0,
-				Yaw : 90
+				Yaw : 270
 			});
 		},
 
@@ -854,7 +854,8 @@ function OMVC() {
 		record : function(bln) {
 			if(bln) {
 				swRecord.setChecked(false);
-				var duration = document.getElementById("frame_duration").value;
+				//var duration = document.getElementById("frame_duration").value;
+				var duration = 0;
 				console.log("start record! duration=" + duration);
 				document.getElementById("movie_download_box").style.display = "none";
 				socket.emit('startRecord', duration);
