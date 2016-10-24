@@ -89,13 +89,10 @@
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
 		align="right"> <ons-switch var="swStereoView" onchange="omvc.omvr.setStereoEnabled(swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
 	<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button></ons-col> <ons-col>Record 
-		<div style=”width:10px”><input style=”width:10px” type="number" value="0" class="text-input" id="frame_duration" /> </div>
-		</ons-col> <ons-col
-		align="right"> <ons-switch var="swRecord" onchange="omvc.record(swRecord.isChecked());"></ons-switch>
+		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button></ons-col> <ons-col>Record <ons-switch var="swRecord" onchange="omvc.record(swRecord.isChecked());"></ons-switch>
 		<div id="movie_download_box"><a href="img/picam360.mp4" download="picam360.mp4" target="_blank" id="movie_download_link"><img width="40" src="img/movie_icon.png"/></a></div> 
 		</ons-col> </ons-row></ons-list-item>
-		 <ons-list-item class="menu-item" id="serviceCallBox">
+	<ons-list-item class="menu-item" id="serviceCallBox">
 	<div class="button-bar" style="width: 240px;">
 		<div class="button-bar__item">
 			<input type="checkbox" name="radioInfoType" id="chkLevel">
