@@ -207,11 +207,15 @@ function OMVC() {
 					self.omvr.checkImageLastUpdate = false;
 					setInterval(function() {
 						var _starttime = new Date();
-						console.log('ping!!');
-						socket.emit('ping');
 						socket.emit('isRecording', function(bln){
 							swRecord.setChecked(bln);
 						});
+					}, 1000);
+					setInterval(function() {
+						//console.log('ping!!');
+						var data = {}
+						data['view_orientation'] = myAttitude;
+						socket.emit('ping', data);
 					}, 1000);
 				});
 				socket.on('pong', function(obj) {
