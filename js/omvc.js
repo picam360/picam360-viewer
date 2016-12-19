@@ -212,7 +212,22 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						socket.emit('set_view_orientation', myAttitude);
+						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Roll), THREE.Math.degToRad(0), THREE.Math.degToRad(0), "ZYX"));
+						var quaternion = 
+							new THREE.Quaternion().setFromEuler(
+								new THREE.Euler(
+									THREE.Math.degToRad(myAttitude.Roll),
+									THREE.Math.degToRad(-myAttitude.Pitch),
+									THREE.Math.degToRad(myAttitude.Yaw - viewOffset.Yaw),
+								"ZYX"));
+						quaternion.multiply(quat_correct);
+						var euler = new THREE.Euler().setFromQuaternion(quaternion, "ZYX");
+						var _myAttitude = {
+							Roll : THREE.Math.radToDeg(euler.x),
+							Pitch : THREE.Math.radToDeg(-euler.y),
+							Yaw : THREE.Math.radToDeg(euler.z)
+						};
+						socket.emit('set_view_orientation', _myAttitude);
 					}, 100);
 				});
 				socket.on('_pong_', function(obj) {
