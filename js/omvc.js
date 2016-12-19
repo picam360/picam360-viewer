@@ -215,7 +215,7 @@ function OMVC() {
 						socket.emit('set_view_orientation', myAttitude);
 					}, 100);
 				});
-				socket.on('pong', function(obj) {
+				socket.on('_pong_', function(obj) {
 					console.log('pong!!');
 					// console.log(obj);
 					document.getElementById("chkConnect").checked = (obj.FlightTelemetryStats.Status) ? true : false;
