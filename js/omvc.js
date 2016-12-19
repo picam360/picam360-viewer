@@ -212,11 +212,8 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						//console.log('ping!!');
-						var data = {}
-						data['view_orientation'] = myAttitude;
-						socket.emit('ping', data);
-					}, 1000);
+						socket.emit('set_view_orientation', myAttitude);
+					}, 100);
 				});
 				socket.on('pong', function(obj) {
 					console.log('pong!!');
