@@ -192,11 +192,11 @@ function OMVC() {
 			var requestAttitude = false;
 			var canvas = document.getElementById('vrCanvas');
 			self.omvr.init(canvas);
-			self.omvr.setTexture(defaultImageUrl, null, imageUrl, null, true, false, null, {
-				Roll : 90,
-				Pitch : 0,
-				Yaw : 270
-			});
+			//self.omvr.setTexture(defaultImageUrl, null, imageUrl, null, true, false, null, {
+			//	Roll : 90,
+			//	Pitch : 0,
+			//	Yaw : 270
+			//});
 		},
 
 		initSocket : function() {
