@@ -212,15 +212,15 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(0), THREE.Math.degToRad(0), "YXZ"));
+						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(0), THREE.Math.degToRad(viewOffset.Yaw), "YXZ"));
 						var quaternion = 
 							new THREE.Quaternion().setFromEuler(
 								new THREE.Euler(
 									THREE.Math.degToRad(myAttitude.Pitch),
-									THREE.Math.degToRad(myAttitude.Yaw - viewOffset.Yaw),
+									THREE.Math.degToRad(myAttitude.Yaw),
 									THREE.Math.degToRad(myAttitude.Roll),
 								"YXZ"));
-						quaternion.multiply(quat_correct);
+						quaternion = quat_correct.multiply(quaternion);
 						var euler = new THREE.Euler().setFromQuaternion(quaternion, "YXZ");
 						var _myAttitude = {
 							Pitch : THREE.Math.radToDeg(euler.x),
