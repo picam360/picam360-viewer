@@ -212,7 +212,7 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(0), THREE.Math.degToRad(viewOffset.Yaw), "YXZ"));
+						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
 						var quaternion = 
 							new THREE.Quaternion().setFromEuler(
 								new THREE.Euler(
