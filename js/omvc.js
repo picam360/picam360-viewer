@@ -212,16 +212,16 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						var quat_correct = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
-						var quaternion = 
+						var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
+						var view_quat = 
 							new THREE.Quaternion().setFromEuler(
 								new THREE.Euler(
 									THREE.Math.degToRad(myAttitude.Pitch),
 									THREE.Math.degToRad(myAttitude.Yaw),
 									THREE.Math.degToRad(myAttitude.Roll),
 								"YXZ"));
-						quaternion = quat_correct.multiply(quaternion);
-						var euler = new THREE.Euler().setFromQuaternion(quaternion, "YXZ");
+						view_quat = view_offset_quat.multiply(view_quat); // (Rvo)Rv(Rvo)^-1Rvo
+						var euler = new THREE.Euler().setFromQuaternion(view_quat, "YXZ");
 						var _myAttitude = {
 							Pitch : THREE.Math.radToDeg(euler.x),
 							Yaw : THREE.Math.radToDeg(euler.y),
@@ -616,7 +616,7 @@ function OMVC() {
 		initMouseEventLisener : function() {
 			var down = false;
 			var swipeable = false;
-			var sx = 0, sz = 0;
+			var sx = 0, sy = 0;
 			var mousedownFunc = function(ev) {
 				if(ev.type == "touchstart") {
 					ev.clientX = ev.pageX;
@@ -624,7 +624,7 @@ function OMVC() {
 				}
 				down = true;
 				sx = ev.clientX;
-				sz = ev.clientY;
+				sy = ev.clientY;
 				swipeable = (sx < 50);
 				menu.setSwipeable(swipeable);
 			};
@@ -638,16 +638,31 @@ function OMVC() {
 					return;
 				}
 				var dx = -(ev.clientX - sx);
-				var dz = -(ev.clientY - sz);
+				var dy = -(ev.clientY - sy);
 				sx -= dx;
-				sz -= dz;
+				sy -= dy;
 
-				var theta = dx * fov / 300;
-				var phi = -dz * fov / 300;
+				var yaw_diff = dx * fov / 300;
+				var pitch_diff = -dy * fov / 300;
 				
-				viewOffset.Pitch += phi;
-				viewOffset.Yaw += theta;
-				viewOffset.Roll = 0;
+				var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
+				var view_offset_diff_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math.degToRad(yaw_diff), THREE.Math.degToRad(0), "YXZ"));
+				var view_quat = 
+					new THREE.Quaternion().setFromEuler(
+						new THREE.Euler(
+							THREE.Math.degToRad(myAttitude.Pitch),
+							THREE.Math.degToRad(myAttitude.Yaw),
+							THREE.Math.degToRad(myAttitude.Roll),
+						"YXZ"));
+				var view_inv_quat = view_quat.inv();
+				view_offset_quat = view_offset_quat.multiply(view_quat).multiply(view_offset_diff_quat).multiply(view_inv_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
+				var euler = new THREE.Euler().setFromQuaternion(view_offset_quat, "YXZ");
+				viewOffset = {
+					Pitch : THREE.Math.radToDeg(euler.x),
+					Yaw : THREE.Math.radToDeg(euler.y),
+					Roll : THREE.Math.radToDeg(euler.z),
+				};
+
 				autoscroll = false;
 			}
 			var mouseupFunc = function() {
