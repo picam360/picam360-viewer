@@ -642,11 +642,11 @@ function OMVC() {
 				sx -= dx;
 				sy -= dy;
 
-				var yaw_diff = dx * fov / 300;
+				var roll_diff = dx * fov / 300;
 				var pitch_diff = -dy * fov / 300;
 				
 				var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(viewOffset.Roll), "ZXY"));
-				var view_offset_diff_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math.degToRad(yaw_diff), THREE.Math.degToRad(0), "ZXY"));
+				var view_offset_diff_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math.degToRad(0), THREE.Math.degToRad(roll_diff), "ZXY"));
 				var view_quat = 
 					new THREE.Quaternion().setFromEuler(
 						new THREE.Euler(
