@@ -654,13 +654,7 @@ function OMVC() {
 							THREE.Math.degToRad(myAttitude.Yaw),
 							THREE.Math.degToRad(myAttitude.Roll),
 						"ZXY"));
-				var view_inv_quat = 
-					new THREE.Quaternion().setFromEuler(
-						new THREE.Euler(
-							THREE.Math.degToRad(-myAttitude.Pitch),
-							THREE.Math.degToRad(-myAttitude.Yaw),
-							THREE.Math.degToRad(-myAttitude.Roll),
-						"YXZ"));
+				var view_inv_quat = view_quat.clone().conjugate();
 				view_offset_quat = view_inv_quat.multiply(view_offset_diff_quat).multiply(view_quat).multiply(view_offset_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
 				var euler = new THREE.Euler().setFromQuaternion(view_offset_quat, "ZXY");
 				viewOffset = {
