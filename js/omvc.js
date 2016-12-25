@@ -212,16 +212,16 @@ function OMVC() {
 						});
 					}, 1000);
 					setInterval(function() {
-						var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
+						var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "ZXY"));
 						var view_quat = 
 							new THREE.Quaternion().setFromEuler(
 								new THREE.Euler(
 									THREE.Math.degToRad(myAttitude.Pitch),
 									THREE.Math.degToRad(myAttitude.Yaw),
 									THREE.Math.degToRad(myAttitude.Roll),
-								"YXZ"));
-						view_quat = view_offset_quat.multiply(view_quat); // (Rvo)Rv(Rvo)^-1Rvo
-						var euler = new THREE.Euler().setFromQuaternion(view_quat, "YXZ");
+								"ZXY"));
+						view_quat = view_quat.multiply(view_offset_quat); // (Rvo)Rv(Rvo)^-1Rvo
+						var euler = new THREE.Euler().setFromQuaternion(view_quat, "ZXY");
 						var _myAttitude = {
 							Pitch : THREE.Math.radToDeg(euler.x),
 							Yaw : THREE.Math.radToDeg(euler.y),
@@ -645,18 +645,18 @@ function OMVC() {
 				var yaw_diff = dx * fov / 300;
 				var pitch_diff = -dy * fov / 300;
 				
-				var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "YXZ"));
-				var view_offset_diff_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math.degToRad(yaw_diff), THREE.Math.degToRad(0), "YXZ"));
+				var view_offset_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(viewOffset.Pitch), THREE.Math.degToRad(viewOffset.Yaw), THREE.Math.degToRad(0), "ZXY"));
+				var view_offset_diff_quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math.degToRad(yaw_diff), THREE.Math.degToRad(0), "ZXY"));
 				var view_quat = 
 					new THREE.Quaternion().setFromEuler(
 						new THREE.Euler(
 							THREE.Math.degToRad(myAttitude.Pitch),
 							THREE.Math.degToRad(myAttitude.Yaw),
 							THREE.Math.degToRad(myAttitude.Roll),
-						"YXZ"));
-				var view_inv_quat = view_quat.inv();
-				view_offset_quat = view_offset_quat.multiply(view_quat).multiply(view_offset_diff_quat).multiply(view_inv_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
-				var euler = new THREE.Euler().setFromQuaternion(view_offset_quat, "YXZ");
+						"ZXY"));
+				var view_inv_quat = view_quat.inverse();
+				view_offset_quat = view_inv_quat.multiply(view_offset_diff_quat).multiply(view_quat).multiply(view_offset_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
+				var euler = new THREE.Euler().setFromQuaternion(view_offset_quat, "ZXY");
 				viewOffset = {
 					Pitch : THREE.Math.radToDeg(euler.x),
 					Yaw : THREE.Math.radToDeg(euler.y),
