@@ -159,7 +159,10 @@
 
 	<script>
 		window.onload = function() {
-    		setTimeout(function() { window.scrollTo(0, 1) }, 100);
+			var inc = 0;
+    		setInterval(function() {
+    			window.scrollTo(0, inc);
+    		}, 1000);
 		};
 		ons.bootstrap();
 		ons.ready(function() {
