@@ -875,7 +875,10 @@ function OMVC() {
 		},
 		
 		snap : function() {
-			downloadAsFile('picam360.jpeg', 'img/picam360.jpeg');
+			socket.emit('snap', function(filename) {
+				console.log("save image!: " + filename);
+				downloadAsFile('picam360.jpeg', "img/" + filename);
+			});
 		},
 		
 		selectFile : function(file) {
