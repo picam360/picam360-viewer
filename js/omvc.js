@@ -144,30 +144,6 @@ function OMVC() {
 			}
 			if(query['check-image-delay']) {
 				self.omvr.checkImageDelay = Number(query['check-image-delay']);
-			}			
-			
-			var _fov = 70;
-			function gestureStartHandler(e) {
-				_fov = fov;
-			}
-			
-			function gestureChangeHandler(e) {
-				fov = _fov / e.scale;
-				if(fov > 150) {
-					fov = 150;
-				} else if(fov < 30) {
-					fov = 30;
-				}
-				self.omvr.setFov(fov);
-			}
-			
-			function gestureEndHandler(e) {
-			}
-			
-			if ("ongesturestart" in window) {
-				document.addEventListener("gesturestart", gestureStartHandler, false);
-				document.addEventListener("gesturechange", gestureChangeHandler, false);
-				document.addEventListener("gestureend", gestureEndHandler, false);
 			}
 		},
 
@@ -674,7 +650,32 @@ function OMVC() {
 			document.addEventListener("touchend", mouseupFunc);
 			document.addEventListener("mousedown", mousedownFunc);
 			document.addEventListener("mousemove", mousemoveFunc);
-			document.addEventListener("mouseup", mouseupFunc);
+			document.addEventListener("mouseup", mouseupFunc);			
+			
+			var _fov = 70;
+			function gestureStartHandler(e) {
+				_fov = fov;
+			}
+			
+			function gestureChangeHandler(e) {
+				fov = _fov / e.scale;
+				if(fov > 150) {
+					fov = 150;
+				} else if(fov < 30) {
+					fov = 30;
+				}
+				self.omvr.setFov(fov);
+				socket.emit('setFov', fov);
+			}
+			
+			function gestureEndHandler(e) {
+			}
+			
+			if ("ongesturestart" in window) {
+				document.addEventListener("gesturestart", gestureStartHandler, false);
+				document.addEventListener("gesturechange", gestureChangeHandler, false);
+				document.addEventListener("gestureend", gestureEndHandler, false);
+			}
 		},
 
 		initViewEventLisener : function() {
