@@ -50,7 +50,7 @@ function OMVC() {
 	    var a = document.createElement('a');
 	    a.download = fileName;
 	    a.href = url;
-		a.target = "_blank";
+		//a.target = "_blank";
 	    a.click();
 	};
 	function GetQueryString()
