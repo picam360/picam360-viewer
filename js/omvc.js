@@ -882,6 +882,16 @@ function OMVC() {
 			});
 		},
 		
+		calibration : function(bln) {
+			if(bln) {
+				swCalibration.setChecked(false);
+				socket.emit('startAC');
+			} else {
+				swCalibration.setChecked(true);
+				socket.emit('stopAC');
+			}
+		},
+		
 		selectFile : function(file) {
 			var url = URL.createObjectURL(file);
 			self.omvr.setTexture(url, file.type.split('/')[0], null, null, true, false, null, {
