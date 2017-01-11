@@ -884,10 +884,8 @@ function OMVC() {
 		
 		calibration : function(bln) {
 			if(bln) {
-				swCalibration.setChecked(false);
 				socket.emit('startAC');
 			} else {
-				swCalibration.setChecked(true);
 				socket.emit('stopAC');
 			}
 		},
