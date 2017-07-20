@@ -178,6 +178,10 @@ function OMVC() {
 		initSocket : function() {
 			jQuery.getScript(server_url + 'socket.io/socket.io.js', function() {
 				socket = io.connect(server_url);
+				socket.on('rtp', function(packet, callback) {
+								console.log("packet : " + packet.length);
+								callback();
+				});
 				// サーバから受け取るイベント
 				socket.on('connect', function() {
 					self.omvr.checkImageLastUpdate = false;

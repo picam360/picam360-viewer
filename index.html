@@ -153,16 +153,16 @@
 	<div class="center">About</div>
 	</ons-toolbar> <ons-row style="margin-top: 100px; text-align: center;"> <ons-col> Picam360-Viewer </ons-col> </ons-row> </ons-page> </ons-template>
 
-	<script type="text/javascript" src="js/omvc.js?cache=no"></script>
+	<script type="text/javascript" src="js/rtp.js?cache=no"></script>
+	<script type="text/javascript" src="js/mjpeg_decoder.js?cache=no"></script>
 	<script type="text/javascript" src="js/index.js?cache=no"></script>
-	<script type="text/javascript" src="js/gamepad.js?cache=no"></script>
 
 	<!-- --------------- App init --------------- -->
 
 	<script>
 		ons.bootstrap();
 		ons.ready(function() {
-			omvc.init();
+			app.main();
 		});
 	</script>
 </body>
