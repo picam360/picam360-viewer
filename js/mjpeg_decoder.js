@@ -1,5 +1,6 @@
-function MjpegDecoder(texture) {
+function MjpegDecoder() {
 	var m_active_frame = null;
+	var m_target_texture = null;
 
 	function Uint8ToString(ary) {
 		var CHUNK_SZ = 0x8000;
@@ -17,6 +18,9 @@ function MjpegDecoder(texture) {
 	}
 
 	var self = {
+		set_target_texture : function(texture) {
+			m_target_texture = texture;
+		},
 		// @data : Uint8Array
 		decode : function(data, data_len) {
 			if (!m_active_frame) {
@@ -27,11 +31,14 @@ function MjpegDecoder(texture) {
 			if (m_active_frame) {
 				m_active_frame.push(data);
 				if (data[data_len - 2] == 0xFF && data[data_len - 1] == 0xD9) { // EOI
-					var base64img = btoa(Uint8ToString(m_active_frame));
-					texture.src = "data:image/jpeg;base64," + base64img;
+					console.log("update");
+					if (m_target_texture) {
+						var base64img = btoa(Uint8ToString(m_active_frame));
+						m_target_texture.src = "data:image/jpeg;base64,"
+							+ base64img;
+					}
 
 					m_active_frame = null;
-					m_base64img = null;
 				}
 			}
 		}

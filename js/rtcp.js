@@ -34,24 +34,37 @@ function PacketHeader(pack) {
 	return self;
 }
 
-function Rtp() {
+function Rtcp() {
+	var m_sequencenumber = 0;
+	var m_timestamp = 0;
+	var m_src = 0;
+	// copy ArrayBuffer
+	function copy(dst, dst_offset, src, src_offset, len) {
+		new Uint8Array(dst, dst_offset)
+			.set(new Uint8Array(src, src_offset, len));
+	}
+	function string_to_buffer(src) {
+		return (new Uint8Array([].map.call(src, function(c) {
+			return c.charCodeAt(0)
+		}))).buffer;
+	}
 	var self = {
-		set_callback : function(ws, callback) {
-			ws.on('rtp', function(packets, rtp_callback) {
-				// console.log("packet : " + packet.byteLength);
-				var cmd = null;
-				if (callback) {
-					if (!Array.isArray(packets)) {
-						packets = [packets];
-					}
-					var first = packets.shift();
-					cmd = callback(PacketHeader(first), true);
-					packets.forEach(function(packet) {
-						callback(PacketHeader(packet));
-					});
-				}
-				rtp_callback(cmd);
-			});
+		// @data : ArrayBuffer
+		sendpacket : function(ws, data, pt) {
+			if (typeof data == 'string') {
+				data = string_to_buffer(data);
+			}
+			var pack = new ArrayBuffer(12 + data.byteLength);
+			copy(pack, 12, data, 0, data.byteLength);
+			var view = new DataView(pack);
+			view.setUint8(0, 0, false);
+			view.setUint8(1, pt & 0x7F, false);
+			view.setUint16(2, m_sequencenumber, false);
+			view.setUint32(4, m_timestamp, false);
+			view.setUint32(8, m_src, false);
+			ws.emit('rtcp', pack);
+
+			m_sequencenumber++;
 		}
 	};
 	return self;
