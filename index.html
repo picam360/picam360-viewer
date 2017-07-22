@@ -54,43 +54,43 @@
 	</ons-toolbar> <ons-list> <ons-list-item class="menu-item">
 	<div class="button-bar" style="width: 240px;">
 		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('hobby')">
+			<input type="radio" name="segment-a" onclick="">
 			<button class="button-bar__button">Hobby</button>
 		</div>
 		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('dive')" checked>
+			<input type="radio" name="segment-a" onclick="" checked>
 			<button class="button-bar__button">Dive</button>
 		</div>
 		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="omvc.setOperationMode('drive')">
+			<input type="radio" name="segment-a" onclick="">
 			<button class="button-bar__button">Drive</button>
 		</div>
 	</div>
 	</ons-list-item> <ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>InfoBox</ons-col> <ons-col align="right"> <ons-switch
-		var="swInfoBox" onchange="omvc.setInfoboxEnabled(swInfoBox.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item" id="infoTypeBox">
+		var="swInfoBox" onchange=""></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item" id="infoTypeBox">
 	<div class="button-bar" style="width: 240px;">
 		<div class="button-bar__item">
 			<input type="checkbox" name="radioInfoType" id="chkAttitudeInfo"
-				onclick="omvc.setInfoType('attitude', document.getElementById('chkAttitudeInfo').checked)">
+				onclick="">
 			<button class="button-bar__button">Attitude</button>
 		</div>
 		<div class="button-bar__item">
 			<input type="checkbox" name="radioInfoType" id="chkActuatorInfo"
-				onclick="omvc.setInfoType('actuator', document.getElementById('chkActuatorInfo').checked)">
+				onclick="">
 			<button class="button-bar__button">Actuator</button>
 		</div>
 		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkDebugInfo" onclick="omvc.setInfoType('debug', document.getElementById('chkDebugInfo').checked)">
+			<input type="checkbox" name="radioInfoType" id="chkDebugInfo" onclick="">
 			<button class="button-bar__button">Debug</button>
 		</div>
 	</div>
 	</ons-list-item> 
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Calibration</ons-col> <ons-col
-		align="right"> <ons-switch var="swCalibration" onchange="omvc.calibration(swCalibration.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
+		align="right"> <ons-switch var="swCalibration" onchange=""></ons-switch> </ons-col> </ons-row></ons-list-item>
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
-		align="right"> <ons-switch var="swStereoView" onchange="omvc.omvr.setStereoEnabled(swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
+		align="right"> <ons-switch var="swStereoView" onchange="app.plugin_host.send_command('set_stereo ' + swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
 	<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <ons-button onclick="omvc.snap();">SNAP</ons-button>Record</ons-col> <ons-col align="right"><ons-switch var="swRecord" onchange="omvc.record(swRecord.isChecked());"></ons-switch>
+		align="center"> <ons-button onclick="">SNAP</ons-button>Record</ons-col> <ons-col align="right"><ons-switch var="swRecord" onchange=""></ons-switch>
 		<div id="movie_download_box"><a href="img/picam360.mp4" download="picam360.mp4" target="_blank" id="movie_download_link"><img width="40" src="img/movie_icon.png"/></a></div> 
 		</ons-col> </ons-row></ons-list-item>
 	<ons-list-item class="menu-item" id="serviceCallBox">
@@ -113,7 +113,7 @@
 		</div>
 	</div>
 		<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <input type="file" id="fileselect" onchange="omvc.selectFile(this.files[0])"> </ons-col> </ons-row></ons-list-item>
+		align="center"> <input type="file" id="fileselect" onchange=""> </ons-col> </ons-row></ons-list-item>
 	</ons-list-item> <ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
 		fixed-width="true"></ons-icon> About </ons-list-item></ons-list></ons-page> </ons-template>
 
@@ -156,7 +156,7 @@
 	<script type="text/javascript" src="js/rtp.js?cache=no"></script>
 	<script type="text/javascript" src="js/rtcp.js?cache=no"></script>
 	<script type="text/javascript" src="js/mjpeg_decoder.js?cache=no"></script>
-	<script type="text/javascript" src="js/omvr.min.js?cache=no"></script>
+	<script type="text/javascript" src="js/omvr.js?cache=no"></script>
 	<script type="text/javascript" src="js/index.js?cache=no"></script>
 
 	<!-- --------------- App init --------------- -->

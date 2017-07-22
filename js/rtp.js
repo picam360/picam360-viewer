@@ -38,19 +38,26 @@ function Rtp() {
 	var self = {
 		set_callback : function(ws, callback) {
 			ws.on('rtp', function(packets, rtp_callback) {
-				// console.log("packet : " + packet.byteLength);
-				var cmd = null;
+				// console.log("packets : " + packets.length);
 				if (callback) {
 					if (!Array.isArray(packets)) {
 						packets = [packets];
 					}
-					var first = packets.shift();
-					cmd = callback(PacketHeader(first), true);
-					packets.forEach(function(packet) {
-						callback(PacketHeader(packet));
-					});
+					// packets.sort(function(a, b) {
+					// return PacketHeader(a).GetSequenceNumber()
+					// - PacketHeader(b).GetSequenceNumber();
+					// });
+					for (var i = 0; i < packets.length; i++) {
+						if (i == 0) {
+							var cmd = callback(PacketHeader(packets[i]), true);
+							rtp_callback(cmd);
+						} else {
+							callback(PacketHeader(packets[i]), false);
+						}
+					}
+				} else {
+					rtp_callback(null);
 				}
-				rtp_callback(cmd);
 			});
 		}
 	};

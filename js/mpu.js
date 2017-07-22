@@ -98,19 +98,29 @@ function MPU() {
 							pitch = -attitude.gamma;
 							yaw = attitude.alpha + 180;
 							roll = -attitude.beta;
+							if (pitch < 0) {
+								pitch = 180 + pitch;
+								yaw = 180 + yaw;
+								roll = 180 + roll;
+							}
 							break;
 						case -90 :
 							pitch = attitude.gamma;
 							yaw = attitude.alpha;
 							roll = attitude.beta;
+							if (pitch < 0) {
+								pitch = 180 + pitch;
+								yaw = 180 + yaw;
+								roll = 180 + roll;
+							}
 							break;
 						default :
 							return;
 					}
 					m_attitude = {
-						Pitch : pitch,
-						Yaw : yaw,
-						Roll : roll,
+						Pitch : pitch % 360,
+						Yaw : yaw % 360,
+						Roll : roll % 360,
 						Timestamp : 0
 					};
 				}

@@ -303,6 +303,7 @@ function OMVR() {
 			m_effect = new THREE.StereoEffect(m_renderer);
 			m_effect.setSize(window.innerWidth, window.innerHeight);
 
+			onWindowResize();
 			window.addEventListener('resize', onWindowResize, false);
 
 			self.setBoard();
@@ -316,14 +317,28 @@ function OMVR() {
 		},
 
 		setTextureImg : function(texture) {
+			var texture_aspect = texture.width / texture.height;
+			var window_aspect = (stereoEnabled
+				? window.innerWidth / 2
+				: window.innerWidth)
+				/ window.innerHeight;
+			var aspect = texture_aspect * window_aspect;			
+			if (aspect < 1.0) {
+				m_mesh.material.uniforms.tex_scalex.value = aspect;
+				m_mesh.material.uniforms.tex_scaley.value = 1.0;
+			} else {
+				m_mesh.material.uniforms.tex_scalex.value = 1.0;
+				m_mesh.material.uniforms.tex_scaley.value = 1.0 / aspect;
+			}
+			
 			m_videoTexture.image = texture;
 			m_videoTexture.needsUpdate = true;
 		},
 
 		setBoard : function() {
 			m_videoImage = document.createElement('canvas');
-			m_videoImage.width = 480;
-			m_videoImage.height = 800;
+			m_videoImage.width = 512;
+			m_videoImage.height = 512;
 			m_videoImageContext = m_videoImage.getContext('2d');
 			m_videoImageContext.fillStyle = '#000000';
 			m_videoImageContext
@@ -334,7 +349,9 @@ function OMVR() {
 			m_videoTexture.minFilter = THREE.LinearFilter;// this is for
 			m_videoTexture.anisotropy = m_renderer.getMaxAnisotropy();
 
-			var geometry = new THREE.PlaneGeometry(2, 2);//position is x:[-1,1], y:[-1,1]
+			var geometry = new THREE.PlaneGeometry(2, 2);// position is
+			// x:[-1,1],
+			// y:[-1,1]
 			loadFile("shader/board.frag?cache=no", function(fragmentShader) {
 				loadFile("shader/board.vert?cache=no", function(vertexShader) {
 					var material = new THREE.ShaderMaterial({
@@ -342,6 +359,10 @@ function OMVR() {
 						fragmentShader : fragmentShader,
 						uniforms : {
 							tex_scalex : {
+								type : 'f',
+								value : 1
+							},
+							tex_scaley : {
 								type : 'f',
 								value : 1
 							},
