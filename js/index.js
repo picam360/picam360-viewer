@@ -272,6 +272,15 @@ var app = (function() {
 				// connect websocket
 				socket = io.connect(server_url);
 
+				socket.on("custom_error", function(event) {
+					console.log("error : " + event);
+					switch (event) {
+						case "exceeded_num_of_clients" :
+							alert("The number of clients is exceeded.");
+							break;
+					}
+				});
+
 				// set rtp callback
 				rtp.set_callback(socket, function(packet, cmd_request) {
 					if (packet.GetPayloadType() == 110) {// image

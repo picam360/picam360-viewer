@@ -16,14 +16,19 @@ function MjpegDecoder() {
 			if (m_active_frame) {
 				m_active_frame.push(data);
 				if (data[data_len - 2] == 0xFF && data[data_len - 1] == 0xD9) { // EOI
-					//.log("update");
+					// .log("update");
 					if (m_target_texture) {
 						var blob = new Blob(m_active_frame, {
 							type : "image/jpeg"
 						});
 						var url = window.URL || window.webkitURL;
+						if (m_target_texture.src
+							&& m_target_texture.src.indexOf("blob") == 0) {
+							url.revokeObjectURL(m_target_texture.src);
+						}
 						m_target_texture.src = url.createObjectURL(blob);
-						//console.log(m_target_texture.src + " : " + blob.size + " : " + m_active_frame.length);
+						// console.log(m_target_texture.src + " : " + blob.size
+						// + " : " + m_active_frame.length);
 						blob = null;
 					}
 
