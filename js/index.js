@@ -29,7 +29,7 @@ var app = (function() {
 	var rtp;
 	var rtcp;
 	// video decoder
-	var mjpeg_decoder;
+	var video_decoder;
 	// motion processer unit
 	var mpu;
 
@@ -252,13 +252,17 @@ var app = (function() {
 			omvr.init(canvas);
 
 			// video decoder
-			mjpeg_decoder = MjpegDecoder();
+			if (query['stream_type'] == "h264") {
+				video_decoder = H264Decoder();
+			} else {
+				video_decoder = MjpegDecoder();
+			}
 			texture = new Image();
 			texture.onload = function() {
 				omvr.setTextureImg(texture);
 				omvr.animate();
 			}
-			mjpeg_decoder.set_target_texture(texture);
+			video_decoder.set_target_texture(texture);
 
 			// motion processer unit
 			mpu = MPU();
@@ -284,7 +288,7 @@ var app = (function() {
 				// set rtp callback
 				rtp.set_callback(socket, function(packet, cmd_request) {
 					if (packet.GetPayloadType() == 110) {// image
-						mjpeg_decoder.decode(packet.GetPayload(), packet
+						video_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 						if (cmd_request) {
 							var UPSTREAM_DOMAIN = "upstream.";
