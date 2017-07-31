@@ -16,6 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+var UPSTREAM_DOMAIN = "upstream.";
+
 var app = (function() {
 	var tilt = 0;
 	var socket;
@@ -33,16 +35,21 @@ var app = (function() {
 	// motion processer unit
 	var mpu;
 
-	var viewOffset = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
-	var myAttitude = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
+	var options = {};
+	var plugins = [];
+
+	var cmd2upstream_list = [];
+
+	function loadFile(path, callback) {
+		var req = new XMLHttpRequest();
+		req.open("get", path, true);
+		req.send(null);
+
+		req.onload = function() {
+			callback(req.responseText);
+		}
+	}
+
 	var plugin_host = function(app) {
 		function handle_command(cmd) {
 			var split = cmd.split(' ');
@@ -52,7 +59,32 @@ var app = (function() {
 		}
 		var self = {
 			send_command : function(cmd) {
+				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
+					cmd2upstream_list.push(cmd.substr(UPSTREAM_DOMAIN.length));
+					return;
+				}
+				for (var i = 0; i < plugins.length; i++) {
+					if (plugins[i].command_handler) {
+						plugins[i].command_handler(cmdå);
+					}
+				}
 				handle_command(cmd);
+			},
+			send_event : function(sender, event) {
+				for (var i = 0; i < plugins.length; i++) {
+					if (plugins[i].event_handler) {
+						plugins[i].event_handler(sender, event);
+					}
+				}
+			},
+			get_mpu : function() {
+				return mpu;
+			},
+			get_fov : function() {
+				return fov;
+			},
+			set_fov : function(value) {
+				fov = value;
 			},
 		};
 		return self;
@@ -109,113 +141,46 @@ var app = (function() {
 			console.log('Received Event: ' + id);
 		},
 
-		initMouseEventLisener : function() {
-			var down = false;
-			var swipeable = false;
-			var sx = 0, sy = 0;
-			var mousedownFunc = function(ev) {
-				if (ev.type == "touchstart") {
-					ev.clientX = ev.pageX;
-					ev.clientY = ev.pageY;
+		init_options : function(callback) {
+			loadFile("config.json", function(txt) {
+				options = JSON.parse(txt);
+				if (options.plugin_paths && options.plugin_paths.length != 0) {
+					function load_plugin(idx) {
+						var script = document.createElement('script');
+						script.onload = function() {
+							console
+								.log("loaded : " + options.plugin_paths[idx]);
+							if (create_plugin) {
+								var plugin = create_plugin(self.plugin_host);
+								plugins.push(plugin);
+								create_plugin = null;
+							}
+							if (idx + 1 < options.plugin_paths.length) {
+								load_plugin(idx + 1);
+							} else {
+								for (var i = 0; i < plugins.length; i++) {
+									if (plugins[i].init_options) {
+										plugins[i].init_options(options);
+									}
+								}
+								callback();
+							}
+						};
+						console.log("loding : " + options.plugin_paths[idx]);
+						script.src = options.plugin_paths[idx];
+
+						document.head.appendChild(script);
+					}
+					load_plugin(0);
+				} else {
+					callback();
 				}
-				down = true;
-				sx = ev.clientX;
-				sy = ev.clientY;
-				swipeable = (sx < 50);
-				menu.setSwipeable(swipeable);
-			};
-			var mousemoveFunc = function(ev) {
-				if (ev.type == "touchmove") {
-					ev.clientX = ev.pageX;
-					ev.clientY = ev.pageY;
-					ev.button = 0;
-				}
-				if (!down || swipeable || ev.button != 0) {
-					return;
-				}
-				var dx = -(ev.clientX - sx);
-				var dy = -(ev.clientY - sy);
-				sx -= dx;
-				sy -= dy;
-
-				var roll_diff = dx * fov / 300;
-				var pitch_diff = -dy * fov / 300;
-
-				var view_offset_quat = new THREE.Quaternion()
-					.setFromEuler(new THREE.Euler(THREE.Math
-						.degToRad(viewOffset.Pitch), THREE.Math
-						.degToRad(viewOffset.Yaw), THREE.Math
-						.degToRad(viewOffset.Roll), "ZXY"));
-				var view_offset_diff_quat = new THREE.Quaternion()
-					.setFromEuler(new THREE.Euler(THREE.Math
-						.degToRad(pitch_diff), THREE.Math.degToRad(0), THREE.Math
-						.degToRad(roll_diff), "ZXY"));
-				var view_quat = new THREE.Quaternion()
-					.setFromEuler(new THREE.Euler(THREE.Math
-						.degToRad(myAttitude.Pitch), THREE.Math
-						.degToRad(myAttitude.Yaw), THREE.Math
-						.degToRad(myAttitude.Roll), "ZXY"));
-				var view_inv_quat = view_quat.clone().conjugate();
-				view_offset_quat = view_inv_quat
-					.multiply(view_offset_diff_quat).multiply(view_quat)
-					.multiply(view_offset_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
-				var euler = new THREE.Euler()
-					.setFromQuaternion(view_offset_quat, "ZXY");
-				viewOffset = {
-					Pitch : THREE.Math.radToDeg(euler.x),
-					Yaw : THREE.Math.radToDeg(euler.y),
-					Roll : THREE.Math.radToDeg(euler.z),
-				};
-				console.log(viewOffset);
-
-				mpu
-					.set_attitude(viewOffset.Pitch, viewOffset.Yaw, viewOffset.Roll);
-
-				autoscroll = false;
-			}
-			var mouseupFunc = function() {
-				down = false;
-			};
-			document.addEventListener("touchstart", mousedownFunc);
-			document.addEventListener("touchmove", mousemoveFunc);
-			document.addEventListener("touchend", mouseupFunc);
-			document.addEventListener("mousedown", mousedownFunc);
-			document.addEventListener("mousemove", mousemoveFunc);
-			document.addEventListener("mouseup", mouseupFunc);
-
-			var _fov = 70;
-			function gestureStartHandler(e) {
-				_fov = fov;
-			}
-
-			function gestureChangeHandler(e) {
-				fov = _fov / e.scale;
-				if (fov > 150) {
-					fov = 150;
-				} else if (fov < 30) {
-					fov = 30;
-				}
-				self.omvr.setFov(fov);
-				socket.emit('setFov', fov);
-			}
-
-			function gestureEndHandler(e) {
-			}
-
-			if ("ongesturestart" in window) {
-				document
-					.addEventListener("gesturestart", gestureStartHandler, false);
-				document
-					.addEventListener("gesturechange", gestureChangeHandler, false);
-				document
-					.addEventListener("gestureend", gestureEndHandler, false);
-			}
+			});
 		},
 
-		cmd_list : [],
-		send_command : function(cmd) {
-			app.cmd_list.push(cmd);
+		init_plugins : function() {
 		},
+
 		rtcp_command_id : 0,
 
 		main : function() {
@@ -243,87 +208,97 @@ var app = (function() {
 				server_url = query['server_url'];
 			}
 
-			canvas = document.getElementById('vrCanvas');
+			self
+				.init_options(function() {
+					self.init_plugins();
 
-			app.initMouseEventLisener();
+					canvas = document.getElementById('vrCanvas');
 
-			// webgl handling
-			omvr = OMVR();
-			omvr.init(canvas);
+					// webgl handling
+					omvr = OMVR();
+					omvr.init(canvas);
 
-			// video decoder
-			if (query['stream_type'] == "h264") {
-				video_decoder = H264Decoder();
-			} else {
-				video_decoder = MjpegDecoder();
-			}
-			texture = new Image();
-			texture.onload = function() {
-				omvr.setTextureImg(texture);
-				omvr.animate();
-			}
-			video_decoder.set_target_texture(texture);
-
-			// motion processer unit
-			mpu = MPU();
-			mpu.init();
-
-			// init network related matters
-			// data stream handling
-			rtp = Rtp();
-			rtcp = Rtcp();
-			jQuery.getScript(server_url + 'socket.io/socket.io.js', function() {
-				// connect websocket
-				socket = io.connect(server_url);
-
-				socket.on("custom_error", function(event) {
-					console.log("error : " + event);
-					switch (event) {
-						case "exceeded_num_of_clients" :
-							alert("The number of clients is exceeded.");
-							break;
+					// video decoder
+					if (query['stream_type'] == "h264"
+						|| options['stream_type'] == "h264") {
+						video_decoder = H264Decoder();
+					} else {
+						video_decoder = MjpegDecoder();
 					}
+					texture = new Image();
+					texture.onload = function() {
+						omvr.setTextureImg(texture);
+						omvr.animate();
+					}
+					video_decoder.set_target_texture(texture);
+
+					// motion processer unit
+					mpu = MPU();
+					mpu.init();
+
+					// init network related matters
+					// data stream handling
+					rtp = Rtp();
+					rtcp = Rtcp();
+					jQuery
+						.getScript(server_url + 'socket.io/socket.io.js', function() {
+							// connect websocket
+							socket = io.connect(server_url);
+
+							socket
+								.on("custom_error", function(event) {
+									console.log("error : " + event);
+									switch (event) {
+										case "exceeded_num_of_clients" :
+											alert("The number of clients is exceeded.");
+											break;
+									}
+								});
+
+							// set rtp callback
+							rtp.set_callback(socket, function(packet,
+								cmd_request) {
+								if (packet.GetPayloadType() == 110) {// image
+									video_decoder
+										.decode(packet.GetPayload(), packet
+											.GetPayloadLength());
+									if (cmd_request) {
+										var UPSTREAM_DOMAIN = "upstream.";
+										var quat = mpu.get_quaternion();
+										var cmd = UPSTREAM_DOMAIN
+											+ "set_view_quaternion 0=" + quat.x
+											+ "," + quat.y + "," + quat.z + ","
+											+ quat.w;
+										return cmd;
+									}
+								}
+							});
+							setInterval(function() {
+								if (!cmd2upstream_list.length) {
+									return;
+								}
+								var value = cmd2upstream_list.shift();
+								var cmd = "<picam360:command id=\""
+									+ app.rtcp_command_id + "\" value=\""
+									+ value + "\" />"
+								rtcp.sendpacket(socket, cmd, 101);
+								app.rtcp_command_id++;
+							}, 10);// 100hz
+						});
+
+					{
+						document.getElementById("overlay").style.display = "none";
+						document.getElementById("infoTypeBox").style.display = "none";
+						document.getElementById("debugMsgBox").style.display = "none";
+						document.getElementById("actuatorMsgBox").style.display = "none";
+						document.getElementById("attitudeMsgBox").style.display = "none";
+
+						document.getElementById("movie_download_box").style.display = "none";
+					}
+
+					// animate
+					self.start_animate();
 				});
-
-				// set rtp callback
-				rtp.set_callback(socket, function(packet, cmd_request) {
-					if (packet.GetPayloadType() == 110) {// image
-						video_decoder.decode(packet.GetPayload(), packet
-							.GetPayloadLength());
-						if (cmd_request) {
-							var UPSTREAM_DOMAIN = "upstream.";
-							var quat = mpu.get_quaternion();
-							var cmd = UPSTREAM_DOMAIN
-								+ "set_view_quaternion 0=" + quat.x + ","
-								+ quat.y + "," + quat.z + "," + quat.w;
-							return cmd;
-						}
-					}
-				});
-				setInterval(function() {
-					if (!app.cmd_list.length) {
-						return;
-					}
-					var value = app.cmd_list.shift();
-					var cmd = "<picam360:command id=\"" + app.rtcp_command_id
-						+ "\" value=\"" + value + "\" />"
-					rtcp.sendpacket(socket, cmd, 101);
-					app.rtcp_command_id++;
-				}, 10);// 100hz
-			});
-
-			{
-				document.getElementById("overlay").style.display = "none";
-				document.getElementById("infoTypeBox").style.display = "none";
-				document.getElementById("debugMsgBox").style.display = "none";
-				document.getElementById("actuatorMsgBox").style.display = "none";
-				document.getElementById("attitudeMsgBox").style.display = "none";
-
-				document.getElementById("movie_download_box").style.display = "none";
-			}
-
-			// animate
-			self.start_animate();
 		},
 		start_animate : function() {
 			// //this technic is for split requestAnimationFrame chain to get

@@ -323,7 +323,7 @@ function OMVR() {
 				: window.innerWidth)
 				/ window.innerHeight;
 			var aspect = texture_aspect * window_aspect;			
-			if (aspect < 1.0) {
+			if (aspect > 1.0) {
 				m_mesh.material.uniforms.tex_scalex.value = aspect;
 				m_mesh.material.uniforms.tex_scaley.value = 1.0;
 			} else {
