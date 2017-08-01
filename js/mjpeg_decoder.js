@@ -1,10 +1,10 @@
 function MjpegDecoder() {
 	var m_active_frame = null;
-	var m_target_texture = null;
+	var m_frame_callback = null;
 
 	var self = {
-		set_target_texture : function(texture) {
-			m_target_texture = texture;
+		set_frame_callback : function(callback) {
+			m_frame_callback = callback;
 		},
 		// @data : Uint8Array
 		decode : function(data, data_len) {
@@ -16,19 +16,11 @@ function MjpegDecoder() {
 			if (m_active_frame) {
 				m_active_frame.push(data);
 				if (data[data_len - 2] == 0xFF && data[data_len - 1] == 0xD9) { // EOI
-					// .log("update");
-					if (m_target_texture) {
+					if (m_frame_callback) {
 						var blob = new Blob(m_active_frame, {
 							type : "image/jpeg"
 						});
-						var url = window.URL || window.webkitURL;
-						if (m_target_texture.src
-							&& m_target_texture.src.indexOf("blob") == 0) {
-							url.revokeObjectURL(m_target_texture.src);
-						}
-						m_target_texture.src = url.createObjectURL(blob);
-						// console.log(m_target_texture.src + " : " + blob.size
-						// + " : " + m_active_frame.length);
+						m_frame_callback("blob", blob);
 						blob = null;
 					}
 

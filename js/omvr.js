@@ -281,6 +281,35 @@ function OMVR() {
 			}
 		},
 
+		handle_frame : function(type, data, width, height) {
+			if (type == "yuv") {
+				var img = m_videoTexture.image;
+				var header = get_bmp_header(width, height, 8);
+				var raw_data = new Uint8Array(data);
+				var blob = new Blob([header, raw_data], {
+					type : "image/bmp"
+				});
+				var url = window.URL || window.webkitURL;
+				if (img.src
+					&& img.src.indexOf("blob") == 0) {
+					url.revokeObjectURL(img.src);
+				}
+				img.src = url.createObjectURL(blob);
+				// console.log(m_target_texture.src + " : " + blob.size
+				// + " : " + m_active_frame.length);
+				blob = null;
+			} else if (type == "blob") {
+				var img = m_videoTexture.image;
+				var url = window.URL || window.webkitURL;
+				if (img.src && img.src.indexOf("blob") == 0) {
+					url.revokeObjectURL(img.src);
+				}
+				img.src = url.createObjectURL(blob);
+				// console.log(img.src + " : " + blob.size);
+
+			}
+		},
+
 		init : function(canvas) {
 
 			m_canvas = canvas;
@@ -329,6 +358,10 @@ function OMVR() {
 				onWindowResize();
 			}
 		},
+		
+		getTextureImg : function(){
+			return m_videoImage;
+		},
 
 		setTextureImg : function(texture) {
 			var texture_aspect = texture.width / texture.height;
@@ -350,13 +383,9 @@ function OMVR() {
 		},
 
 		setBoard : function() {
-			m_videoImage = document.createElement('canvas');
+			m_videoImage = new Image();
 			m_videoImage.width = 512;
 			m_videoImage.height = 512;
-			m_videoImageContext = m_videoImage.getContext('2d');
-			m_videoImageContext.fillStyle = '#000000';
-			m_videoImageContext
-				.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 			m_videoTexture = new THREE.Texture(m_videoImage);
 			m_videoTexture.needsUpdate = true;
 			m_videoTexture.generateMipmaps = false;// this is for performance

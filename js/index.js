@@ -218,17 +218,16 @@ var app = (function() {
 					// webgl handling
 					omvr = OMVR();
 					omvr.init(canvas);
+					omvr.getTextureImg().onload = function() {
+						omvr.setTextureImg(omvr.getTextureImg());
+						omvr.animate();
+					}
 
 					// video decoder
 					h264_decoder = H264Decoder();
 					mjpeg_decoder = MjpegDecoder();
-					texture = new Image();
-					texture.onload = function() {
-						omvr.setTextureImg(texture);
-						omvr.animate();
-					}
-					h264_decoder.set_target_texture(texture);
-					mjpeg_decoder.set_target_texture(texture);
+					h264_decoder.set_frame_callback(omvr.handle_frame);
+					mjpeg_decoder.set_frame_callback(omvr.handle_frame);
 
 					// motion processer unit
 					mpu = MPU();

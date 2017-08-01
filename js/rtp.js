@@ -35,9 +35,13 @@ function PacketHeader(pack) {
 }
 
 function Rtp() {
+	var m_bandwidth = 0;
+	var m_last_packet_time = Date.now();
 	var self = {
 		set_callback : function(ws, callback) {
 			ws.on('rtp', function(packets, rtp_callback) {
+				var packet_time = Date.now();
+				var sum_packet = 0;
 				// console.log("packets : " + packets.length);
 				if (callback) {
 					if (!Array.isArray(packets)) {
@@ -48,6 +52,7 @@ function Rtp() {
 					// - PacketHeader(b).GetSequenceNumber();
 					// });
 					for (var i = 0; i < packets.length; i++) {
+						sum_packet += packets[i].byteLength;
 						if (i == 0) {
 							var cmd = callback(PacketHeader(packets[i]), true);
 							rtp_callback(cmd);
@@ -58,6 +63,15 @@ function Rtp() {
 				} else {
 					rtp_callback(null);
 				}
+
+				{ // bandwidth
+					var diff_usec = (packet_time - m_last_packet_time) * 1000;
+					var tmp = 8.0 * sum_packet / diff_usec; // Mbps
+					var w = diff_usec / 1000000 / 10;
+					m_bandwidth = m_bandwidth * (1.0 - w) + tmp * w;
+					//console.log("bandwidth : " + m_bandwidth.toFixed(3) + "Mbps");
+				}
+				m_last_packet_time = packet_time;
 			});
 		}
 	};
