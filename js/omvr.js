@@ -27,6 +27,8 @@ function OMVR() {
 	var m_videoTexture;
 	var m_video;
 	var m_videoStart = 0;
+	
+	var m_yuv_canvas = null;
 
 	function onWindowResize() {
 		m_canvas.width = window.innerWidth;
@@ -282,6 +284,18 @@ function OMVR() {
 		init : function(canvas) {
 
 			m_canvas = canvas;
+
+//			var js_file = "lib/Broadway/YUVCanvas.js";
+//			var options = {
+//				canvas : canvas,
+//			};
+//			var script = document.createElement('script');
+//			script.onload = function() {
+//				m_yuv_canvas = new YUVCanvas(options);
+//			};
+//			script.src = js_file;
+//
+//			document.head.appendChild(script);
 
 			m_camera = new THREE.PerspectiveCamera(75, window.innerWidth
 				/ window.innerHeight, 1, 1100);

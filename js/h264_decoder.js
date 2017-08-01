@@ -29,23 +29,24 @@ function H264Decoder() {
 		view.setUint32(46, 0, true); // colour palette, 0 == 2^n
 		view.setUint32(50, 0, true); // important colours
 
-		// // Grayscale tables for bit depths <= 8
-		// if (depth <= 8) {
-		// data += conv(0);
-		//
-		// for (var s = Math.floor(255 / (Math.pow(2, depth) - 1)), i = s; i <
-		// 256;
-		// i += s) {
-		// data += conv(i + i * 256 + i * 65536);
-		// }
-		// }
+		// Grayscale tables for bit depths <= 8
+		if (depth <= 8) {
+			var offset = 54;
+			view.setUint32(offset, 0, true);
+			offset += 4;
+
+			for (var s = Math.floor(255 / (Math.pow(2, depth) - 1)), i = s; i < 256; i += s) {
+				view.setUint32(offset, i + (i << 8) + (i << 16), true);
+				offset += 4;
+			}
+		}
 
 		return new Uint8Array(buffer);
 	}
 
 	var decoder_file = "lib/Broadway/Decoder.js";
 	var options = {
-		rgb : true,
+		rgb : false,
 		reuseMemory : true
 	};
 	var decoder = null;
@@ -59,9 +60,9 @@ function H264Decoder() {
 				return;
 			};
 
-			//console.log("frame");
+			// console.log("frame");
 			if (m_target_texture) {
-				var header = get_bmp_header(data.width, data.height, 32);
+				var header = get_bmp_header(data.width, data.height, 8);
 				var raw_data = new Uint8Array(data.buf);
 				var blob = new Blob([header, raw_data], {
 					type : "image/bmp"
@@ -117,7 +118,7 @@ function H264Decoder() {
 				self.init();
 			}
 			if (!m_active_frame) {
-				if (data[0] == 0xFF && data[1] == 0xD8) { // SOI
+				if (data[0] == 0x4E && data[1] == 0x41) { // SOI
 					m_active_frame = [];
 				}
 			}
@@ -125,7 +126,7 @@ function H264Decoder() {
 				if (data.length != 2) {
 					m_active_frame.push(data);
 				}
-				if (data[data_len - 2] == 0xFF && data[data_len - 1] == 0xD9) { // EOI
+				if (data[data_len - 2] == 0x4C && data[data_len - 1] == 0x55) { // EOI
 					var nal_len = 0;
 					var _nal_len = 0;
 					for (var i = 0; i < m_active_frame.length; i++) {
