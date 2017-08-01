@@ -25,9 +25,12 @@ function OMVR() {
 	var m_videoImage;
 	var m_videoImageContext;
 	var m_videoTexture;
+	var m_videoTexture_y;
+	var m_videoTexture_u;
+	var m_videoTexture_v;
 	var m_video;
 	var m_videoStart = 0;
-	
+
 	var m_yuv_canvas = null;
 
 	function onWindowResize() {
@@ -283,48 +286,68 @@ function OMVR() {
 
 		handle_frame : function(type, data, width, height) {
 			if (type == "yuv") {
-				var img = m_videoTexture.image;
-				var header = get_bmp_header(width, height, 8);
+				// var img = m_videoTexture.image;
+				// var header = get_bmp_header(width, height, 8);
+				// var raw_data = new Uint8Array(data);
+				// var blob = new Blob([header, raw_data], {
+				// type : "image/bmp"
+				// });
+				// var url = window.URL || window.webkitURL;
+				// if (img.src
+				// && img.src.indexOf("blob") == 0) {
+				// url.revokeObjectURL(img.src);
+				// }
+				// img.src = url.createObjectURL(blob);
+				// // console.log(m_target_texture.src + " : " + blob.size
+				// // + " : " + m_active_frame.length);
+				// blob = null;
 				var raw_data = new Uint8Array(data);
-				var blob = new Blob([header, raw_data], {
-					type : "image/bmp"
-				});
-				var url = window.URL || window.webkitURL;
-				if (img.src
-					&& img.src.indexOf("blob") == 0) {
-					url.revokeObjectURL(img.src);
-				}
-				img.src = url.createObjectURL(blob);
-				// console.log(m_target_texture.src + " : " + blob.size
-				// + " : " + m_active_frame.length);
-				blob = null;
+				var ylen = width * height;
+				var uvlen = (width / 2) * (height / 2);
+
+				var yData = raw_data.subarray(0, ylen);
+				var uData = raw_data.subarray(ylen, ylen + uvlen);
+				var vData = raw_data.subarray(ylen + uvlen, ylen + uvlen
+					+ uvlen);
+
+				var yDataPerRow = width;
+				var yRowCnt = height;
+
+				var uDataPerRow = width / 2;
+				var uRowCnt = height / 2;
+
+				var vDataPerRow = uDataPerRow;
+				var vRowCnt = uRowCnt;
+
+				var gl = m_renderer.context;
+				m_renderer.setTexture(m_videoTexture_y, 0);
+				gl
+					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, yDataPerRow, yRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, yData);
+
+				m_renderer.setTexture(m_videoTexture_u, 0);
+				gl
+					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, uDataPerRow, uRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uData);
+
+				m_renderer.setTexture(m_videoTexture_v, 0);
+				gl
+					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, vDataPerRow, vRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, vData);
+
+				self.setAspect(width, height);
+				self.animate();
 			} else if (type == "blob") {
 				var img = m_videoTexture.image;
 				var url = window.URL || window.webkitURL;
 				if (img.src && img.src.indexOf("blob") == 0) {
 					url.revokeObjectURL(img.src);
 				}
-				img.src = url.createObjectURL(blob);
+				img.src = url.createObjectURL(data);
 				// console.log(img.src + " : " + blob.size);
-
 			}
 		},
 
 		init : function(canvas) {
 
 			m_canvas = canvas;
-
-//			var js_file = "lib/Broadway/YUVCanvas.js";
-//			var options = {
-//				canvas : canvas,
-//			};
-//			var script = document.createElement('script');
-//			script.onload = function() {
-//				m_yuv_canvas = new YUVCanvas(options);
-//			};
-//			script.src = js_file;
-//
-//			document.head.appendChild(script);
 
 			m_camera = new THREE.PerspectiveCamera(75, window.innerWidth
 				/ window.innerHeight, 1, 1100);
@@ -358,18 +381,18 @@ function OMVR() {
 				onWindowResize();
 			}
 		},
-		
-		getTextureImg : function(){
+
+		getTextureImg : function() {
 			return m_videoImage;
 		},
 
-		setTextureImg : function(texture) {
-			var texture_aspect = texture.width / texture.height;
+		setAspect : function(width, height) {
+			var texture_aspect = width / height;
 			var window_aspect = (stereoEnabled
 				? window.innerWidth / 2
 				: window.innerWidth)
 				/ window.innerHeight;
-			var aspect = texture_aspect * window_aspect;			
+			var aspect = window_aspect / texture_aspect;
 			if (aspect > 1.0) {
 				m_mesh.material.uniforms.tex_scalex.value = aspect;
 				m_mesh.material.uniforms.tex_scaley.value = 1.0;
@@ -377,7 +400,11 @@ function OMVR() {
 				m_mesh.material.uniforms.tex_scalex.value = 1.0;
 				m_mesh.material.uniforms.tex_scaley.value = 1.0 / aspect;
 			}
-			
+		},
+
+		setTextureImg : function(texture) {
+			self.setAspect(texture.width, texture.height);
+
 			m_videoTexture.image = texture;
 			m_videoTexture.needsUpdate = true;
 		},
@@ -386,17 +413,75 @@ function OMVR() {
 			m_videoImage = new Image();
 			m_videoImage.width = 512;
 			m_videoImage.height = 512;
+			m_videoImage.onload = function() {
+				self.setTextureImg(m_videoImage);
+				self.animate();
+			}
+
 			m_videoTexture = new THREE.Texture(m_videoImage);
 			m_videoTexture.needsUpdate = true;
 			m_videoTexture.generateMipmaps = false;// this is for performance
 			m_videoTexture.minFilter = THREE.LinearFilter;// this is for
 			m_videoTexture.anisotropy = m_renderer.getMaxAnisotropy();
 
+			var imgage_y = new Image();
+			imgage_y.width = 512;
+			imgage_y.height = 512;
+			m_videoTexture_y = new THREE.Texture(imgage_y);
+			m_videoTexture_y.needsUpdate = true;
+			m_videoTexture_y.generateMipmaps = false;// this is for
+			// performance
+			m_videoTexture_y.minFilter = THREE.LinearFilter;// this is for
+			m_videoTexture_y.anisotropy = m_renderer.getMaxAnisotropy();
+
+			var imgage_u = new Image();
+			imgage_u.width = 512;
+			imgage_u.height = 512;
+			m_videoTexture_u = new THREE.Texture(imgage_u);
+			m_videoTexture_u.needsUpdate = true;
+			m_videoTexture_u.generateMipmaps = false;// this is for
+			// performance
+			m_videoTexture_u.minFilter = THREE.LinearFilter;// this is for
+			m_videoTexture_u.anisotropy = m_renderer.getMaxAnisotropy();
+
+			var imgage_v = new Image();
+			imgage_v.width = 512;
+			imgage_v.height = 512;
+			m_videoTexture_v = new THREE.Texture(imgage_v);
+			m_videoTexture_v.needsUpdate = true;
+			m_videoTexture_v.generateMipmaps = false;// this is for
+			// performance
+			m_videoTexture_v.minFilter = THREE.LinearFilter;// this is for
+			m_videoTexture_v.anisotropy = m_renderer.getMaxAnisotropy();
+
+			var YUV2RGB = new THREE.Matrix4();
+
+			if (0 == "rec709") {
+				// ITU-T Rec. 709
+				YUV2RGB.elements = [//
+				1.16438, 0.00000, 1.79274, -0.97295,//
+				1.16438, -0.21325, -0.53291, 0.30148,//
+				1.16438, 2.11240, 0.00000, -1.13340,//
+				0, 0, 0, 1,//
+				];
+			} else {
+				// assume ITU-T Rec. 601
+				YUV2RGB.elements = [//
+				1.16438, 0.00000, 1.59603, -0.87079,//
+				1.16438, -0.39176, -0.81297, 0.52959,//
+				1.16438, 2.01723, 0.00000, -1.08139,//
+				0, 0, 0, 1//
+				];
+			};
+
 			var geometry = new THREE.PlaneGeometry(2, 2);// position is
 			// x:[-1,1],
 			// y:[-1,1]
-			loadFile("shader/board.frag?cache=no", function(fragmentShader) {
-				loadFile("shader/board.vert?cache=no", function(vertexShader) {
+			// loadFile("shader/board.frag?cache=no", function(fragmentShader) {
+			// loadFile("shader/board.vert?cache=no", function(vertexShader) {
+			loadFile("shader/board_yuv.frag?cache=no", function(fragmentShader) {
+				loadFile("shader/board_yuv.vert?cache=no", function(
+					vertexShader) {
 					var material = new THREE.ShaderMaterial({
 						vertexShader : vertexShader,
 						fragmentShader : fragmentShader,
@@ -412,6 +497,22 @@ function OMVR() {
 							tex : {
 								type : 't',
 								value : m_videoTexture
+							},
+							tex_y : {
+								type : 't',
+								value : m_videoTexture_y
+							},
+							tex_u : {
+								type : 't',
+								value : m_videoTexture_u
+							},
+							tex_v : {
+								type : 't',
+								value : m_videoTexture_v
+							},
+							YUV2RGB : {
+								type : 'm4',
+								value : YUV2RGB
 							}
 						},
 						side : THREE.DoubleSide,

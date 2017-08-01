@@ -7,12 +7,7 @@ var create_plugin = (function() {
 		Yaw : 0,
 		Roll : 0,
 	};
-	var myAttitude = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
-	
+
 	function init() {
 		var down = false;
 		var swipeable = false;
@@ -54,26 +49,19 @@ var create_plugin = (function() {
 				.setFromEuler(new THREE.Euler(THREE.Math
 					.degToRad(viewOffset.Pitch), THREE.Math
 					.degToRad(viewOffset.Yaw), THREE.Math
-					.degToRad(viewOffset.Roll), "ZXY"));
+					.degToRad(viewOffset.Roll), "YXZ"));
 			var view_offset_diff_quat = new THREE.Quaternion()
 				.setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math
-					.degToRad(0), THREE.Math.degToRad(roll_diff), "ZXY"));
-			var view_quat = new THREE.Quaternion()
-				.setFromEuler(new THREE.Euler(THREE.Math
-					.degToRad(myAttitude.Pitch), THREE.Math
-					.degToRad(myAttitude.Yaw), THREE.Math
-					.degToRad(myAttitude.Roll), "ZXY"));
-			var view_inv_quat = view_quat.clone().conjugate();
-			view_offset_quat = view_inv_quat.multiply(view_offset_diff_quat)
-				.multiply(view_quat).multiply(view_offset_quat); // (RvoRv)Rvd(RvoRv)^-1RvoRvRv^-1
+					.degToRad(0), THREE.Math.degToRad(roll_diff), "YXZ"));
+			view_offset_quat = view_offset_quat.multiply(view_offset_diff_quat);
 			var euler = new THREE.Euler()
-				.setFromQuaternion(view_offset_quat, "ZXY");
+				.setFromQuaternion(view_offset_quat, "YXZ");
 			viewOffset = {
 				Pitch : THREE.Math.radToDeg(euler.x),
 				Yaw : THREE.Math.radToDeg(euler.y),
 				Roll : THREE.Math.radToDeg(euler.z),
 			};
-			console.log(viewOffset);
+			//console.log(viewOffset);
 
 			if (m_plugin_host && m_plugin_host.get_mpu()) {
 				m_plugin_host

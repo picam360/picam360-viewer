@@ -218,10 +218,6 @@ var app = (function() {
 					// webgl handling
 					omvr = OMVR();
 					omvr.init(canvas);
-					omvr.getTextureImg().onload = function() {
-						omvr.setTextureImg(omvr.getTextureImg());
-						omvr.animate();
-					}
 
 					// video decoder
 					h264_decoder = H264Decoder();
