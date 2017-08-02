@@ -39,6 +39,7 @@ var app = (function() {
 	var options = {};
 	var plugins = [];
 
+	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var cmd2upstream_list = [];
 
 	function loadFile(path, callback) {
@@ -66,7 +67,7 @@ var app = (function() {
 				}
 				for (var i = 0; i < plugins.length; i++) {
 					if (plugins[i].command_handler) {
-						plugins[i].command_handler(cmdå);
+						plugins[i].command_handler(cmd);
 					}
 				}
 				handle_command(cmd);
@@ -85,7 +86,8 @@ var app = (function() {
 				return fov;
 			},
 			set_fov : function(value) {
-				fov = value;
+				self
+					.send_command(SYSTEM_DOMAIN + "set_fov 0=" + value.toFixed(0));
 			},
 		};
 		return self;
