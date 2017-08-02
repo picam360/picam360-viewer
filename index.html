@@ -46,8 +46,8 @@
 
 <title>Picam360</title>
 </head>
-<body ontouchmove="event.preventDefault()">
-	<ons-sliding-menu menu-page="menu.html" main-page="main.html" side="left" var="menu" type="push" max-slide-distance="260px" swipeable="true">
+<body>
+	<ons-sliding-menu menu-page="menu.html" main-page="main.html" side="left" var="ons_menu" type="push" max-slide-distance="260px" swipeable="true">
 	</ons-sliding-menu>
 
 	<ons-template id="menu.html"> <ons-page modifier="menu-page"> <ons-toolbar>
@@ -169,6 +169,13 @@
 	<script>
 		ons.bootstrap();
 		ons.ready(function() {
+			
+			document.addEventListener("touchmove", function(event){
+				if(!ons_menu.isMenuOpened()){
+					event.preventDefault();
+				}
+			});
+			
 			app.main();
 		});
 	</script>
