@@ -82,6 +82,9 @@ function MPU() {
 				if (attitude['detail']) {
 					attitude = attitude['detail'];
 				}
+				// attitude.alpha=0 means heading north
+				// attitude.webkitCompassHeading
+				// console.log(attitude);
 				if (attitude.alpha != null) {
 					var pitch = 0;
 					var yaw = 0;
@@ -89,14 +92,12 @@ function MPU() {
 					switch (window.orientation) {
 						case 0 :
 							pitch = attitude.beta;
-							yaw = attitude.alpha;// unstable, attitude.alpha
-							// is also unstable
-							// yaw = -attitude.webkitCompassHeading;
+							yaw = attitude.alpha;
 							roll = -attitude.gamma;
 							break;
 						case 90 :
 							pitch = -attitude.gamma;
-							yaw = attitude.alpha + 180;
+							yaw = attitude.alpha + 180 + 90;
 							roll = -attitude.beta;
 							if (pitch < 0) {
 								pitch = 180 + pitch;
@@ -106,7 +107,7 @@ function MPU() {
 							break;
 						case -90 :
 							pitch = attitude.gamma;
-							yaw = attitude.alpha;
+							yaw = attitude.alpha + 90;
 							roll = attitude.beta;
 							if (pitch < 0) {
 								pitch = 180 + pitch;
