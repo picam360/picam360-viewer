@@ -15,6 +15,7 @@ var create_plugin = (function() {
 		}
 		var pid_enabled = false;
 		var menu_visible = false;
+		var stereo_enabled = false;
 		var plugin = {
 			event_handler : function(sender, event) {
 				if (sender == "ICADE") {
@@ -24,6 +25,11 @@ var create_plugin = (function() {
 							m_plugin_host.send_command(ROV_DOMAIN
 								+ "set_pid_enabled "
 								+ (pid_enabled ? "1" : "0"));
+							break;
+						case "B_BUTTON_UP" :
+							stereo_enabled = !stereo_enabled;
+							m_plugin_host.send_command("set_stereo "
+								+ (stereo_enabled ? "1" : "0"));
 							break;
 						case "G_BUTTON_UP" :
 							menu_visible = !menu_visible;
