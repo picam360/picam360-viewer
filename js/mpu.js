@@ -1,26 +1,19 @@
 function MPU() {
 	var m_callback = null;
-	var m_attitude = null;
+	var m_debugoutput_time = Date.now();
+	var m_quat = new THREE.Quaternion(0, 0, 0, 1);
+	var m_north_diff = 0;
+
 	var self = {
 		// return THREE.Quaternion
 		get_quaternion : function() {
-			if (!m_attitude) {
-				return new THREE.Quaternion(0, 0, 0, 1);
-			} else {
-				return new THREE.Quaternion()
-					.setFromEuler(new THREE.Euler(THREE.Math
-						.degToRad(m_attitude.Pitch), THREE.Math
-						.degToRad(m_attitude.Yaw), THREE.Math
-						.degToRad(m_attitude.Roll), "YXZ"));
-			}
+			return m_quat;
 		},
 		set_attitude : function(pitch, yaw, roll) {
-			m_attitude = {
-				Roll : roll,
-				Pitch : pitch,
-				Yaw : yaw,
-				Timestamp : 0
-			};
+			var quat = new THREE.Quaternion()
+				.setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch), THREE.Math
+					.degToRad(yaw), THREE.Math.degToRad(roll), "YXZ"));
+			m_quat = quat;
 		},
 		set_callback : function(callback) {
 			m_callback = callback;
@@ -39,12 +32,12 @@ function MPU() {
 		},
 
 		onSuccess_attitude : function(attitude) {
-			m_attitude = {
-				Roll : attitude.alpha,
-				Pitch : attitude.beta,
-				Yaw : attitude.gamma,
-				Timestamp : attitude.timestamp
-			};
+			var quat = new THREE.Quaternion()
+				.setFromEuler(new THREE.Euler(THREE.Math
+					.degToRad(attitude.beta), THREE.Math
+					.degToRad(attitude.alpha), THREE.Math
+					.degToRad(-attitude.gamma), "YXZ"));
+			m_quat = quat;
 		},
 
 		onError_attitude : function(error) {
@@ -78,54 +71,53 @@ function MPU() {
 		},
 
 		initDeviceOrientationEventLisener : function() {
-			window.addEventListener('deviceorientation', function(attitude) {
-				if (attitude['detail']) {
-					attitude = attitude['detail'];
-				}
-				// attitude.alpha=0 means heading north
-				// attitude.webkitCompassHeading
-				// console.log(attitude);
-				if (attitude.alpha != null) {
-					var pitch = 0;
-					var yaw = 0;
-					var roll = 0;
-					switch (window.orientation) {
-						case 0 :
-							pitch = attitude.beta;
-							yaw = attitude.alpha;
-							roll = -attitude.gamma;
-							break;
-						case 90 :
-							pitch = -attitude.gamma;
-							yaw = attitude.alpha + 180 + 90;
-							roll = -attitude.beta;
-							if (pitch < 0) {
-								pitch = 180 + pitch;
-								yaw = 180 + yaw;
-								roll = 180 + roll;
-							}
-							break;
-						case -90 :
-							pitch = attitude.gamma;
-							yaw = attitude.alpha + 90;
-							roll = attitude.beta;
-							if (pitch < 0) {
-								pitch = 180 + pitch;
-								yaw = 180 + yaw;
-								roll = 180 + roll;
-							}
-							break;
-						default :
-							return;
+			window
+				.addEventListener('deviceorientation', function(attitude) {
+					if (attitude['detail']) {
+						attitude = attitude['detail'];
 					}
-					m_attitude = {
-						Pitch : pitch % 360,
-						Yaw : yaw % 360,
-						Roll : roll % 360,
-						Timestamp : 0
-					};
-				}
-			});
+					var time = Date.now();
+					if (attitude.alpha != null) {
+						var quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(attitude.beta), THREE.Math
+								.degToRad(attitude.alpha), THREE.Math
+								.degToRad(-attitude.gamma), "YXZ"));
+						var offset_quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(0), THREE.Math
+								.degToRad(-window.orientation), THREE.Math
+								.degToRad(0), "YXZ"));
+						quat = quat.multiply(offset_quat);
+
+						var north = -attitude.webkitCompassHeading
+							- window.orientation;
+						var euler = new THREE.Euler()
+							.setFromQuaternion(quat, "YXZ");
+						if (Math.abs(euler.x * 180 / Math.PI) < 45
+							&& Math.abs(euler.z * 180 / Math.PI)) {
+							m_north_diff = euler.y * 180 / Math.PI - north;
+						}
+						var north_diff_quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(0), THREE.Math
+								.degToRad(-m_north_diff), THREE.Math
+								.degToRad(0), "YXZ"));
+						quat = north_diff_quat.multiply(quat);
+
+						m_quat = quat;
+						if (time - m_debugoutput_time > 500) {
+							var euler = new THREE.Euler()
+								.setFromQuaternion(quat, "YXZ");
+							m_debugoutput_time = time;
+							// console.log(attitude);
+							console
+								.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", north, m_north_diff, euler.x
+									* 180 / Math.PI, euler.y * 180 / Math.PI, euler.z
+									* 180 / Math.PI));
+						}
+					}
+				});
 		}
 	};
 	return self;

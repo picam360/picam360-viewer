@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="viewport"
-	content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+	content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
 
 <!-- JS dependencies (order matters!) -->
 <script src="lib/angular/angular.js"></script>
@@ -47,7 +47,7 @@
 <title>Picam360</title>
 </head>
 <body>
-	<ons-sliding-menu menu-page="menu.html" main-page="main.html" side="left" var="ons_menu" type="push" max-slide-distance="260px" swipeable="true">
+	<ons-sliding-menu menu-page="menu.html" main-page="main.html" side="left" var="menu" type="push" max-slide-distance="260px" swipeable="true">
 	</ons-sliding-menu>
 
 	<ons-template id="menu.html"> <ons-page modifier="menu-page"> <ons-toolbar>
@@ -155,6 +155,7 @@
 	<div class="center">About</div>
 	</ons-toolbar> <ons-row style="margin-top: 100px; text-align: center;"> <ons-col> Picam360-Viewer </ons-col> </ons-row> </ons-page> </ons-template>
 
+	<script type="text/javascript" src="js/printf.js?cache=no"></script>
 	<script type="text/javascript" src="js/bmp_header.js?cache=no"></script>
 	<script type="text/javascript" src="js/mpu.js?cache=no"></script>
 	<script type="text/javascript" src="js/rtp.js?cache=no"></script>
@@ -171,7 +172,7 @@
 		ons.ready(function() {
 			
 			document.addEventListener("touchmove", function(event){
-				if(!ons_menu.isMenuOpened()){
+				if(!menu.isMenuOpened()){
 					event.preventDefault();
 				}
 			});
