@@ -54,97 +54,15 @@
 	<div class="right">
 		<ons-toolbar-button ng-click="menu.closeMenu()"> <ons-icon icon="fa-times" size="28px" fixed-width="false"></ons-icon> </ons-toolbar-button>
 	</div>
-	</ons-toolbar> <ons-list> <ons-list-item class="menu-item">
-	<div class="button-bar" style="width: 240px;">
-		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="">
-			<button class="button-bar__button">Hobby</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="" checked>
-			<button class="button-bar__button">Dive</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="radio" name="segment-a" onclick="">
-			<button class="button-bar__button">Drive</button>
-		</div>
-	</div>
-	</ons-list-item> <ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>InfoBox</ons-col> <ons-col align="right"> <ons-switch
-		var="swInfoBox" onchange=""></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item" id="infoTypeBox">
-	<div class="button-bar" style="width: 240px;">
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkAttitudeInfo"
-				onclick="">
-			<button class="button-bar__button">Attitude</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkActuatorInfo"
-				onclick="">
-			<button class="button-bar__button">Actuator</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkDebugInfo" onclick="">
-			<button class="button-bar__button">Debug</button>
-		</div>
-	</div>
-	</ons-list-item> 
-	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Calibration</ons-col> <ons-col
-		align="right"> <ons-switch var="swCalibration" onchange=""></ons-switch> </ons-col> </ons-row></ons-list-item>
+	</ons-toolbar> <ons-list>
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
 		align="right"> <ons-switch var="swStereoView" onchange="app.plugin_host.send_command('set_stereo ' + swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
-	<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <ons-button onclick="">SNAP</ons-button>Record</ons-col> <ons-col align="right"><ons-switch var="swRecord" onchange=""></ons-switch>
-		<div id="movie_download_box"><a href="img/picam360.mp4" download="picam360.mp4" target="_blank" id="movie_download_link"><img width="40" src="img/movie_icon.png"/></a></div> 
-		</ons-col> </ons-row></ons-list-item>
-	<ons-list-item class="menu-item" id="serviceCallBox">
-	<div class="button-bar" style="width: 240px;">
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkLevel">
-			<button class="button-bar__button">Level</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkArm">
-			<button class="button-bar__button">Arm</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkConnect">
-			<button class="button-bar__button">Connect</button>
-		</div>
-		<div class="button-bar__item">
-			<input type="checkbox" name="radioInfoType" id="chkProxy">
-			<button class="button-bar__button">Proxy</button>
-		</div>
-	</div>
-		<ons-list-item class="menu-item"> <ons-row align="center"><ons-col
-		align="center"> <input type="file" id="fileselect" onchange=""> </ons-col> </ons-row></ons-list-item>
-	</ons-list-item> <ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
+		<ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
 		fixed-width="true"></ons-icon> About </ons-list-item></ons-list></ons-page> </ons-template>
 
 	<ons-template id="main.html"> <ons-navigator animation="slide" var="app.navi"> <ons-page>
 	<div class="main_view" id="container">
 		<canvas id="vrCanvas"></canvas>
-		<div id="overlay">
-			<div id="fpsMsgBox">
-				FPS:
-				<span id="fpsMsg"></span>
-			</div>
-			<div id="controlMsgBox">
-				Control:
-				<span id="controlMsg"></span>
-			</div>
-			<div id="actuatorMsgBox">
-				Actuator:
-				<span id="actuatorMsg"></span>
-			</div>
-			<div id="attitudeMsgBox">
-				Attitude:
-				<span id="attitudeMsg"></span>
-			</div>
-			<div id="debugMsgBox">
-				DebugMsg:
-				<span id="debugMsg"></span>
-			</div>
-		</div>
 	</div>
 	</ons-page> </ons-navigator> </ons-template>
 
