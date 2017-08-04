@@ -95,7 +95,7 @@ function MPU() {
 						var euler = new THREE.Euler()
 							.setFromQuaternion(quat, "YXZ");
 						if (Math.abs(euler.x * 180 / Math.PI) < 45
-							&& Math.abs(euler.z * 180 / Math.PI)) {
+							&& Math.abs(euler.z * 180 / Math.PI) < 45) {
 							m_north_diff = euler.y * 180 / Math.PI - north;
 						}
 						var north_diff_quat = new THREE.Quaternion()
