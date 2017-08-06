@@ -54,8 +54,12 @@ var create_plugin = (function() {
 								m_plugin_host.send_command(SYSTEM_DOMAIN
 									+ "back2previouse_menu");
 							} else {
-								m_plugin_host.send_command(ROV_DOMAIN
-									+ "increment_thrust 1");
+								var quat = m_plugin_host.get_view_quaternion();
+								var cmd = ROV_DOMAIN + "increment_thrust 1";
+								if (quat) {
+									cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+								}
+								m_plugin_host.send_command(cmd);
 							}
 							break;
 						case "DOWN_BUTTON_UP" :
@@ -63,8 +67,12 @@ var create_plugin = (function() {
 								m_plugin_host.send_command(SYSTEM_DOMAIN
 									+ "go2next_menu");
 							} else {
-								m_plugin_host.send_command(ROV_DOMAIN
-									+ "increment_thrust -1");
+								var quat = m_plugin_host.get_view_quaternion();
+								var cmd = ROV_DOMAIN + "increment_thrust -1";
+								if (quat) {
+									cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+								}
+								m_plugin_host.send_command(cmd);
 							}
 							break;
 					}

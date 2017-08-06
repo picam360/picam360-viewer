@@ -79,6 +79,13 @@ var app = (function() {
 					}
 				}
 			},
+			get_view_quaternion : function() {
+				if (mpu) {
+					return mpu.get_quaternion();
+				} else {
+					return null;
+				}
+			},
 			get_mpu : function() {
 				return mpu;
 			},
@@ -86,8 +93,8 @@ var app = (function() {
 				return fov;
 			},
 			set_fov : function(value) {
-				self
-					.send_command(SYSTEM_DOMAIN + "set_fov 0=" + value.toFixed(0));
+				self.send_command(SYSTEM_DOMAIN + "set_fov 0="
+					+ value.toFixed(0));
 			},
 		};
 		return self;
@@ -283,16 +290,6 @@ var app = (function() {
 								app.rtcp_command_id++;
 							}, 10);// 100hz
 						});
-
-					{
-						document.getElementById("overlay").style.display = "none";
-						document.getElementById("infoTypeBox").style.display = "none";
-						document.getElementById("debugMsgBox").style.display = "none";
-						document.getElementById("actuatorMsgBox").style.display = "none";
-						document.getElementById("attitudeMsgBox").style.display = "none";
-
-						document.getElementById("movie_download_box").style.display = "none";
-					}
 
 					// animate
 					self.start_animate();
