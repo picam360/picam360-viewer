@@ -17,6 +17,9 @@
  * under the License.
  */
 var UPSTREAM_DOMAIN = "upstream.";
+var SERVER_DOMAIN = UPSTREAM_DOMAIN;
+var CAPTURE_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
+var DRIVER_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 
 var app = (function() {
 	var tilt = 0;
@@ -38,6 +41,7 @@ var app = (function() {
 
 	var options = {};
 	var plugins = [];
+	var view_offset = new THREE.Quaternion();
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var cmd2upstream_list = [];
@@ -86,9 +90,6 @@ var app = (function() {
 					return null;
 				}
 			},
-			get_mpu : function() {
-				return mpu;
-			},
 			get_fov : function() {
 				return fov;
 			},
@@ -96,6 +97,9 @@ var app = (function() {
 				self.send_command(SYSTEM_DOMAIN + "set_fov 0="
 					+ value.toFixed(0));
 			},
+			set_view_offset : function(value) {
+				view_offset = value;
+			},			
 		};
 		return self;
 	};
@@ -270,6 +274,7 @@ var app = (function() {
 									if (cmd_request) {
 										var UPSTREAM_DOMAIN = "upstream.";
 										var quat = mpu.get_quaternion();
+										quat = view_offset.clone().multiply(quat);
 										var cmd = UPSTREAM_DOMAIN
 											+ "set_view_quaternion 0=" + quat.x
 											+ "," + quat.y + "," + quat.z + ","

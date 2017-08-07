@@ -2,11 +2,7 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 
-	var viewOffset = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
+	var m_view_offset_quat = new THREE.Quaternion();
 
 	function init() {
 		var down = false;
@@ -45,29 +41,16 @@ var create_plugin = (function() {
 			var roll_diff = dx * fov / 300;
 			var pitch_diff = -dy * fov / 300;
 
-			var view_offset_quat = new THREE.Quaternion()
-				.setFromEuler(new THREE.Euler(THREE.Math
-					.degToRad(viewOffset.Pitch), THREE.Math
-					.degToRad(viewOffset.Yaw), THREE.Math
-					.degToRad(viewOffset.Roll), "YXZ"));
+			var quat = m_plugin_host.get_view_quaternion();
+			var view_quat = m_view_offset_quat.clone().multiply(quat);
 			var view_offset_diff_quat = new THREE.Quaternion()
 				.setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math
 					.degToRad(0), THREE.Math.degToRad(roll_diff), "YXZ"));
-			view_offset_quat = view_offset_quat.multiply(view_offset_diff_quat);
-			var euler = new THREE.Euler()
-				.setFromQuaternion(view_offset_quat, "YXZ");
-			viewOffset = {
-				Pitch : THREE.Math.radToDeg(euler.x),
-				Yaw : THREE.Math.radToDeg(euler.y),
-				Roll : THREE.Math.radToDeg(euler.z),
-			};
-			//console.log(viewOffset);
+			m_view_offset_quat = view_quat.multiply(view_offset_diff_quat)
+				.multiply(quat.conjugate());
+			// console.log(viewOffset);
 
-			if (m_plugin_host && m_plugin_host.get_mpu()) {
-				m_plugin_host
-					.get_mpu()
-					.set_attitude(viewOffset.Pitch, viewOffset.Yaw, viewOffset.Roll);
-			}
+			m_plugin_host.set_view_offset(m_view_offset_quat);
 
 			autoscroll = false;
 		}

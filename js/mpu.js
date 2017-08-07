@@ -7,7 +7,7 @@ function MPU() {
 	var self = {
 		// return THREE.Quaternion
 		get_quaternion : function() {
-			return m_quat;
+			return m_quat.clone();
 		},
 		set_attitude : function(pitch, yaw, roll) {
 			var quat = new THREE.Quaternion()

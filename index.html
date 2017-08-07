@@ -55,6 +55,26 @@
 		<ons-toolbar-button ng-click="menu.closeMenu()"> <ons-icon icon="fa-times" size="28px" fixed-width="false"></ons-icon> </ons-toolbar-button>
 	</div>
 	</ons-toolbar> <ons-list>
+	<ons-list-item class="menu-item">
+	<div class="button-bar" style="width: 240px;">
+		<div class="button-bar__item">
+			<input type="checkbox" name="radioInfoType" id="menu_button_visible" onclick="app.plugin_host.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' + (this.checked?'1':'0'));">
+			<button class="button-bar__button">Menu</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="button" name="radioInfoType" id="menu_button_go2next" onclick="app.plugin_host.send_command(CAPTURE_DOMAIN + 'go2next_menu');">
+			<button class="button-bar__button">Next</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="button" name="radioInfoType" id="menu_button_select" onclick="app.plugin_host.send_command(CAPTURE_DOMAIN + 'select_active_menu');">
+			<button class="button-bar__button">Select</button>
+		</div>
+		<div class="button-bar__item">
+			<input type="button" name="radioInfoType" id="menu_button_deselect" onclick="app.plugin_host.send_command(CAPTURE_DOMAIN + 'deselect_active_menu');">
+			<button class="button-bar__button">Deselect</button>
+		</div>
+	</div>
+	</ons-list-item>
 	<ons-list-item class="menu-item"> <ons-row align="center"> <ons-col>Stereo</ons-col> <ons-col
 		align="right"> <ons-switch var="swStereoView" onchange="app.plugin_host.send_command('set_stereo ' + swStereoView.isChecked());"></ons-switch> </ons-col> </ons-row></ons-list-item>
 		<ons-list-item class="menu-item" ng-click="app.navi.pushPage('about.html');menu.closeMenu();"> <ons-icon icon="fa-info-circle"
