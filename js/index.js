@@ -20,6 +20,9 @@ var UPSTREAM_DOMAIN = "upstream.";
 var SERVER_DOMAIN = UPSTREAM_DOMAIN;
 var CAPTURE_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 var DRIVER_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
+var PT_STATUS = 100;
+var PT_CMD = 101;
+var PT_CAM_BASE = 110;
 
 var app = (function() {
 	var tilt = 0;
@@ -39,8 +42,12 @@ var app = (function() {
 	// motion processer unit
 	var mpu;
 
+	var server_url = window.location.href.split('?')[0];
 	var options = {};
 	var plugins = [];
+	var watches = [];
+	var statuses = [];
+	var is_recording = false;
 	var view_offset = new THREE.Quaternion();
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
@@ -56,13 +63,52 @@ var app = (function() {
 		}
 	}
 
+	function set_is_recording(value) {
+		if (is_recording != value) {
+			is_recording = value;
+			if (is_recording) {
+				document.getElementById('imgRec').src = "img/stop_record_icon.png";
+			} else {
+				document.getElementById('imgRec').src = "img/start_record_icon.png";
+			}
+		}
+	}
+
+	function GetQueryString() {
+		var result = {};
+		if (1 < window.location.search.length) {
+			var query = window.location.search.substring(1);
+			var parameters = query.split('&');
+
+			for (var i = 0; i < parameters.length; i++) {
+				var element = parameters[i].split('=');
+
+				var paramName = decodeURIComponent(element[0]);
+				var paramValue = decodeURIComponent(element[1]);
+
+				result[paramName] = paramValue;
+			}
+		}
+		return result;
+	}
+
 	var plugin_host = function(app) {
+
+		function downloadAsFile(fileName, url) {
+			var a = document.createElement('a');
+			a.download = fileName;
+			a.href = url;
+			// a.target = "_blank";
+			a.click();
+		};
+
 		function handle_command(cmd) {
 			var split = cmd.split(' ');
 			if (split[0] == "set_stereo") {
 				omvr.setStereoEnabled(split[1] == "true" || split[1] == "1");
 			}
 		}
+
 		var self = {
 			send_command : function(cmd) {
 				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
@@ -83,6 +129,9 @@ var app = (function() {
 					}
 				}
 			},
+			add_watch : function(name, callback) {
+				watches[name] = callback;
+			},
 			get_view_quaternion : function() {
 				if (mpu) {
 					return mpu.get_quaternion();
@@ -99,7 +148,30 @@ var app = (function() {
 			},
 			set_view_offset : function(value) {
 				view_offset = value;
-			},			
+			},
+			get_view_offset : function() {
+				return view_offset.clone();
+			},
+			snap : function() {
+				socket.emit('snap', function(filename) {
+					console.log("save image!: " + filename);
+					downloadAsFile('picam360.jpeg', server_url + "img/"
+						+ filename);
+				});
+			},
+			rec : function() {
+				if (is_recording) {
+					socket.emit('stop_record', function(filename) {
+						console.log("save video!: " + filename);
+						downloadAsFile('picam360.mp4', server_url + "img/"
+							+ filename);
+					});
+				} else {
+					socket.emit('start_record', function() {
+						console.log("start_record");
+					});
+				}
+			},
 		};
 		return self;
 	};
@@ -199,25 +271,8 @@ var app = (function() {
 
 		main : function() {
 			app.receivedEvent('main');
-			function GetQueryString() {
-				var result = {};
-				if (1 < window.location.search.length) {
-					var query = window.location.search.substring(1);
-					var parameters = query.split('&');
 
-					for (var i = 0; i < parameters.length; i++) {
-						var element = parameters[i].split('=');
-
-						var paramName = decodeURIComponent(element[0]);
-						var paramValue = decodeURIComponent(element[1]);
-
-						result[paramName] = paramValue;
-					}
-				}
-				return result;
-			}
 			var query = GetQueryString();
-			var server_url = window.location.href.split('?')[0];
 			if (query['server_url']) {
 				server_url = query['server_url'];
 			}
@@ -227,6 +282,11 @@ var app = (function() {
 					self.init_plugins();
 
 					canvas = document.getElementById('vrCanvas');
+
+					self.plugin_host
+						.add_watch("upstream.is_recording", function(value) {
+							set_is_recording(value.toLowerCase() == 'true');
+						});
 
 					// webgl handling
 					omvr = OMVR();
@@ -262,27 +322,39 @@ var app = (function() {
 								});
 
 							// set rtp callback
-							rtp.set_callback(socket, function(packet,
-								cmd_request) {
-								if (packet.GetPayloadType() == 110) {// image
-									mjpeg_decoder
-										.decode(packet.GetPayload(), packet
+							rtp
+								.set_callback(socket, function(packet,
+									cmd_request) {
+									if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+										mjpeg_decoder.decode(packet
+											.GetPayload(), packet
 											.GetPayloadLength());
-									h264_decoder
-										.decode(packet.GetPayload(), packet
-											.GetPayloadLength());
-									if (cmd_request) {
-										var UPSTREAM_DOMAIN = "upstream.";
-										var quat = mpu.get_quaternion();
-										quat = view_offset.clone().multiply(quat);
-										var cmd = UPSTREAM_DOMAIN
-											+ "set_view_quaternion 0=" + quat.x
-											+ "," + quat.y + "," + quat.z + ","
-											+ quat.w;
-										return cmd;
+										h264_decoder
+											.decode(packet.GetPayload(), packet
+												.GetPayloadLength());
+										if (cmd_request) {
+											var quat = mpu.get_quaternion();
+											quat = self.plugin_host
+												.get_view_offset()
+												.multiply(quat);
+											var cmd = UPSTREAM_DOMAIN
+												+ "set_view_quaternion 0="
+												+ quat.x + "," + quat.y + ","
+												+ quat.z + "," + quat.w;
+											return cmd;
+										}
+									} else if (packet.GetPayloadType() == PT_STATUS) {// status
+										var str = String.fromCharCode
+											.apply("", new Uint8Array(packet
+												.GetPayload()));
+										var split = str.split('"');
+										var name = UPSTREAM_DOMAIN + split[1];
+										var value = split[3];
+										if (watches[name]) {
+											watches[name](value);
+										}
 									}
-								}
-							});
+								});
 							setInterval(function() {
 								if (!cmd2upstream_list.length) {
 									return;
