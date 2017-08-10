@@ -66,6 +66,8 @@ var app = (function() {
 		req.onload = function() {
 			if (req.status == 200) {
 				callback(req.responseText);
+			} else {
+				callback(null);
 			}
 		}
 	}
@@ -287,7 +289,9 @@ var app = (function() {
 
 		init_options : function(callback) {
 			loadFile("config.json", function(txt) {
-				options = JSON.parse(txt);
+				if (txt) {
+					options = JSON.parse(txt);
+				}
 				if (options.plugin_paths && options.plugin_paths.length != 0) {
 					function load_plugin(idx) {
 						var script = document.createElement('script');
