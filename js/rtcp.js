@@ -38,6 +38,8 @@ function Rtcp() {
 	var m_sequencenumber = 0;
 	var m_timestamp = 0;
 	var m_src = 0;
+	var m_ws = null;
+	var m_conn = null;
 	// copy ArrayBuffer
 	function copy(dst, dst_offset, src, src_offset, len) {
 		new Uint8Array(dst, dst_offset)
@@ -49,8 +51,22 @@ function Rtcp() {
 		}))).buffer;
 	}
 	var self = {
+		set_websocket : function(ws) {
+			m_ws = ws;
+		},
+		set_peerconnection : function(conn) {
+			m_conn = conn;
+		},
 		// @data : ArrayBuffer
-		sendpacket : function(ws, data, pt) {
+		sendpacket : function(pack) {
+			if (m_conn) {
+				m_conn.send(pack);
+			} else if (m_ws) {
+				m_ws.emit('rtcp', pack);
+			}
+		},
+		// @data : ArrayBuffer
+		buildpacket : function(data, pt) {
 			if (typeof data == 'string') {
 				data = string_to_buffer(data);
 			}
@@ -62,10 +78,11 @@ function Rtcp() {
 			view.setUint16(2, m_sequencenumber, false);
 			view.setUint32(4, m_timestamp, false);
 			view.setUint32(8, m_src, false);
-			ws.emit('rtcp', pack);
 
 			m_sequencenumber++;
-		}
+
+			return pack;
+		},
 	};
 	return self;
 }

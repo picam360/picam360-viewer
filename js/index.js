@@ -23,6 +23,7 @@ var DRIVER_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 var PT_STATUS = 100;
 var PT_CMD = 101;
 var PT_CAM_BASE = 110;
+var P2P_API_KEY = "v8df88o1y4zbmx6r";
 
 var app = (function() {
 	var tilt = 0;
@@ -49,6 +50,9 @@ var app = (function() {
 	var statuses = [];
 	var is_recording = false;
 	var view_offset = new THREE.Quaternion();
+	var is_p2p_upstream = false;
+	var p2p_uuid = "";
+	var peer_conn = null;
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var cmd2upstream_list = [];
@@ -92,7 +96,41 @@ var app = (function() {
 		return result;
 	}
 
-	var plugin_host = function(app) {
+	function execCopy(string) {
+		var temp = document.createElement('textarea');
+
+		temp.value = string;
+		temp.selectionStart = 0;
+		temp.selectionEnd = temp.value.length;
+
+		var s = temp.style;
+		s.position = 'fixed';
+		s.left = '-100%';
+
+		document.body.appendChild(temp);
+		temp.focus();
+		var result = document.execCommand('copy');
+		temp.blur();
+		document.body.removeChild(temp);
+		return result;
+	}
+
+	function uuid() {
+		var uuid = "", i, random;
+		for (i = 0; i < 32; i++) {
+			random = Math.random() * 16 | 0;
+
+			if (i == 8 || i == 12 || i == 16 || i == 20) {
+				uuid += "-"
+			}
+			uuid += (i == 12 ? 4 : (i == 16 ? (random & 3 | 8) : random))
+				.toString(16);
+		}
+		return uuid;
+	}
+
+	// interface for plugin
+	function PluginHost(core) {
 
 		function downloadAsFile(fileName, url) {
 			var a = document.createElement('a');
@@ -105,7 +143,7 @@ var app = (function() {
 		function handle_command(cmd) {
 			var split = cmd.split(' ');
 			if (split[0] == "set_stereo") {
-				omvr.setStereoEnabled(split[1] == "true" || split[1] == "1");
+				plugin_host.set_stereo(split[1] == "true" || split[1] == "1");
 			}
 		}
 
@@ -146,6 +184,9 @@ var app = (function() {
 				self.send_command(SYSTEM_DOMAIN + "set_fov 0="
 					+ value.toFixed(0));
 			},
+			set_stereo : function(value) {
+				omvr.setStereoEnabled(value);
+			},
 			set_view_offset : function(value) {
 				view_offset = value;
 			},
@@ -172,11 +213,25 @@ var app = (function() {
 					});
 				}
 			},
+			p2p : function(bln) {
+				if (bln) {
+					core.start_p2p();
+				} else {
+					core.stop_p2p();
+				}
+			},
+			call : function(bln) {
+				if (bln) {
+					core.start_call();
+				} else {
+					core.stop_call();
+				}
+			},
 		};
 		return self;
 	};
 	var self = {
-		plugin_host : plugin_host(self),
+		plugin_host : null,
 		isDeviceReady : false,
 		// Application Constructor
 		initialize : function() {
@@ -272,10 +327,14 @@ var app = (function() {
 		main : function() {
 			app.receivedEvent('main');
 
+			document.getElementById("uiCall").style.display = "none";
+
 			var query = GetQueryString();
 			if (query['server_url']) {
 				server_url = query['server_url'];
 			}
+
+			self.plugin_host = PluginHost(self);
 
 			self
 				.init_options(function() {
@@ -306,11 +365,67 @@ var app = (function() {
 					// data stream handling
 					rtp = Rtp();
 					rtcp = Rtcp();
+					// set rtp callback
+					rtp
+						.set_callback(function(packet, cmd_request) {
+							if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+								mjpeg_decoder
+									.decode(packet.GetPayload(), packet
+										.GetPayloadLength());
+								h264_decoder.decode(packet.GetPayload(), packet
+									.GetPayloadLength());
+								if (cmd_request) {
+									var quat = mpu.get_quaternion();
+									quat = self.plugin_host.get_view_offset()
+										.multiply(quat);
+									var cmd = UPSTREAM_DOMAIN
+										+ "set_view_quaternion 0=" + quat.x
+										+ "," + quat.y + "," + quat.z + ","
+										+ quat.w;
+									return cmd;
+								}
+							} else if (packet.GetPayloadType() == PT_STATUS) {// status
+								var str = String.fromCharCode
+									.apply("", new Uint8Array(packet
+										.GetPayload()));
+								var split = str.split('"');
+								var name = UPSTREAM_DOMAIN + split[1];
+								var value = split[3];
+								if (watches[name]) {
+									watches[name](value);
+								}
+							}
+						});
+					// command to upstream
+					setInterval(function() {
+						if (!cmd2upstream_list.length) {
+							return;
+						}
+						var value = cmd2upstream_list.shift();
+						var cmd = "<picam360:command id=\""
+							+ app.rtcp_command_id + "\" value=\"" + value
+							+ "\" />"
+						rtcp.sendpacket(rtcp.buildpacket(cmd, 101));
+						app.rtcp_command_id++;
+					}, 10);// 100hz
+
+					// websocket
 					jQuery
 						.getScript(server_url + 'socket.io/socket.io.js', function() {
 							// connect websocket
 							socket = io.connect(server_url);
 
+							socket.on("connect", function() {
+								console.log("connected : " + socket.id);
+
+								rtp.set_websocket(socket);
+								rtcp.set_websocket(socket);
+
+								is_p2p_upstream = true;
+							});
+							socket.on("disconnect", function() {
+								console.log("disconnected");
+							});
 							socket
 								.on("custom_error", function(event) {
 									console.log("error : " + event);
@@ -320,57 +435,93 @@ var app = (function() {
 											break;
 									}
 								});
-
-							// set rtp callback
-							rtp
-								.set_callback(socket, function(packet,
-									cmd_request) {
-									if (packet.GetPayloadType() == PT_CAM_BASE) {// image
-										mjpeg_decoder.decode(packet
-											.GetPayload(), packet
-											.GetPayloadLength());
-										h264_decoder
-											.decode(packet.GetPayload(), packet
-												.GetPayloadLength());
-										if (cmd_request) {
-											var quat = mpu.get_quaternion();
-											quat = self.plugin_host
-												.get_view_offset()
-												.multiply(quat);
-											var cmd = UPSTREAM_DOMAIN
-												+ "set_view_quaternion 0="
-												+ quat.x + "," + quat.y + ","
-												+ quat.z + "," + quat.w;
-											return cmd;
-										}
-									} else if (packet.GetPayloadType() == PT_STATUS) {// status
-										var str = String.fromCharCode
-											.apply("", new Uint8Array(packet
-												.GetPayload()));
-										var split = str.split('"');
-										var name = UPSTREAM_DOMAIN + split[1];
-										var value = split[3];
-										if (watches[name]) {
-											watches[name](value);
-										}
-									}
-								});
-							setInterval(function() {
-								if (!cmd2upstream_list.length) {
-									return;
-								}
-								var value = cmd2upstream_list.shift();
-								var cmd = "<picam360:command id=\""
-									+ app.rtcp_command_id + "\" value=\""
-									+ value + "\" />"
-								rtcp.sendpacket(socket, cmd, 101);
-								app.rtcp_command_id++;
-							}, 10);// 100hz
 						});
 
 					// animate
 					self.start_animate();
 				});
+		},
+		start_p2p : function() {
+			if (is_p2p_upstream) {
+				p2p_uuid = uuid();
+				execCopy(p2p_uuid);
+				alert("copy uuid to clip board : " + p2p_uuid);
+				var peer = new Peer(p2p_uuid, {
+					key : P2P_API_KEY
+				});
+				peer.on('connection', function(conn) {
+					peer_conn = conn;
+					console.log("p2p connection established as upstream.");
+					peer_conn.on('data', function(data) {
+						// rtcp.sendpacket(data);
+					});
+					rtp
+						.set_passthrough_callback(function(packets,
+							rtp_callback) {
+							peer_conn.send(packets);
+						});
+					navigator.getUserMedia = navigator.getUserMedia
+						|| navigator.webkitGetUserMedia
+						|| navigator.mozGetUserMedia;
+					peer.on('call', function(call) {
+						navigator.getUserMedia({
+							video : false,
+							audio : true
+						}, function(stream) {
+							call.answer(stream);
+							call.on('stream', function(remoteStream) {
+								var audio = $('<audio autoplay />')
+									.appendTo('body');
+								audio[0].src = (URL || webkitURL || mozURL)
+									.createObjectURL(stream);
+							});
+						}, function(err) {
+							console.log('Failed to get local stream', err);
+						});
+					});
+				});
+			} else {
+				var peer = new Peer({
+					key : P2P_API_KEY
+				});
+				var upstream_uuid = window.prompt("Please input UUID.", "");
+				peer_conn = peer.connect(upstream_uuid);
+				peer_conn.on('open', function() {
+					console.log("p2p connection established as downstream.");
+					rtp.set_peerconnection(peer_conn, function(cmd) {
+						cmd2upstream_list.push(cmd);
+					});
+					rtcp.set_peerconnection(peer_conn);
+					document.getElementById("uiCall").style.display = "block";
+				});
+			}
+		},
+		stop_p2p : function() {
+			peer = null;
+			if (is_p2p_upstream) {
+				rtp.set_passthrough_callback(null);
+			} else {
+				rtp.set_peerconnection(null);
+				rtcp.set_peerconnection(null);
+			}
+			document.getElementById("uiCall").style.display = "none";
+		},
+		start_call : function() {
+			navigator.getUserMedia({
+				video : false,
+				audio : true
+			}, function(stream) {
+				var call = peer.call(upstream_uuid, stream);
+				call.on('stream', function(remoteStream) {
+					var audio = $('<audio autoplay />').appendTo('body');
+					audio[0].src = (URL || webkitURL || mozURL)
+						.createObjectURL(stream);
+				});
+			}, function(err) {
+				console.log('Failed to get local stream', err);
+			});
+		},
+		stop_call : function() {
 		},
 		start_animate : function() {
 			// //this technic is for split requestAnimationFrame chain to get
@@ -400,7 +551,7 @@ var app = (function() {
 			// omvr.animate();
 			// requestAnimationFrame(animate);
 			// }
-		}
+		},
 	};
 	return self;
 })();

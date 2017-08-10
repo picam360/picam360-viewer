@@ -52,6 +52,10 @@
 	type="text/javascript"
 	src="lib/moment/moment.js"
 ></script>
+<script
+	type="text/javascript"
+	src="lib/peer/peer.js"
+></script>
 
 <!-- CSS dependencies -->
 <link
@@ -147,11 +151,6 @@
 	</div>
 	</ons-list-item> <ons-list-item class="menu-item"> <ons-row
 		align="center"
-	> <ons-col>Stereo</ons-col> <ons-col align="right"> <ons-switch
-		var="swStereoView"
-		onchange="app.plugin_host.send_command('set_stereo ' + swStereoView.isChecked());"
-	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item"> <ons-row
-		align="center"
 	> <ons-col align="center"> <ons-button
 		valign="middle"
 		onclick="app.plugin_host.snap();"
@@ -161,10 +160,29 @@
 	/>SNAP</ons-button> <ons-button
 		valign="middle"
 		onclick="app.plugin_host.rec();"
-	> <img id="imgRec"
+	> <img
+		id="imgRec"
 		width="25"
 		src="img/start_record_icon.png"
-	/>REC</ons-button> </ons-col> </ons-row></ons-list-item> <ons-list-item
+	/>REC</ons-button> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item"> <ons-row
+		align="center"
+	> <ons-col>Stereo</ons-col> <ons-col align="right"> <ons-switch
+		var="swStereoView"
+		onchange="app.plugin_host.set_stereo(swStereoView.isChecked());"
+	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item"> <ons-row
+		align="center"
+	> <ons-col>P2P</ons-col> <ons-col align="right"> <ons-switch
+		var="swP2p"
+		onchange="app.plugin_host.p2p(swP2p.isChecked());"
+	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item
+		class="menu-item"
+		id="uiCall"
+	> <ons-row align="center"> <ons-col>CALL</ons-col> <ons-col
+		align="right"
+	> <ons-switch
+		var="swCall"
+		onchange="app.plugin_host.call(swCall.isChecked());"
+	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item
 		class="menu-item"
 		ng-click="app.navi.pushPage('about.html');menu.closeMenu();"
 	> <ons-icon
