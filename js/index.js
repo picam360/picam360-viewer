@@ -64,7 +64,9 @@ var app = (function() {
 		req.send(null);
 
 		req.onload = function() {
-			callback(req.responseText);
+			if (req.responseText) {
+				callback(req.responseText);
+			}
 		}
 	}
 
