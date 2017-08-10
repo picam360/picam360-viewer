@@ -29,6 +29,7 @@ var app = (function() {
 	var tilt = 0;
 	var socket;
 	var fov = 120;
+	var auto_scroll = false;
 
 	// main canvas
 	var canvas;
@@ -194,6 +195,7 @@ var app = (function() {
 			},
 			set_view_offset : function(value) {
 				view_offset = value;
+				auto_scroll = false;
 			},
 			get_view_offset : function() {
 				return view_offset.clone();
@@ -355,6 +357,10 @@ var app = (function() {
 			if (query['fov']) {
 				fov = parseFloat(query['fov']);
 			}
+			if (query['auto-scroll']) {
+				auto_scroll = query['auto-scroll'] == "yes"
+					|| query['auto-scroll'] == "on";
+			}
 
 			self.plugin_host = PluginHost(self);
 
@@ -375,10 +381,21 @@ var app = (function() {
 					omvr.setFov(fov);
 
 					setInterval(function() {
-						var quat = self.plugin_host.get_view_quaternion();
-						quat = self.plugin_host.get_view_offset()
-							.multiply(quat);
-						omvr.setCameraQuaternion(quat);
+						var quat = self.plugin_host.get_view_quaternion()
+							|| new THREE.Quaternion();
+						var view_offset_quat = self.plugin_host
+							.get_view_offset();
+						var view_quat = view_offset_quat.multiply(quat);
+						omvr.setCameraQuaternion(view_quat);
+						if (auto_scroll) {
+							var view_offset_diff_quat = new THREE.Quaternion()
+								.setFromEuler(new THREE.Euler(THREE.Math
+									.degToRad(0), THREE.Math.degToRad(0), THREE.Math
+									.degToRad(0.5), "YXZ"));
+							view_offset = view_quat
+								.multiply(view_offset_diff_quat).multiply(quat
+									.conjugate());
+						}
 					}, 33);// 30hz
 
 					if (default_image_url) {
