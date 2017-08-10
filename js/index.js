@@ -64,7 +64,7 @@ var app = (function() {
 		req.send(null);
 
 		req.onload = function() {
-			if (req.responseText) {
+			if (req.status == 200) {
 				callback(req.responseText);
 			}
 		}
