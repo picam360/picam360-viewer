@@ -41,7 +41,8 @@ var create_plugin = (function() {
 			var roll_diff = dx * fov / 300;
 			var pitch_diff = -dy * fov / 300;
 
-			var quat = m_plugin_host.get_view_quaternion();
+			var quat = m_plugin_host.get_view_quaternion()
+				|| new THREE.Quaternion();
 			var view_quat = m_view_offset_quat.clone().multiply(quat);
 			var view_offset_diff_quat = new THREE.Quaternion()
 				.setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math

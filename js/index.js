@@ -53,6 +53,7 @@ var app = (function() {
 	var is_p2p_upstream = false;
 	var p2p_uuid = "";
 	var peer_conn = null;
+	var default_image_url = null;
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var cmd2upstream_list = [];
@@ -174,7 +175,7 @@ var app = (function() {
 				if (mpu) {
 					return mpu.get_quaternion();
 				} else {
-					return null;
+					return new THREE.Quaternion();
 				}
 			},
 			get_fov : function() {
@@ -333,6 +334,18 @@ var app = (function() {
 			if (query['server_url']) {
 				server_url = query['server_url'];
 			}
+			if (query['default-image-url']) {
+				default_image_url = query['default-image-url'];
+			}
+			if (query['view_offset']) {
+				var split = query['view_offset'].split(',');
+				var euler = new THREE.Euler(THREE.Math
+					.degToRad(parseFloat(split[0])), THREE.Math
+					.degToRad(parseFloat(split[1])), THREE.Math
+					.degToRad(parseFloat(split[2])), "YXZ");
+
+				view_offset = new THREE.Quaternion().setFromEuler(euler);
+			}
 
 			self.plugin_host = PluginHost(self);
 
@@ -350,6 +363,22 @@ var app = (function() {
 					// webgl handling
 					omvr = OMVR();
 					omvr.init(canvas);
+
+					setInterval(function() {
+						var quat = self.plugin_host.get_view_quaternion();
+						quat = self.plugin_host.get_view_offset()
+							.multiply(quat);
+						omvr.setCameraQuaternion(quat);
+					}, 33);// 30hz
+
+					if (default_image_url) {
+						omvr
+							.setSphere(default_image_url, "", "", "", false, false, null, {
+								Pitch : 0,
+								Yaw : 0,
+								Roll : 0
+							});
+					}
 
 					// video decoder
 					h264_decoder = H264Decoder();

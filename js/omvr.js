@@ -3,17 +3,7 @@
  */
 
 function OMVR() {
-	var myAttitude = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
-
-	var vehicleAttitude = {
-		Pitch : 0,
-		Yaw : 0,
-		Roll : 0,
-	};
+	var m_camera_quat = new THREE.Quaternion();
 
 	var m_camera, m_scene, m_renderer, m_mesh;
 
@@ -70,68 +60,38 @@ function OMVR() {
 		}
 	}
 
+	setInterval(function() {
+		if (self && self.mode == "sphere") {
+			self.animate();
+		}
+	}, 33);// 30hz
+
 	var stereoEnabled = false;
 
 	var self = {
-		setMyAttitude : function(value) {
-			myAttitude = value;
-		},
+		setCameraQuaternion : function(value) {
+			m_camera_quat = value;
 
-		setVehicleAttitude : function(value) {
-			vehicleAttitude = value;
-		},
+			m_camera.target = new THREE.Vector3(0, -1, 0);
+			m_camera.up = new THREE.Vector3(0, 0, -1);
 
-		addFisheyeCamera : function(default_image_url, imageUrl, flipX, flipY,
-			image_updated_callback, attitude) {
-			var geometry = new THREE.SphereGeometry(500, 100, 100, 0, Math.PI);
-			geometry.scale(1, 1, 1);
+			m_camera.target.applyQuaternion(m_camera_quat);
+			m_camera.up.applyQuaternion(m_camera_quat);
 
-			var texLoader = new THREE.TextureLoader();
-			var texture = texLoader.load(default_image_url, function(tex) {
-				var material = new THREE.ShaderMaterial({
-					vertexShader : fisheye_vertexShader,
-					fragmentShader : fisheye_fragmentShader,
-					uniforms : {
-						flipX : {
-							type : 'i',
-							value : flipX
-						},
-						flipY : {
-							type : 'i',
-							value : flipY
-						},
-						texture : {
-							type : 't',
-							value : texture
-						}
-					},
-					side : THREE.DoubleSide,
-					// 通常マテリアルのパラメータ
-					blending : THREE.AdditiveBlending,
-					transparent : true,
-					depthTest : false
-				});
-				material.needsUpdate = true;
-				var mesh = new THREE.Mesh(geometry, material);
-				m_scene.add(mesh);
-
-				fisheyeCameraList.push({
-					loading : false,
-					default_image_url : default_image_url,
-					imageUrl : imageUrl,
-					image_updated_callback : image_updated_callback,
-					mesh : mesh,
-					attitude : attitude
-				});
-			});
+			m_camera.lookAt(m_camera.target);
 		},
 
 		fps : 0,
 		checkImageDelay : 1000,
 		mode : "",
 
-		setTexture : function(default_image_url, default_image_type, imageUrl,
+		setSphere : function(default_image_url, default_image_type, imageUrl,
 			image_type, flipX, flipY, image_updated_callback, attitude) {
+			if (self.mode == "sphere") {
+				return;
+			} else {
+				self.mode = "sphere";
+			}
 			var geometry = new THREE.SphereGeometry(500, 60, 40);
 			geometry.scale(-1, 1, 1);
 
@@ -144,15 +104,14 @@ function OMVR() {
 					map : tex
 				});
 				material.needsUpdate = true;
-				if (m_mesh) {
-					m_scene.remove(m_mesh);
-					m_mesh = null;
-				}
 				m_mesh = new THREE.Mesh(geometry, material);
+				for (var i = 0; i < m_scene.children.length; i++) {
+					m_scene.remove(m_scene.children[i]);
+				}
 				m_scene.add(m_mesh);
 
 				var euler_correct = new THREE.Euler(THREE.Math
-					.degToRad(attitude.Pitch), THREE.Math
+					.degToRad(-attitude.Pitch), THREE.Math
 					.degToRad(attitude.Yaw), THREE.Math.degToRad(attitude.Roll), "YXZ");
 
 				var quat_correct = new THREE.Quaternion();
@@ -168,14 +127,6 @@ function OMVR() {
 
 				m_window_mode = false;
 
-				fisheyeCameraList.push({
-					loading : false,
-					default_image_url : default_image_url,
-					imageUrl : imageUrl,
-					image_updated_callback : image_updated_callback,
-					mesh : m_mesh,
-					attitude : attitude
-				});
 				var last_modified = "";
 				var start_time = Date.now();
 				var duration = 0;

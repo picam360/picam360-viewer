@@ -126,18 +126,16 @@ var create_plugin = (function() {
 						break;
 					case "INCREMENT_THRUST" :
 						var quat = m_plugin_host.get_view_quaternion();
+						quat = m_plugin_host.get_view_offset().multiply(quat);
 						var cmd = ROV_DOMAIN + "increment_thrust 1";
-						if (quat) {
-							cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
-						}
+						cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
 						m_plugin_host.send_command(cmd);
 						break;
 					case "DECREMENT_THRUST" :
 						var quat = m_plugin_host.get_view_quaternion();
+						quat = m_plugin_host.get_view_offset().multiply(quat);
 						var cmd = ROV_DOMAIN + "increment_thrust -1";
-						if (quat) {
-							cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
-						}
+						cmd += sprintf(" %.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
 						m_plugin_host.send_command(cmd);
 						break;
 				}
