@@ -337,20 +337,23 @@ var app = (function() {
 			document.getElementById("uiCall").style.display = "none";
 
 			var query = GetQueryString();
-			if (query['server_url']) {
-				server_url = query['server_url'];
+			if (query['server-url']) {
+				server_url = query['server-url'];
 			}
 			if (query['default-image-url']) {
 				default_image_url = query['default-image-url'];
 			}
-			if (query['view_offset']) {
-				var split = query['view_offset'].split(',');
+			if (query['view-offset']) {
+				var split = query['view-offset'].split(',');
 				var euler = new THREE.Euler(THREE.Math
 					.degToRad(parseFloat(split[0])), THREE.Math
 					.degToRad(parseFloat(split[1])), THREE.Math
 					.degToRad(parseFloat(split[2])), "YXZ");
 
 				view_offset = new THREE.Quaternion().setFromEuler(euler);
+			}
+			if (query['fov']) {
+				fov = parseFloat(query['fov']);
 			}
 
 			self.plugin_host = PluginHost(self);
@@ -369,6 +372,7 @@ var app = (function() {
 					// webgl handling
 					omvr = OMVR();
 					omvr.init(canvas);
+					omvr.setFov(fov);
 
 					setInterval(function() {
 						var quat = self.plugin_host.get_view_quaternion();

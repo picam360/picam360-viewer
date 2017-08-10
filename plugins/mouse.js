@@ -2,8 +2,6 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 
-	var m_view_offset_quat = new THREE.Quaternion();
-
 	function init() {
 		var down = false;
 		var swipeable = false;
@@ -43,15 +41,16 @@ var create_plugin = (function() {
 
 			var quat = m_plugin_host.get_view_quaternion()
 				|| new THREE.Quaternion();
-			var view_quat = m_view_offset_quat.clone().multiply(quat);
+			var view_offset_quat = m_plugin_host.get_view_offset();
+			var view_quat = view_offset_quat.multiply(quat);
 			var view_offset_diff_quat = new THREE.Quaternion()
 				.setFromEuler(new THREE.Euler(THREE.Math.degToRad(pitch_diff), THREE.Math
 					.degToRad(0), THREE.Math.degToRad(roll_diff), "YXZ"));
-			m_view_offset_quat = view_quat.multiply(view_offset_diff_quat)
+			view_offset_quat = view_quat.multiply(view_offset_diff_quat)
 				.multiply(quat.conjugate());
 			// console.log(viewOffset);
 
-			m_plugin_host.set_view_offset(m_view_offset_quat);
+			m_plugin_host.set_view_offset(view_offset_quat);
 
 			autoscroll = false;
 		}
