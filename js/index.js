@@ -538,10 +538,13 @@ var app = (function() {
 				});
 			} else {
 				var peer = new Peer({
-					key : P2P_API_KEY
+					key : P2P_API_KEY,
+					debug : 1
 				});
 				var upstream_uuid = window.prompt("Please input UUID.", "");
-				peer_conn = peer.connect(upstream_uuid);
+				peer_conn = peer.connect(upstream_uuid, {
+					constraints : {}
+				});
 				peer_conn.on('open', function() {
 					console.log("p2p connection established as downstream.");
 					rtp.set_peerconnection(peer_conn, function(cmd) {
