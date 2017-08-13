@@ -24,6 +24,7 @@ var PT_STATUS = 100;
 var PT_CMD = 101;
 var PT_CAM_BASE = 110;
 var P2P_API_KEY = "v8df88o1y4zbmx6r";
+var PUBLIC_VIEWER = "http://picam360.github.io/picam360-viewer/";
 
 var app = (function() {
 	var tilt = 0;
@@ -499,9 +500,15 @@ var app = (function() {
 		},
 		start_p2p : function() {
 			if (is_p2p_upstream) {
-				p2p_uuid = uuid();
-				execCopy(p2p_uuid);
-				alert("copy uuid to clip board : " + p2p_uuid);
+				var query = GetQueryString();
+				if (query['p2p-uuid']) {
+					p2p_uuid = query['p2p-uuid'];
+				} else {
+					p2p_uuid = uuid();
+				}
+				var viewer_url = PUBLIC_VIEWER + "?p2p-uuid=" + p2p_uuid;
+				execCopy(viewer_url);
+				alert("The p2p link was copied to clip board : " + viewer_url);
 				var peer = new Peer(p2p_uuid, {
 					key : P2P_API_KEY
 				});
@@ -541,8 +548,13 @@ var app = (function() {
 					key : P2P_API_KEY,
 					debug : 1
 				});
-				var upstream_uuid = window.prompt("Please input UUID.", "");
-				peer_conn = peer.connect(upstream_uuid, {
+				var query = GetQueryString();
+				if (query['p2p-uuid']) {
+					p2p_uuid = query['p2p-uuid'];
+				} else {
+					p2p_uuid = window.prompt("Please input UUID.", "");
+				}
+				peer_conn = peer.connect(p2p_uuid, {
 					constraints : {}
 				});
 				peer_conn.on('open', function() {
@@ -557,13 +569,13 @@ var app = (function() {
 		},
 		stop_p2p : function() {
 			peer = null;
+			document.getElementById("uiCall").style.display = "none";
 			if (is_p2p_upstream) {
 				rtp.set_passthrough_callback(null);
 			} else {
 				rtp.set_peerconnection(null);
 				rtcp.set_peerconnection(null);
 			}
-			document.getElementById("uiCall").style.display = "none";
 		},
 		start_call : function() {
 			navigator.getUserMedia({
