@@ -237,6 +237,11 @@ var app = (function() {
 					core.stop_call();
 				}
 			},
+			log : function(str, level) {
+				if (level && level <= debug) {
+					console.log(str);
+				}
+			},
 		};
 		return self;
 	};
@@ -424,7 +429,7 @@ var app = (function() {
 					mjpeg_decoder.set_frame_callback(omvr.handle_frame);
 
 					// motion processer unit
-					mpu = MPU();
+					mpu = MPU(self.plugin_host);
 					mpu.init();
 
 					// init network related matters

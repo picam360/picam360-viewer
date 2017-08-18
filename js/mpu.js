@@ -1,4 +1,5 @@
-function MPU() {
+function MPU(plugin_host) {
+	var m_plugin_host = plugin_host;
 	var m_callback = null;
 	var m_debugoutput_time = Date.now();
 	var m_quat = new THREE.Quaternion(0, 0, 0, 1);
@@ -111,10 +112,10 @@ function MPU() {
 								.setFromQuaternion(quat, "YXZ");
 							m_debugoutput_time = time;
 							// console.log(attitude);
-							console
+							m_plugin_host
 								.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", north, m_north_diff, euler.x
 									* 180 / Math.PI, euler.y * 180 / Math.PI, euler.z
-									* 180 / Math.PI));
+									* 180 / Math.PI), 5);
 						}
 					}
 				});
