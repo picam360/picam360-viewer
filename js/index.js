@@ -31,6 +31,7 @@ var app = (function() {
 	var socket;
 	var fov = 120;
 	var auto_scroll = false;
+	var debug = 0;
 
 	// main canvas
 	var canvas;
@@ -53,6 +54,7 @@ var app = (function() {
 	var is_recording = false;
 	var view_offset = new THREE.Quaternion();
 	var is_p2p_upstream = false;
+	var peer = null;
 	var p2p_uuid = "";
 	var peer_conn = null;
 	var default_image_url = null;
@@ -362,6 +364,13 @@ var app = (function() {
 				auto_scroll = query['auto-scroll'] == "yes"
 					|| query['auto-scroll'] == "on";
 			}
+			if (query['is-p2p-upstream']) {
+				is_p2p_upstream = query['is-p2p-upstream'] == "yes"
+					|| query['is-p2p-upstream'] == "on";
+			}
+			if (query['debug']) {
+				debug = parseFloat(query['debug']);
+			}
 
 			self.plugin_host = PluginHost(self);
 
@@ -506,11 +515,13 @@ var app = (function() {
 				} else {
 					p2p_uuid = uuid();
 				}
+				console.log(p2p_uuid);
 				var viewer_url = PUBLIC_VIEWER + "?p2p-uuid=" + p2p_uuid;
 				execCopy(viewer_url);
 				alert("The p2p link was copied to clip board : " + viewer_url);
-				var peer = new Peer(p2p_uuid, {
-					key : P2P_API_KEY
+				peer = new Peer(p2p_uuid, {
+					key : P2P_API_KEY,
+					debug : debug
 				});
 				peer.on('connection', function(conn) {
 					peer_conn = conn;
@@ -544,9 +555,9 @@ var app = (function() {
 					});
 				});
 			} else {
-				var peer = new Peer({
+				peer = new Peer({
 					key : P2P_API_KEY,
-					debug : 1
+					debug : debug
 				});
 				var query = GetQueryString();
 				if (query['p2p-uuid']) {
@@ -582,7 +593,7 @@ var app = (function() {
 				video : false,
 				audio : true
 			}, function(stream) {
-				var call = peer.call(upstream_uuid, stream);
+				var call = peer.call(p2p_uuid, stream);
 				call.on('stream', function(remoteStream) {
 					var audio = $('<audio autoplay />').appendTo('body');
 					audio[0].src = (URL || webkitURL || mozURL)

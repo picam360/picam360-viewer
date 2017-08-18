@@ -38,10 +38,12 @@ function Rtp() {
 	var m_bandwidth = 0;
 	var m_last_packet_time = Date.now();
 	var m_debugoutput_time = Date.now();
+	var m_ws = null;
+	var m_conn = null;
 	var m_callback = null;
 	var m_passthrough_callback = null;
 	var self = {
-		packet_handler : function(packets, rtp_callback){
+		packet_handler : function(packets, rtp_callback) {
 			var packet_time = Date.now();
 			var sum_packet = 0;
 			// console.log("packets : " + packets.length);
@@ -86,15 +88,29 @@ function Rtp() {
 			m_passthrough_callback = callback;
 		},
 		set_websocket : function(ws) {
+			m_ws = ws;
+			if (!m_ws) {
+				return;
+			}
 			ws.on('rtp', function(packets, rtp_callback) {
+				if (ws != m_ws) {
+					return;
+				}
 				self.packet_handler(packets, rtp_callback);
-				if(m_passthrough_callback){
+				if (m_passthrough_callback) {
 					m_passthrough_callback(packets, rtp_callback);
 				}
 			});
 		},
 		set_peerconnection : function(conn, rtp_callback) {
+			m_conn = conn;
+			if (!m_conn) {
+				return;
+			}
 			conn.on('data', function(data) {
+				if (conn != m_conn) {
+					return;
+				}
 				self.packet_handler(data, rtp_callback);
 			});
 		},
