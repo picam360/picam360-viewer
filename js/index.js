@@ -149,6 +149,18 @@ var app = (function() {
 			a.click();
 		};
 
+		function downloadBlobAsFile(fileName, blob) {
+			var blob = new Blob([blob]);
+			var url = window.URL || window.webkitURL;
+			var blobURL = url.createObjectURL(blob);
+
+			var a = document.createElement('a');
+			a.download = fileName;
+			a.href = blobURL;
+			// a.target = "_blank";
+			a.click();
+		};
+
 		function handle_command(cmd) {
 			var split = cmd.split(' ');
 			if (split[0] == "set_stereo") {
@@ -157,6 +169,7 @@ var app = (function() {
 		}
 
 		var self = {
+			file_received_callback : null,
 			send_command : function(cmd) {
 				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
 					cmd2upstream_list.push(cmd.substr(UPSTREAM_DOMAIN.length));
@@ -204,23 +217,21 @@ var app = (function() {
 				return view_offset.clone();
 			},
 			snap : function() {
-				socket.emit('snap', function(filename) {
-					console.log("save image!: " + filename);
-					downloadAsFile('picam360.jpeg', server_url + "img/"
-						+ filename);
-				});
+				self.send_command(SERVER_DOMAIN + "snap");
+				self.file_received_callback = function(data) {
+					console.log(data);
+					downloadBlobAsFile("picam360.jpeg", data);
+				}
 			},
 			rec : function() {
 				if (is_recording) {
-					socket.emit('stop_record', function(filename) {
-						console.log("save video!: " + filename);
-						downloadAsFile('picam360.mp4', server_url + "img/"
-							+ filename);
-					});
+					self.send_command(SERVER_DOMAIN + "stop_record");
+					self.file_received_callback = function(data) {
+						console.log(data);
+						downloadBlobAsFile("picam360.mp4", data);
+					}
 				} else {
-					socket.emit('start_record', function() {
-						console.log("start_record");
-					});
+					self.send_command(SERVER_DOMAIN + "start_record");
 				}
 			},
 			p2p : function(bln) {
@@ -464,6 +475,10 @@ var app = (function() {
 								var value = split[3];
 								if (watches[name]) {
 									watches[name](value);
+								}
+							} else if (packet.GetPayloadType() == PT_FILE) {// file
+								if (self.file_received_callback) {
+									self.file_received_callback();
 								}
 							}
 						});
