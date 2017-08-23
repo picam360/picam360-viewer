@@ -25,6 +25,8 @@ var PT_CMD = 101;
 var PT_CAM_BASE = 110;
 var P2P_API_KEY = "v8df88o1y4zbmx6r";
 var PUBLIC_VIEWER = "http://picam360.github.io/picam360-viewer/";
+var SIGNALING_HOST = "peer.picam360.com";
+var SIGNALING_PORT = 80;
 
 var app = (function() {
 	var tilt = 0;
@@ -540,6 +542,8 @@ var app = (function() {
 				execCopy(viewer_url);
 				alert("The p2p link was copied to clip board : " + viewer_url);
 				peer = new Peer(p2p_uuid, {
+					host : SIGNALING_HOST,
+					port : SIGNALING_PORT,
 					key : P2P_API_KEY,
 					debug : debug
 				});
@@ -576,6 +580,8 @@ var app = (function() {
 				});
 			} else {
 				peer = new Peer({
+					host : SIGNALING_HOST,
+					port : SIGNALING_PORT,
 					key : P2P_API_KEY,
 					debug : debug
 				});
