@@ -15,7 +15,7 @@ var create_plugin = (function() {
 			down = true;
 			sx = ev.clientX;
 			sy = ev.clientY;
-			swipeable = (sx < 50);
+			swipeable = (sx < 100);
 			menu.setSwipeable(swipeable);
 		};
 		var mousemoveFunc = function(ev) {

@@ -31,6 +31,7 @@ var app = (function() {
 	var socket;
 	var fov = 120;
 	var auto_scroll = false;
+	var view_offset_lock = false;
 	var debug = 0;
 
 	// main canvas
@@ -197,6 +198,9 @@ var app = (function() {
 				omvr.setStereoEnabled(value);
 			},
 			set_view_offset : function(value) {
+				if (view_offset_lock) {
+					return;
+				}
 				view_offset = value;
 				auto_scroll = false;
 			},
@@ -375,6 +379,10 @@ var app = (function() {
 			}
 			if (query['debug']) {
 				debug = parseFloat(query['debug']);
+			}
+			if (query['view-offset-lock']) {
+				view_offset_lock = query['view-offset-lock'] == "yes"
+					|| query['is-p2p-lock'] == "on";
 			}
 
 			self.plugin_host = PluginHost(self);
