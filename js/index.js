@@ -25,12 +25,16 @@ var PT_CMD = 101;
 var PT_CAM_BASE = 110;
 var P2P_API_KEY = "v8df88o1y4zbmx6r";
 var PUBLIC_VIEWER = "http://picam360.github.io/picam360-viewer/";
+var SIGNALING_HOST = "peer.picam360.com";
+var SIGNALING_PORT = 443;
+var SIGNALING_SECURE = true;
 
 var app = (function() {
 	var tilt = 0;
 	var socket;
 	var fov = 120;
 	var auto_scroll = false;
+	var view_offset_lock = false;
 	var debug = 0;
 
 	// main canvas
@@ -197,6 +201,9 @@ var app = (function() {
 				omvr.setStereoEnabled(value);
 			},
 			set_view_offset : function(value) {
+				if (view_offset_lock) {
+					return;
+				}
 				view_offset = value;
 				auto_scroll = false;
 			},
@@ -376,6 +383,10 @@ var app = (function() {
 			if (query['debug']) {
 				debug = parseFloat(query['debug']);
 			}
+			if (query['view-offset-lock']) {
+				view_offset_lock = query['view-offset-lock'] == "yes"
+					|| query['is-p2p-lock'] == "on";
+			}
 
 			self.plugin_host = PluginHost(self);
 
@@ -525,6 +536,9 @@ var app = (function() {
 				execCopy(viewer_url);
 				alert("The p2p link was copied to clip board : " + viewer_url);
 				peer = new Peer(p2p_uuid, {
+					host : SIGNALING_HOST,
+					port : SIGNALING_PORT,
+					secure : SIGNALING_SECURE,
 					key : P2P_API_KEY,
 					debug : debug
 				});
@@ -561,6 +575,9 @@ var app = (function() {
 				});
 			} else {
 				peer = new Peer({
+					host : SIGNALING_HOST,
+					port : SIGNALING_PORT,
+					secure : SIGNALING_SECURE,
 					key : P2P_API_KEY,
 					debug : debug
 				});
