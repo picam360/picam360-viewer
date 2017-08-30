@@ -61,9 +61,10 @@ var app = (function() {
 	var peer = null;
 	var p2p_uuid = "";
 	var peer_conn = null;
+	var peer_call = null;
+	var p2p_uuid_call = "";
 	var default_image_url = null;
-
-	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
+	
 	var cmd2upstream_list = [];
 
 	function loadFile(path, callback) {
@@ -194,7 +195,7 @@ var app = (function() {
 				return fov;
 			},
 			set_fov : function(value) {
-				self.send_command(SYSTEM_DOMAIN + "set_fov 0="
+				self.send_command(CAPTURE_DOMAIN + "set_fov 0="
 					+ value.toFixed(0));
 			},
 			set_stereo : function(value) {
@@ -400,6 +401,47 @@ var app = (function() {
 						.add_watch("upstream.is_recording", function(value) {
 							set_is_recording(value.toLowerCase() == 'true');
 						});
+					self.plugin_host
+						.add_watch("upstream.p2p_num_of_members", function(
+							value) {
+							if (peer && value >= 2) {
+								document.getElementById("uiCall").style.display = "block";
+							} else {
+								document.getElementById("uiCall").style.display = "none";
+							}
+						});
+					self.plugin_host
+						.add_watch("upstream.request_call", function(value) {
+							if (p2p_uuid_call == value) {
+								return;
+							}
+							p2p_uuid_call = value;
+							if (!window.confirm('An incoming call')) {
+								return;
+							}
+							navigator.getUserMedia({
+								video : false,
+								audio : true
+							}, function(stream) {
+								peer_call = new Peer({
+									host : SIGNALING_HOST,
+									port : SIGNALING_PORT,
+									secure : SIGNALING_SECURE,
+									key : P2P_API_KEY,
+									debug : debug
+								});
+								var call = peer_call
+									.call(p2p_uuid_call, stream);
+								call.on('stream', function(remoteStream) {
+									var audio = $('<audio autoplay />')
+										.appendTo('body');
+									audio[0].src = (URL || webkitURL || mozURL)
+										.createObjectURL(stream);
+								});
+							}, function(err) {
+								console.log('Failed to get local stream', err);
+							});
+						});
 
 					// webgl handling
 					omvr = OMVR();
@@ -523,7 +565,7 @@ var app = (function() {
 					self.start_animate();
 				});
 		},
-		start_p2p : function() {
+		start_p2p : function(sender) {
 			if (is_p2p_upstream) {
 				var query = GetQueryString();
 				if (query['p2p-uuid']) {
@@ -596,7 +638,6 @@ var app = (function() {
 						cmd2upstream_list.push(cmd);
 					});
 					rtcp.set_peerconnection(peer_conn);
-					document.getElementById("uiCall").style.display = "block";
 				});
 			}
 		},
@@ -611,19 +652,33 @@ var app = (function() {
 			}
 		},
 		start_call : function() {
-			navigator.getUserMedia({
-				video : false,
-				audio : true
-			}, function(stream) {
-				var call = peer.call(p2p_uuid, stream);
-				call.on('stream', function(remoteStream) {
-					var audio = $('<audio autoplay />').appendTo('body');
-					audio[0].src = (URL || webkitURL || mozURL)
-						.createObjectURL(stream);
-				});
-			}, function(err) {
-				console.log('Failed to get local stream', err);
+			p2p_uuid_call = uuid();
+			peer_call = new Peer(p2p_uuid_call, {
+				host : SIGNALING_HOST,
+				port : SIGNALING_PORT,
+				secure : SIGNALING_SECURE,
+				key : P2P_API_KEY,
+				debug : debug
 			});
+			navigator.getUserMedia = navigator.getUserMedia
+				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+			peer_call.on('call', function(call) {
+				navigator.getUserMedia({
+					video : false,
+					audio : true
+				}, function(stream) {
+					call.answer(stream);
+					call.on('stream', function(remoteStream) {
+						var audio = $('<audio autoplay />').appendTo('body');
+						audio[0].src = (URL || webkitURL || mozURL)
+							.createObjectURL(stream);
+					});
+				}, function(err) {
+					console.log('Failed to get local stream', err);
+				});
+			});
+			self.plugin_host.send_command(SERVER_DOMAIN + "request_call "
+				+ p2p_uuid_call);
 		},
 		stop_call : function() {
 		},
