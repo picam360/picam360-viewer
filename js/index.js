@@ -266,6 +266,9 @@ var app = (function() {
 			// });
 
 			window.addEventListener('message', function(event) {
+				if (!event.data || event.data.charAt(0) != '{') {
+					return;
+				}
 				var args = JSON.parse(event.data);
 				if (!args['function']) {
 					alert("no handler : null");
@@ -351,6 +354,9 @@ var app = (function() {
 
 		main : function() {
 			app.receivedEvent('main');
+
+			navigator.getUserMedia = navigator.getUserMedia
+				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 			document.getElementById("uiCall").style.display = "none";
 
@@ -641,8 +647,6 @@ var app = (function() {
 				key : P2P_API_KEY,
 				debug : debug
 			});
-			navigator.getUserMedia = navigator.getUserMedia
-				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 			peer_call.on('call', function(call) {
 				navigator.getUserMedia({
 					video : false,
