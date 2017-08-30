@@ -442,7 +442,7 @@ var app = (function() {
 									var audio = $('<audio autoplay />')
 										.appendTo('body');
 									audio[0].src = (URL || webkitURL || mozURL)
-										.createObjectURL(stream);
+										.createObjectURL(remoteStream);
 								});
 							}, function(err) {
 								console.log('Failed to get local stream', err);
