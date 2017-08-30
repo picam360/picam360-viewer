@@ -64,7 +64,7 @@ var app = (function() {
 	var peer_call = null;
 	var p2p_uuid_call = "";
 	var default_image_url = null;
-	
+
 	var cmd2upstream_list = [];
 
 	function loadFile(path, callback) {
@@ -436,7 +436,7 @@ var app = (function() {
 									var audio = $('<audio autoplay />')
 										.appendTo('body');
 									audio[0].src = (URL || webkitURL || mozURL)
-										.createObjectURL(remoteStream);
+										.createObjectURL(stream);
 								});
 							}, function(err) {
 								console.log('Failed to get local stream', err);
@@ -595,25 +595,6 @@ var app = (function() {
 							rtp_callback) {
 							peer_conn.send(packets);
 						});
-					navigator.getUserMedia = navigator.getUserMedia
-						|| navigator.webkitGetUserMedia
-						|| navigator.mozGetUserMedia;
-					peer.on('call', function(call) {
-						navigator.getUserMedia({
-							video : false,
-							audio : true
-						}, function(stream) {
-							call.answer(stream);
-							call.on('stream', function(remoteStream) {
-								var audio = $('<audio autoplay />')
-									.appendTo('body');
-								audio[0].src = (URL || webkitURL || mozURL)
-									.createObjectURL(remoteStream);
-							});
-						}, function(err) {
-							console.log('Failed to get local stream', err);
-						});
-					});
 				});
 			} else {
 				peer = new Peer({
@@ -671,7 +652,7 @@ var app = (function() {
 					call.on('stream', function(remoteStream) {
 						var audio = $('<audio autoplay />').appendTo('body');
 						audio[0].src = (URL || webkitURL || mozURL)
-							.createObjectURL(stream);
+							.createObjectURL(remoteStream);
 					});
 				}, function(err) {
 					console.log('Failed to get local stream', err);
