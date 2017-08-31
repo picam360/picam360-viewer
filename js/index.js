@@ -446,6 +446,7 @@ var app = (function() {
 										audio.src = (URL || webkitURL || mozURL)
 											.createObjectURL(remoteStream);
 									}
+									audio.play();
 								});
 							}, function(err) {
 								console.log('Failed to get local stream', err);
