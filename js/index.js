@@ -656,7 +656,7 @@ var app = (function() {
 					call.on('stream', function(remoteStream) {
 						var audio = new Audio();
 						if (navigator.userAgent.indexOf("Safari") > -1) {
-							audio.src = remoteStream;
+							audio.srcObject = remoteStream;
 						} else {
 							audio.src = (URL || webkitURL || mozURL)
 								.createObjectURL(remoteStream);
