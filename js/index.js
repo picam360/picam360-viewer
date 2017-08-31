@@ -425,32 +425,37 @@ var app = (function() {
 							if (!window.confirm('An incoming call')) {
 								return;
 							}
-							navigator.getUserMedia({
-								video : false,
-								audio : true
-							}, function(stream) {
-								peer_call = new Peer({
-									host : SIGNALING_HOST,
-									port : SIGNALING_PORT,
-									secure : SIGNALING_SECURE,
-									key : P2P_API_KEY,
-									debug : debug
+							navigator
+								.getUserMedia({
+									video : false,
+									audio : true
+								}, function(stream) {
+									peer_call = new Peer({
+										host : SIGNALING_HOST,
+										port : SIGNALING_PORT,
+										secure : SIGNALING_SECURE,
+										key : P2P_API_KEY,
+										debug : debug
+									});
+									var call = peer_call
+										.call(p2p_uuid_call, stream);
+									call
+										.on('stream', function(remoteStream) {
+											var audio = new Audio();
+											if (navigator.userAgent
+												.indexOf("Safari") > -1) {
+												audio.srcObject = remoteStream;
+											} else {
+												audio.src = (URL || webkitURL || mozURL)
+													.createObjectURL(remoteStream);
+											}
+											audio.load();
+											audio.play();
+										});
+								}, function(err) {
+									console
+										.log('Failed to get local stream', err);
 								});
-								var call = peer_call
-									.call(p2p_uuid_call, stream);
-								call.on('stream', function(remoteStream) {
-									var audio = new Audio();
-									if (navigator.userAgent.indexOf("Safari") > -1) {
-										audio.srcObject = remoteStream;
-									} else {
-										audio.src = (URL || webkitURL || mozURL)
-											.createObjectURL(remoteStream);
-									}
-									audio.play();
-								});
-							}, function(err) {
-								console.log('Failed to get local stream', err);
-							});
 						});
 
 					// webgl handling
@@ -665,6 +670,7 @@ var app = (function() {
 							audio.src = (URL || webkitURL || mozURL)
 								.createObjectURL(remoteStream);
 						}
+						audio.load();
 						audio.play();
 					});
 				}, function(err) {
