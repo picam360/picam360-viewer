@@ -439,10 +439,13 @@ var app = (function() {
 								var call = peer_call
 									.call(p2p_uuid_call, stream);
 								call.on('stream', function(remoteStream) {
-									var audio = $('<audio autoplay />')
-										.appendTo('body');
-									audio[0].src = (URL || webkitURL || mozURL)
-										.createObjectURL(remoteStream);
+									var audio = new Audio();
+									if (navigator.userAgent.indexOf("Safari") > -1) {
+										audio.srcObject = remoteStream;
+									} else {
+										audio.src = (URL || webkitURL || mozURL)
+											.createObjectURL(remoteStream);
+									}
 								});
 							}, function(err) {
 								console.log('Failed to get local stream', err);
