@@ -451,12 +451,7 @@ var app = (function() {
 											}
 											console.log("stream");
 											audio.load();
-											audio.onloded = function() {
-												console.log("loded");
-											}
-											// audio.play();
 											setTimeout(function() {
-												console.log("play");
 												audio.play();
 											}, 2000);
 										});
@@ -679,7 +674,6 @@ var app = (function() {
 								.createObjectURL(remoteStream);
 						}
 						audio.load();
-						// audio.play();
 						setTimeout(function() {
 							audio.play();
 						}, 2000);
