@@ -449,11 +449,16 @@ var app = (function() {
 												audio.src = (URL || webkitURL || mozURL)
 													.createObjectURL(remoteStream);
 											}
+											console.log("stream");
 											audio.load();
-											//audio.play();
-										    setTimeout(function(){
-										        audio.play();
-										    }, 2000);
+											audio.onloded = function() {
+												console.log("loded");
+											}
+											// audio.play();
+											setTimeout(function() {
+												console.log("play");
+												audio.play();
+											}, 2000);
 										});
 								}, function(err) {
 									console
@@ -674,10 +679,10 @@ var app = (function() {
 								.createObjectURL(remoteStream);
 						}
 						audio.load();
-						//audio.play();
-					    setTimeout(function(){
-					        audio.play();
-					    }, 2000);
+						// audio.play();
+						setTimeout(function() {
+							audio.play();
+						}, 2000);
 					});
 				}, function(err) {
 					console.log('Failed to get local stream', err);
