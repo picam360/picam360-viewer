@@ -654,9 +654,10 @@ var app = (function() {
 				}, function(stream) {
 					call.answer(stream);
 					call.on('stream', function(remoteStream) {
-						var audio = $('<audio autoplay />').appendTo('body');
-						audio[0].src = (URL || webkitURL || mozURL)
+						var audio = new Audio();
+						audio.src = (URL || webkitURL || mozURL)
 							.createObjectURL(remoteStream);
+						audio.play();
 					});
 				}, function(err) {
 					console.log('Failed to get local stream', err);
