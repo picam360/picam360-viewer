@@ -450,7 +450,10 @@ var app = (function() {
 													.createObjectURL(remoteStream);
 											}
 											audio.load();
-											audio.play();
+											//audio.play();
+										    setTimeout(function(){
+										        audio.play();
+										    }, 2000);
 										});
 								}, function(err) {
 									console
@@ -671,7 +674,10 @@ var app = (function() {
 								.createObjectURL(remoteStream);
 						}
 						audio.load();
-						audio.play();
+						//audio.play();
+					    setTimeout(function(){
+					        audio.play();
+					    }, 2000);
 					});
 				}, function(err) {
 					console.log('Failed to get local stream', err);
