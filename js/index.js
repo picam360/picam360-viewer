@@ -655,8 +655,12 @@ var app = (function() {
 					call.answer(stream);
 					call.on('stream', function(remoteStream) {
 						var audio = new Audio();
-						audio.src = (URL || webkitURL || mozURL)
-							.createObjectURL(remoteStream);
+						if (navigator.userAgent.indexOf("Safari") > -1) {
+							audio.src = remoteStream;
+						} else {
+							audio.src = (URL || webkitURL || mozURL)
+								.createObjectURL(remoteStream);
+						}
 						audio.play();
 					});
 				}, function(err) {
