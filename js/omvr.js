@@ -23,6 +23,29 @@ function OMVR() {
 
 	var m_yuv_canvas = null;
 
+	// shader
+	var m_shaders = {};
+
+	var YUV2RGB = new THREE.Matrix4();
+
+	if (0 == "rec709") {
+		// ITU-T Rec. 709
+		YUV2RGB.elements = [//
+		1.16438, 0.00000, 1.79274, -0.97295,//
+		1.16438, -0.21325, -0.53291, 0.30148,//
+		1.16438, 2.11240, 0.00000, -1.13340,//
+		0, 0, 0, 1,//
+		];
+	} else {
+		// assume ITU-T Rec. 601
+		YUV2RGB.elements = [//
+		1.16438, 0.00000, 1.59603, -0.87079,//
+		1.16438, -0.39176, -0.81297, 0.52959,//
+		1.16438, 2.01723, 0.00000, -1.08139,//
+		0, 0, 0, 1//
+		];
+	};
+
 	function onWindowResize() {
 		m_canvas.width = window.innerWidth;
 		m_canvas.height = window.innerHeight;
@@ -60,11 +83,68 @@ function OMVR() {
 		}
 	}
 
-	setInterval(function() {
-		if (self && self.mode == "sphere") {
-			self.animate();
+	function windowGeometry(theta_degree, phi_degree, num_of_steps) {
+		var bufferGeometry = new THREE.BufferGeometry();
+		bufferGeometry.type = 'SphereWindowBufferGeometry';
+
+		var theta = theta_degree * Math.PI / 180.0;
+		var phi = phi_degree * Math.PI / 180.0;
+
+		var start_x = -Math.tan(theta / 2);
+		var start_y = -Math.tan(phi / 2);
+
+		var end_x = Math.tan(theta / 2);
+		var end_y = Math.tan(phi / 2);
+
+		var step_x = (end_x - start_x) / num_of_steps;
+		var step_y = (end_y - start_y) / num_of_steps;
+
+		var vertexCount = ((num_of_steps + 1) * (num_of_steps + 1));
+
+		var positions = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
+
+		var index = 0, vertices = [];
+		for (var i = 0; i <= num_of_steps; i++) {
+			var verticesRow = [];
+			for (var j = 0; j <= num_of_steps; j++) {
+				var x = start_x + step_x * j;
+				var y = start_y + step_y * i;
+				var z = 1.0;
+				var len = Math.sqrt(x * x + y * y + z * z);
+
+				positions.setXYZ(index, x / len, y / len, z / len);
+
+				verticesRow.push(index);
+
+				index++;
+			}
+			vertices.push(verticesRow);
 		}
-	}, 33);// 30hz
+
+		var indices = [];
+		for (var i = 0; i < num_of_steps; i++) {
+			for (var j = 0; j < num_of_steps; j++) {
+				var v1 = vertices[i][j + 1];
+				var v2 = vertices[i][j];
+				var v3 = vertices[i + 1][j];
+				var v4 = vertices[i + 1][j + 1];
+
+				indices.push(v1, v2, v4);
+				indices.push(v2, v3, v4);
+			}
+		}
+
+		bufferGeometry.setIndex(new (positions.count > 65535
+			? THREE.Uint32Attribute
+			: THREE.Uint16Attribute)(indices, 1));
+		bufferGeometry.addAttribute('position', positions);
+
+		var geometry = new THREE.Geometry();
+		geometry.type = 'SphereWindowGeometry';
+		geometry.fromBufferGeometry(bufferGeometry);
+
+		return geometry;
+	}
 
 	var stereoEnabled = false;
 
@@ -72,133 +152,37 @@ function OMVR() {
 		setCameraQuaternion : function(value) {
 			m_camera_quat = value;
 
-			m_camera.target = new THREE.Vector3(0, -1, 0);
-			m_camera.up = new THREE.Vector3(0, 0, -1);
+			if (m_mesh && m_mesh.material.uniforms.unif_matrix) {
+				var quat = value.clone();
+				var euler_correct = new THREE.Euler(THREE.Math.degToRad(-90), THREE.Math
+					.degToRad(180), THREE.Math.degToRad(0), "YXZ");
 
-			m_camera.target.applyQuaternion(m_camera_quat);
-			m_camera.up.applyQuaternion(m_camera_quat);
-
-			m_camera.lookAt(m_camera.target);
+				var quat_correct = new THREE.Quaternion();
+				quat_correct.setFromEuler(euler_correct);
+				quat = quat.multiply(quat_correct);
+				m_mesh.material.uniforms.unif_matrix.value
+					.makeRotationFromQuaternion(quat);
+			}
 		},
 
 		fps : 0,
 		checkImageDelay : 1000,
-		mode : "",
+		vertex_type : "",
+		fragment_type : "",
+		auto_animate : false,
+		tex_fov : 360,// for sphere
 
-		setSphere : function(default_image_url, default_image_type, imageUrl,
-			image_type, flipX, flipY, image_updated_callback, attitude) {
-			if (self.mode == "sphere") {
-				return;
-			} else {
-				self.mode = "sphere";
+		loadTexture : function(image_url, image_type) {
+
+			if (!image_type) {
+				image_type = splitExt(image_url.split('?')[0])[1].toLowerCase();
 			}
-			var geometry = new THREE.SphereGeometry(500, 60, 40);
-			geometry.scale(-1, 1, 1);
-
-			var maxAnisotropy = m_renderer.getMaxAnisotropy();
-			var setTextureFunc = function(tex) {
-				tex.generateMipmaps = false;// this is for performance
-				tex.minFilter = THREE.LinearFilter;// this is for
-				tex.anisotropy = maxAnisotropy;
-				var material = new THREE.MeshBasicMaterial({
-					map : tex
-				});
-				material.needsUpdate = true;
-				m_mesh = new THREE.Mesh(geometry, material);
-				for (var i = 0; i < m_scene.children.length; i++) {
-					m_scene.remove(m_scene.children[i]);
-				}
-				m_scene.add(m_mesh);
-
-				var euler_correct = new THREE.Euler(THREE.Math
-					.degToRad(-attitude.Pitch), THREE.Math
-					.degToRad(attitude.Yaw), THREE.Math.degToRad(attitude.Roll), "YXZ");
-
-				var quat_correct = new THREE.Quaternion();
-				quat_correct.setFromEuler(euler_correct);
-
-				var target = new THREE.Vector3(0, 0, 1);
-				m_mesh.up = new THREE.Vector3(0, 1, 0);
-
-				target.applyQuaternion(quat_correct);
-				m_mesh.up.applyQuaternion(quat_correct);
-
-				m_mesh.lookAt(target);
-
-				m_window_mode = false;
-
-				var last_modified = "";
-				var start_time = Date.now();
-				var duration = 0;
-				var load = function(callback) {
-					var timeout = false;
-					var succeeded = false;
-					var texLoader = new THREE.TextureLoader();
-					texLoader.crossOrigin = '*';
-					texLoader.load(imageUrl, function(tex) {
-						var end_time = Date.now();
-						var _duration = end_time - start_time;
-						if (_duration != 0) {
-							duration = 0.9 * duration + 0.1 * _duration;
-							self.fps = 1000.0 / (duration != 0 ? duration : 1);
-							start_time = end_time;
-						}
-						// console.log('Drawing image');
-						tex.generateMipmaps = false;// this is for performance
-						tex.minFilter = THREE.LinearFilter;// this is for
-						tex.anisotropy = maxAnisotropy;
-						// performance
-						var old = m_mesh.material.map;
-						m_mesh.material.map = tex;
-						m_mesh.material.needsUpdate = true;
-						old.dispose();
-						if (!timeout) {
-							callback();
-							succeeded = true;
-						}
-					});
-					setTimeout(function() {
-						if (!succeeded) {
-							timeout = true;
-							callback();
-						}
-					}, 5000);
-				};
-				var check_and_load = function() {
-					if (self.checkImageLastUpdate) {
-						$.ajax({
-							url : imageUrl,
-							type : 'HEAD',
-						}).done(function(data, status, xhr) {
-							var new_last_modified = xhr
-								.getResponseHeader('Last-Modified');
-							if (new_last_modified == last_modified) {
-								setTimeout(function() {
-									check_and_load();
-								}, self.checkImageDelay);
-							} else {
-								last_modified = new_last_modified;
-								load(check_and_load);
-							}
-						});
-					} else {
-						load(check_and_load);
-					}
-				};
-				if (imageUrl) {
-					check_and_load();
-				}
-			};
-			if (!default_image_type) {
-				default_image_type = splitExt(default_image_url.split('?')[0])[1]
-					.toLowerCase();
-			}
-			switch (default_image_type) {
+			switch (image_type) {
 				case 'video' :
 				case 'mp4' :
 					m_video = document.createElement('video');
 					m_video.crossOrigin = "Anonymous";
-					m_video.src = default_image_url;
+					m_video.src = image_url;
 					m_video.load();
 					if (isSmartphone()) {
 						m_video
@@ -229,15 +213,21 @@ function OMVR() {
 				case 'png' :
 				case 'image' :
 				default :
-					var texLoader = new THREE.TextureLoader();
-					texLoader.crossOrigin = '*';
-					texLoader.load(default_image_url, setTextureFunc);
+					var img = new Image();
+					img.onload = function() {
+						self.setTextureImg(img);
+					}
+					img.crossOrigin = '*';
+					img.src = image_url;
 					break;
 			}
 		},
 
 		handle_frame : function(type, data, width, height) {
+			self.auto_animate = false;
 			if (type == "raw_bmp") {
+				self.setModel(self.vertex_type, "bmp");
+
 				var img = m_videoTexture.image;
 				var header = get_bmp_header(width, height, 8);
 				var raw_data = new Uint8Array(data);
@@ -253,7 +243,8 @@ function OMVR() {
 				// + " : " + m_active_frame.length);
 				blob = null;
 			} else if (type == "yuv") {
-				self.setBoardYuv();
+				self.setModel(self.vertex_type, "yuv");
+
 				var raw_data = new Uint8Array(data);
 				var ylen = width * height;
 				var uvlen = (width / 2) * (height / 2);
@@ -288,7 +279,7 @@ function OMVR() {
 				self.setAspect(width, height);
 				self.animate();
 			} else if (type == "blob") {
-				self.setBoard();
+				self.setModel(self.vertex_type, "bmp");
 
 				var img = m_videoTexture.image;
 				var url = window.URL || window.webkitURL;
@@ -300,7 +291,7 @@ function OMVR() {
 			}
 		},
 
-		init : function(canvas) {
+		init : function(canvas, callback) {
 
 			m_canvas = canvas;
 
@@ -326,57 +317,18 @@ function OMVR() {
 
 			onWindowResize();
 			window.addEventListener('resize', onWindowResize, false);
-		},
 
-		setFov : function(value) {
-			if (m_camera) {
-				m_camera.fov = value;
-				onWindowResize();
-			}
-		},
-
-		getTextureImg : function() {
-			return m_videoImage;
-		},
-
-		setAspect : function(width, height) {
-			if (!m_mesh) {
-				return;
-			}
-			var texture_aspect = width / height;
-			var window_aspect = (stereoEnabled
-				? window.innerWidth / 2
-				: window.innerWidth)
-				/ window.innerHeight;
-			var aspect = window_aspect / texture_aspect;
-			if (aspect > 1.0) {
-				m_mesh.material.uniforms.tex_scalex.value = aspect;
-				m_mesh.material.uniforms.tex_scaley.value = 1.0;
-			} else {
-				m_mesh.material.uniforms.tex_scalex.value = 1.0;
-				m_mesh.material.uniforms.tex_scaley.value = 1.0 / aspect;
-			}
-		},
-
-		setTextureImg : function(texture) {
-			self.setAspect(texture.width, texture.height);
-
-			m_videoTexture.image = texture;
+			// texture
+			m_videoTexture = new THREE.Texture(new Image());
 			m_videoTexture.needsUpdate = true;
-		},
-
-		setBoardYuv : function() {
-			if (self.mode == "board_yuv") {
-				return;
-			} else {
-				self.mode = "board_yuv";
-			}
+			m_videoTexture.generateMipmaps = false;// performance
+			m_videoTexture.minFilter = THREE.LinearFilter;// performance
+			m_videoTexture.anisotropy = m_renderer.getMaxAnisotropy();
 
 			m_videoTexture_y = new THREE.Texture(new Image());
 			m_videoTexture_y.needsUpdate = true;
-			m_videoTexture_y.generateMipmaps = false;// this is for
-			// performance
-			m_videoTexture_y.minFilter = THREE.LinearFilter;// this is for
+			m_videoTexture_y.generateMipmaps = false;// performance
+			m_videoTexture_y.minFilter = THREE.LinearFilter;// performance
 			m_videoTexture_y.anisotropy = m_renderer.getMaxAnisotropy();
 
 			m_videoTexture_u = new THREE.Texture(new Image());
@@ -391,138 +343,166 @@ function OMVR() {
 			m_videoTexture_v.minFilter = THREE.LinearFilter;// performance
 			m_videoTexture_v.anisotropy = m_renderer.getMaxAnisotropy();
 
-			var YUV2RGB = new THREE.Matrix4();
+			setInterval(function() {
+				if (self.auto_animate) {
+					self.animate();
+				}
+			}, 33);// 30hz
 
-			if (0 == "rec709") {
-				// ITU-T Rec. 709
-				YUV2RGB.elements = [//
-				1.16438, 0.00000, 1.79274, -0.97295,//
-				1.16438, -0.21325, -0.53291, 0.30148,//
-				1.16438, 2.11240, 0.00000, -1.13340,//
-				0, 0, 0, 1,//
-				];
-			} else {
-				// assume ITU-T Rec. 601
-				YUV2RGB.elements = [//
-				1.16438, 0.00000, 1.59603, -0.87079,//
-				1.16438, -0.39176, -0.81297, 0.52959,//
-				1.16438, 2.01723, 0.00000, -1.08139,//
-				0, 0, 0, 1//
-				];
-			};
-
-			var geometry = new THREE.PlaneGeometry(2, 2);// position is
-			// x:[-1,1],
-			// y:[-1,1]
-			// loadFile("shader/board.frag?cache=no", function(fragmentShader) {
-			// loadFile("shader/board.vert?cache=no", function(vertexShader) {
-			loadFile("shader/board_yuv.frag?cache=no", function(fragmentShader) {
-				loadFile("shader/board_yuv.vert?cache=no", function(
-					vertexShader) {
-					var material = new THREE.ShaderMaterial({
-						vertexShader : vertexShader,
-						fragmentShader : fragmentShader,
-						uniforms : {
-							tex_scalex : {
-								type : 'f',
-								value : 1
-							},
-							tex_scaley : {
-								type : 'f',
-								value : 1
-							},
-							tex_y : {
-								type : 't',
-								value : m_videoTexture_y
-							},
-							tex_u : {
-								type : 't',
-								value : m_videoTexture_u
-							},
-							tex_v : {
-								type : 't',
-								value : m_videoTexture_v
-							},
-							YUV2RGB : {
-								type : 'm4',
-								value : YUV2RGB
-							},
-						},
-						side : THREE.DoubleSide,
-						blending : THREE.NormalBlending,
-						transparent : true,
-						depthTest : false
-					});
-
-					m_mesh = new THREE.Mesh(geometry, material);
-					m_mesh.material.needsUpdate = true;
-					for (var i = 0; i < m_scene.children.length; i++) {
-						m_scene.remove(m_scene.children[i]);
+			// load shader
+			var loaded_shader_num = 0;
+			var shader_list = [{
+				url : "shader/window.vert?cache=no",
+				shader : "window_vertex_shader"
+			}, {
+				url : "shader/window_yuv.frag?cache=no",
+				shader : "window_yuv_fragment_shader"
+			}, {
+				url : "shader/window_rgb.frag?cache=no",
+				shader : "window_rgb_fragment_shader"
+			}, {
+				url : "shader/board.vert?cache=no",
+				shader : "board_vertex_shader"
+			}, {
+				url : "shader/board_yuv.frag?cache=no",
+				shader : "board_yuv_fragment_shader"
+			}, {
+				url : "shader/board_rgb.frag?cache=no",
+				shader : "board_rgb_fragment_shader"
+			}, ];
+			shader_list.forEach(function(item) {
+				loadFile(item.url, function(shader) {
+					m_shaders[item.shader] = shader;
+					loaded_shader_num++;
+					if (callback && loaded_shader_num == shader_list.length) {
+						callback();
 					}
-					m_scene.add(m_mesh);
 				});
 			});
 		},
 
-		setBoard : function() {
-			if (self.mode == "board") {
+		getTextureImg : function() {
+			return m_videoImage;
+		},
+
+		setTexureFov : function(value) {
+			self.tex_fov = value;
+		},
+
+		setAspect : function(width, height) {
+			if (!m_mesh) {
+				return;
+			}
+			var texture_aspect = width / height;
+			var window_aspect = (stereoEnabled
+				? window.innerWidth / 2
+				: window.innerWidth)
+				/ window.innerHeight;
+			var aspect = window_aspect / texture_aspect;
+			if (aspect > 1.0) {
+				m_mesh.material.uniforms.frame_scalex.value = aspect;
+				m_mesh.material.uniforms.frame_scaley.value = 1.0;
+			} else {
+				m_mesh.material.uniforms.frame_scalex.value = 1.0;
+				m_mesh.material.uniforms.frame_scaley.value = 1.0 / aspect;
+			}
+			if (self.vertex_type == "board") {
+				//m_mesh.material.uniforms.tex_scalex.value = 360.0 / self.tex_fov;
+				//m_mesh.material.uniforms.tex_scaley.value = 360.0 / (self.tex_fov / texture_aspect);
+			}
+		},
+
+		setTextureImg : function(texture) {
+			self.setAspect(texture.width, texture.height);
+
+			m_videoTexture.image = texture;
+			m_videoTexture.needsUpdate = true;
+		},
+
+		setModel : function(vertex_type, fragment_type) {
+			if (self.vertex_type == vertex_type
+				&& self.fragment_type == fragment_type) {
 				return;
 			} else {
-				self.mode = "board";
+				self.vertex_type = vertex_type;
+				self.fragment_type = fragment_type;
 			}
 
-			m_videoImage = new Image();
-			m_videoImage.width = 512;
-			m_videoImage.height = 512;
-			m_videoImage.onload = function() {
-				self.setTextureImg(m_videoImage);
-				self.animate();
+			var geometry = null;
+			if (vertex_type == "board") {
+				geometry = new THREE.PlaneGeometry(2, 2);
+			} else if (vertex_type == "window") {
+				m_camera.target = new THREE.Vector3(0, 0, 1);
+				m_camera.up = new THREE.Vector3(0, 1, 0);
+				m_camera.lookAt(m_camera.target);
+
+				var maxfov = 150;
+				geometry = windowGeometry(maxfov, maxfov, 64);
+			} else {
+				// error
+				return;
 			}
-
-			m_videoTexture = new THREE.Texture(m_videoImage);
-			m_videoTexture.needsUpdate = true;
-			m_videoTexture.generateMipmaps = false;// this is for performance
-			m_videoTexture.minFilter = THREE.LinearFilter;// this is for
-			m_videoTexture.anisotropy = m_renderer.getMaxAnisotropy();
-
-			var geometry = new THREE.PlaneGeometry(2, 2);// position is
+			// position is
 			// x:[-1,1],
 			// y:[-1,1]
-			// loadFile("shader/board.frag?cache=no", function(fragmentShader) {
-			// loadFile("shader/board.vert?cache=no", function(vertexShader) {
-			loadFile("shader/board.frag?cache=no", function(fragmentShader) {
-				loadFile("shader/board.vert?cache=no", function(vertexShader) {
-					var material = new THREE.ShaderMaterial({
-						vertexShader : vertexShader,
-						fragmentShader : fragmentShader,
-						uniforms : {
-							tex_scalex : {
-								type : 'f',
-								value : 1
-							},
-							tex_scaley : {
-								type : 'f',
-								value : 1
-							},
-							tex : {
-								type : 't',
-								value : m_videoTexture
-							},
-						},
-						side : THREE.DoubleSide,
-						blending : THREE.NormalBlending,
-						transparent : true,
-						depthTest : false
-					});
-
-					m_mesh = new THREE.Mesh(geometry, material);
-					m_mesh.material.needsUpdate = true;
-					for (var i = 0; i < m_scene.children.length; i++) {
-						m_scene.remove(m_scene.children[i]);
-					}
-					m_scene.add(m_mesh);
-				});
+			var material = new THREE.ShaderMaterial({
+				vertexShader : m_shaders[vertex_type + "_vertex_shader"],
+				fragmentShader : m_shaders[vertex_type + "_" + fragment_type
+					+ "_fragment_shader"],
+				uniforms : {
+					frame_scalex : {
+						type : 'f',
+						value : 1
+					},
+					frame_scaley : {
+						type : 'f',
+						value : 1
+					},
+					tex_scalex : {
+						type : 'f',
+						value : 1
+					},
+					tex_scaley : {
+						type : 'f',
+						value : 1
+					},
+					tex : {
+						type : 't',
+						value : m_videoTexture
+					},
+					tex_y : {
+						type : 't',
+						value : m_videoTexture_y
+					},
+					tex_u : {
+						type : 't',
+						value : m_videoTexture_u
+					},
+					tex_v : {
+						type : 't',
+						value : m_videoTexture_v
+					},
+					YUV2RGB : {
+						type : 'm4',
+						value : YUV2RGB
+					},
+					unif_matrix : {
+						type : 'm4',
+						value : new THREE.Matrix4()
+					},
+				},
+				side : THREE.DoubleSide,
+				blending : THREE.NormalBlending,
+				transparent : true,
+				depthTest : false
 			});
+
+			m_mesh = new THREE.Mesh(geometry, material);
+			m_mesh.material.needsUpdate = true;
+			for (var i = 0; i < m_scene.children.length; i++) {
+				m_scene.remove(m_scene.children[i]);
+			}
+			m_scene.add(m_mesh);
 		},
 
 		checkImageLastUpdate : true,

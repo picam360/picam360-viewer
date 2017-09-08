@@ -35,6 +35,7 @@ var app = (function() {
 	var fov = 120;
 	var auto_scroll = false;
 	var view_offset_lock = false;
+	var anti_delay = false;
 	var debug = 0;
 
 	// main canvas
@@ -360,6 +361,9 @@ var app = (function() {
 
 			document.getElementById("uiCall").style.display = "none";
 
+			function parseBoolean(str) {
+				return str == "yes" || str == "on" || str == "true";
+			}
 			var query = GetQueryString();
 			if (query['server-url']) {
 				server_url = query['server-url'];
@@ -380,19 +384,19 @@ var app = (function() {
 				fov = parseFloat(query['fov']);
 			}
 			if (query['auto-scroll']) {
-				auto_scroll = query['auto-scroll'] == "yes"
-					|| query['auto-scroll'] == "on";
+				auto_scroll = parseBoolean(query['auto-scroll']);
 			}
 			if (query['is-p2p-upstream']) {
-				is_p2p_upstream = query['is-p2p-upstream'] == "yes"
-					|| query['is-p2p-upstream'] == "on";
+				is_p2p_upstream = parseBoolean(query['is-p2p-upstream']);
 			}
 			if (query['debug']) {
 				debug = parseFloat(query['debug']);
 			}
 			if (query['view-offset-lock']) {
-				view_offset_lock = query['view-offset-lock'] == "yes"
-					|| query['is-p2p-lock'] == "on";
+				view_offset_lock = parseBoolean(query['view-offset-lock']);
+			}
+			if (query['anti-delay']) {
+				anti_delay = parseBoolean(query['anti-delay']);
 			}
 
 			self.plugin_host = PluginHost(self);
@@ -463,124 +467,126 @@ var app = (function() {
 
 					// webgl handling
 					omvr = OMVR();
-					omvr.init(canvas);
-					omvr.setFov(fov);
-
-					setInterval(function() {
-						var quat = self.plugin_host.get_view_quaternion()
-							|| new THREE.Quaternion();
-						var view_offset_quat = self.plugin_host
-							.get_view_offset();
-						var view_quat = view_offset_quat.multiply(quat);
-						omvr.setCameraQuaternion(view_quat);
-						if (auto_scroll) {
-							var view_offset_diff_quat = new THREE.Quaternion()
-								.setFromEuler(new THREE.Euler(THREE.Math
-									.degToRad(0), THREE.Math.degToRad(0), THREE.Math
-									.degToRad(0.5), "YXZ"));
-							view_offset = view_quat
-								.multiply(view_offset_diff_quat).multiply(quat
-									.conjugate());
-						}
-					}, 33);// 30hz
-
-					if (default_image_url) {
-						omvr
-							.setSphere(default_image_url, "", "", "", false, false, null, {
-								Pitch : 0,
-								Yaw : 0,
-								Roll : 0
-							});
-					}
-
-					// video decoder
-					h264_decoder = H264Decoder();
-					mjpeg_decoder = MjpegDecoder();
-					h264_decoder.set_frame_callback(omvr.handle_frame);
-					mjpeg_decoder.set_frame_callback(omvr.handle_frame);
-
-					// motion processer unit
-					mpu = MPU(self.plugin_host);
-					mpu.init();
-
-					// init network related matters
-					// data stream handling
-					rtp = Rtp();
-					rtcp = Rtcp();
-					// set rtp callback
-					rtp
-						.set_callback(function(packet, cmd_request) {
-							if (packet.GetPayloadType() == PT_CAM_BASE) {// image
-								mjpeg_decoder
-									.decode(packet.GetPayload(), packet
-										.GetPayloadLength());
-								h264_decoder.decode(packet.GetPayload(), packet
-									.GetPayloadLength());
-								if (cmd_request) {
-									var quat = mpu.get_quaternion();
-									quat = self.plugin_host.get_view_offset()
-										.multiply(quat);
-									var cmd = UPSTREAM_DOMAIN
-										+ "set_view_quaternion 0=" + quat.x
-										+ "," + quat.y + "," + quat.z + ","
-										+ quat.w;
-									return cmd;
-								}
-							} else if (packet.GetPayloadType() == PT_STATUS) {// status
-								var str = String.fromCharCode
-									.apply("", new Uint8Array(packet
-										.GetPayload()));
-								var split = str.split('"');
-								var name = UPSTREAM_DOMAIN + split[1];
-								var value = split[3];
-								if (watches[name]) {
-									watches[name](value);
-								}
+					omvr.init(canvas, function(){
+						setInterval(function() {
+							var quat = self.plugin_host.get_view_quaternion()
+								|| new THREE.Quaternion();
+							var view_offset_quat = self.plugin_host
+								.get_view_offset();
+							var view_quat = view_offset_quat.multiply(quat);
+							omvr.setCameraQuaternion(view_quat);
+							if (auto_scroll) {
+								var view_offset_diff_quat = new THREE.Quaternion()
+									.setFromEuler(new THREE.Euler(THREE.Math
+										.degToRad(0), THREE.Math.degToRad(0), THREE.Math
+										.degToRad(0.5), "YXZ"));
+								view_offset = view_quat
+									.multiply(view_offset_diff_quat).multiply(quat
+										.conjugate());
 							}
-						});
-					// command to upstream
-					setInterval(function() {
-						if (!cmd2upstream_list.length) {
-							return;
+						}, 33);// 30hz
+
+						if (default_image_url) {
+							omvr.auto_animate = true;
+							omvr.setTexureFov(360);
+							omvr.setModel("window", "rgb");
+							omvr.loadTexture(default_image_url);
+						} else if (anti_delay) {
+							omvr.setTexureFov(120);
+							omvr.setModel("board", "rgb");
+						} else {
+							omvr.setModel("board", "rgb");
 						}
-						var value = cmd2upstream_list.shift();
-						var cmd = "<picam360:command id=\""
-							+ app.rtcp_command_id + "\" value=\"" + value
-							+ "\" />"
-						rtcp.sendpacket(rtcp.buildpacket(cmd, 101));
-						app.rtcp_command_id++;
-					}, 10);// 100hz
 
-					// websocket
-					jQuery
-						.getScript(server_url + 'socket.io/socket.io.js', function() {
-							// connect websocket
-							socket = io.connect(server_url);
+						// video decoder
+						h264_decoder = H264Decoder();
+						mjpeg_decoder = MjpegDecoder();
+						h264_decoder.set_frame_callback(omvr.handle_frame);
+						mjpeg_decoder.set_frame_callback(omvr.handle_frame);
 
-							socket.on("connect", function() {
-								console.log("connected : " + socket.id);
+						// motion processer unit
+						mpu = MPU(self.plugin_host);
+						mpu.init();
 
-								rtp.set_websocket(socket);
-								rtcp.set_websocket(socket);
-
-								is_p2p_upstream = true;
-							});
-							socket.on("disconnect", function() {
-								console.log("disconnected");
-							});
-							socket
-								.on("custom_error", function(event) {
-									console.log("error : " + event);
-									switch (event) {
-										case "exceeded_num_of_clients" :
-											alert("The number of clients is exceeded.");
-											break;
+						// init network related matters
+						// data stream handling
+						rtp = Rtp();
+						rtcp = Rtcp();
+						// set rtp callback
+						rtp
+							.set_callback(function(packet, cmd_request) {
+								if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+									mjpeg_decoder
+										.decode(packet.GetPayload(), packet
+											.GetPayloadLength());
+									h264_decoder.decode(packet.GetPayload(), packet
+										.GetPayloadLength());
+									if (cmd_request) {
+										var quat = mpu.get_quaternion();
+										quat = self.plugin_host.get_view_offset()
+											.multiply(quat);
+										var cmd = UPSTREAM_DOMAIN
+											+ "set_view_quaternion 0=" + quat.x
+											+ "," + quat.y + "," + quat.z + ","
+											+ quat.w;
+										return cmd;
 									}
-								});
-						});
+								} else if (packet.GetPayloadType() == PT_STATUS) {// status
+									var str = String.fromCharCode
+										.apply("", new Uint8Array(packet
+											.GetPayload()));
+									var split = str.split('"');
+									var name = UPSTREAM_DOMAIN + split[1];
+									var value = split[3];
+									if (watches[name]) {
+										watches[name](value);
+									}
+								}
+							});
+						// command to upstream
+						setInterval(function() {
+							if (!cmd2upstream_list.length) {
+								return;
+							}
+							var value = cmd2upstream_list.shift();
+							var cmd = "<picam360:command id=\""
+								+ app.rtcp_command_id + "\" value=\"" + value
+								+ "\" />"
+							rtcp.sendpacket(rtcp.buildpacket(cmd, 101));
+							app.rtcp_command_id++;
+						}, 10);// 100hz
 
-					// animate
-					self.start_animate();
+						// websocket
+						jQuery
+							.getScript(server_url + 'socket.io/socket.io.js', function() {
+								// connect websocket
+								socket = io.connect(server_url);
+
+								socket.on("connect", function() {
+									console.log("connected : " + socket.id);
+
+									rtp.set_websocket(socket);
+									rtcp.set_websocket(socket);
+
+									is_p2p_upstream = true;
+								});
+								socket.on("disconnect", function() {
+									console.log("disconnected");
+								});
+								socket
+									.on("custom_error", function(event) {
+										console.log("error : " + event);
+										switch (event) {
+											case "exceeded_num_of_clients" :
+												alert("The number of clients is exceeded.");
+												break;
+										}
+									});
+							});
+
+						// animate
+						self.start_animate();
+					});
 				});
 		},
 		start_p2p : function(sender) {
