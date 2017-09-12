@@ -3,7 +3,8 @@
  */
 
 function OMVR() {
-	var m_camera_quat = new THREE.Quaternion();
+	var m_view_quat = new THREE.Quaternion();
+	var m_tex_quat = new THREE.Quaternion();
 
 	var m_camera, m_scene, m_renderer, m_mesh;
 
@@ -12,6 +13,11 @@ function OMVR() {
 	var m_context;
 	var m_effect;
 
+	var m_maxfov = 150;
+	var m_view_fov = 120;
+	var m_videoTexture_fov = 120;
+	var m_videoTexture_width = 512;
+	var m_videoTexture_height = 512;
 	var m_videoImage;
 	var m_videoImageContext;
 	var m_videoTexture;
@@ -150,27 +156,14 @@ function OMVR() {
 
 	var self = {
 		setCameraQuaternion : function(value) {
-			m_camera_quat = value;
-
-			if (m_mesh && m_mesh.material.uniforms.unif_matrix) {
-				var quat = value.clone();
-				var euler_correct = new THREE.Euler(THREE.Math.degToRad(-90), THREE.Math
-					.degToRad(180), THREE.Math.degToRad(0), "YXZ");
-
-				var quat_correct = new THREE.Quaternion();
-				quat_correct.setFromEuler(euler_correct);
-				quat = quat.multiply(quat_correct);
-				m_mesh.material.uniforms.unif_matrix.value
-					.makeRotationFromQuaternion(quat);
-			}
+			m_view_quat = value;
 		},
 
 		fps : 0,
 		checkImageDelay : 1000,
 		vertex_type : "",
 		fragment_type : "",
-		auto_animate : false,
-		tex_fov : 360,// for sphere
+		anti_delay : false,
 
 		loadTexture : function(image_url, image_type) {
 
@@ -223,8 +216,26 @@ function OMVR() {
 			}
 		},
 
-		handle_frame : function(type, data, width, height) {
-			self.auto_animate = false;
+		handle_frame_info : function(info) {
+		},
+
+		handle_frame : function(type, data, width, height, info) {
+			var tex_quat;
+			if (info) {
+				var split = info.split(' ');
+				for (var i = 0; i < split.length; i++) {
+					var separator = (/[=,\"]/);
+					var _split = split[i].split(separator);
+					if (_split[0] == "vq") { // view quaternion
+						var x = parseFloat(_split[2]);
+						var y = parseFloat(_split[3]);
+						var z = parseFloat(_split[4]);
+						var w = parseFloat(_split[5]);
+						tex_quat = new THREE.Quaternion(x, y, z, w);
+					}
+				}
+			}
+			m_tex_quat = tex_quat || m_view_quat.clone();
 			if (type == "raw_bmp") {
 				self.setModel(self.vertex_type, "bmp");
 
@@ -276,8 +287,8 @@ function OMVR() {
 				gl
 					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, vDataPerRow, vRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, vData);
 
-				self.setAspect(width, height);
-				self.animate();
+				m_videoTexture_width = width;
+				m_videoTexture_height = height;
 			} else if (type == "blob") {
 				self.setModel(self.vertex_type, "bmp");
 
@@ -343,12 +354,6 @@ function OMVR() {
 			m_videoTexture_v.minFilter = THREE.LinearFilter;// performance
 			m_videoTexture_v.anisotropy = m_renderer.getMaxAnisotropy();
 
-			setInterval(function() {
-				if (self.auto_animate) {
-					self.animate();
-				}
-			}, 33);// 30hz
-
 			// load shader
 			var loaded_shader_num = 0;
 			var shader_list = [{
@@ -386,34 +391,16 @@ function OMVR() {
 		},
 
 		setTexureFov : function(value) {
-			self.tex_fov = value;
+			m_videoTexture_fov = value;
 		},
 
-		setAspect : function(width, height) {
-			if (!m_mesh) {
-				return;
-			}
-			var texture_aspect = width / height;
-			var window_aspect = (stereoEnabled
-				? window.innerWidth / 2
-				: window.innerWidth)
-				/ window.innerHeight;
-			var aspect = window_aspect / texture_aspect;
-			if (aspect > 1.0) {
-				m_mesh.material.uniforms.frame_scalex.value = aspect;
-				m_mesh.material.uniforms.frame_scaley.value = 1.0;
-			} else {
-				m_mesh.material.uniforms.frame_scalex.value = 1.0;
-				m_mesh.material.uniforms.frame_scaley.value = 1.0 / aspect;
-			}
-			if (self.vertex_type == "board") {
-				//m_mesh.material.uniforms.tex_scalex.value = 360.0 / self.tex_fov;
-				//m_mesh.material.uniforms.tex_scaley.value = 360.0 / (self.tex_fov / texture_aspect);
-			}
+		setViewFov : function(value) {
+			m_view_fov = value;
 		},
 
 		setTextureImg : function(texture) {
-			self.setAspect(texture.width, texture.height);
+			m_videoTexture_width = texture.width;
+			m_videoTexture_height = texture.height;
 
 			m_videoTexture.image = texture;
 			m_videoTexture.needsUpdate = true;
@@ -428,20 +415,12 @@ function OMVR() {
 				self.fragment_type = fragment_type;
 			}
 
-			var geometry = null;
-			if (vertex_type == "board") {
-				geometry = new THREE.PlaneGeometry(2, 2);
-			} else if (vertex_type == "window") {
-				m_camera.target = new THREE.Vector3(0, 0, 1);
-				m_camera.up = new THREE.Vector3(0, 1, 0);
-				m_camera.lookAt(m_camera.target);
+			m_camera.target = new THREE.Vector3(0, 0, 1);
+			m_camera.up = new THREE.Vector3(0, 1, 0);
+			m_camera.lookAt(m_camera.target);
 
-				var maxfov = 150;
-				geometry = windowGeometry(maxfov, maxfov, 64);
-			} else {
-				// error
-				return;
-			}
+			var geometry = windowGeometry(m_maxfov, m_maxfov, 64);
+
 			// position is
 			// x:[-1,1],
 			// y:[-1,1]
@@ -508,6 +487,61 @@ function OMVR() {
 		checkImageLastUpdate : true,
 
 		animate : function(elapsedTime) {
+			if (m_mesh && m_mesh.material.uniforms.unif_matrix) {
+				var euler_correct = new THREE.Euler(THREE.Math.degToRad(-90), THREE.Math
+					.degToRad(180), THREE.Math.degToRad(0), "YXZ");
+				var quat_correct = new THREE.Quaternion();
+				quat_correct.setFromEuler(euler_correct);
+
+				var view_quat = m_view_quat.clone();
+				if (self.vertex_type == "board") {
+					if (self.anti_delay) {
+						var tex_quat = m_tex_quat.clone();
+						view_quat = tex_quat.clone().conjugate()
+							.multiply(view_quat);
+						view_quat = quat_correct.clone().multiply(view_quat)
+							.multiply(quat_correct.clone().conjugate());
+						m_mesh.material.uniforms.unif_matrix.value
+							.makeRotationFromQuaternion(view_quat);
+					}
+				} else {
+					view_quat = view_quat.clone().multiply(quat_correct);
+					m_mesh.material.uniforms.unif_matrix.value
+						.makeRotationFromQuaternion(view_quat);
+				}
+
+				{
+					var window_aspect = (stereoEnabled
+						? window.innerWidth / 2
+						: window.innerWidth)
+						/ window.innerHeight;
+					var fov_rad = m_view_fov * Math.PI / 180.0;
+					var fov_gain = Math.tan(fov_rad / 2);
+					var scale = 1.0 / fov_gain;
+					if (window_aspect > 1.0) {
+						m_mesh.material.uniforms.frame_scalex.value = scale
+							/ window_aspect;
+						m_mesh.material.uniforms.frame_scaley.value = scale;
+					} else {
+						m_mesh.material.uniforms.frame_scalex.value = scale;
+						m_mesh.material.uniforms.frame_scaley.value = scale
+							* window_aspect;
+					}
+				}
+
+				if (self.vertex_type == "board") {
+					var texture_aspect = m_videoTexture_width
+						/ m_videoTexture_height;
+					var fov_rad = m_view_fov * Math.PI / 180.0;
+					var fov_gain = Math.tan(fov_rad / 2);
+					var tex_fov_rad = m_videoTexture_fov * Math.PI / 180.0;
+					var tex_fov_gain = Math.tan(tex_fov_rad / 2);
+					var scale = (1.0 / fov_gain) * (fov_gain / tex_fov_gain);
+					m_mesh.material.uniforms.tex_scalex.value = scale;
+					m_mesh.material.uniforms.tex_scaley.value = scale
+						* texture_aspect;
+				}
+			}
 			if (stereoEnabled) {
 				m_effect.render(m_scene, m_camera);
 			} else {

@@ -1,4 +1,3 @@
-//THREE.SphereGeometry()
 //position is windowed sphere
 uniform float frame_scalex;
 uniform float frame_scaley;

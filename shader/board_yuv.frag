@@ -1,4 +1,3 @@
-precision highp float;
 varying vec2 tcoord;
 uniform sampler2D tex_y;
 uniform sampler2D tex_u;
