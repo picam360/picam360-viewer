@@ -26,15 +26,30 @@ function H264Decoder(callback) {
 
 				// console.log("frame");
 				m_decoded_frame_num++;
+				if (m_decoded_frame_num > m_packet_frame_num) {
+					console.log("something wrong");
+				}
 				if (m_frame_callback) {
+					var info = m_frame_info[m_decoded_frame_num];
+					if (!info) {
+						console.log("no view quat info:" + m_decoded_frame_num
+							+ ":" + m_frame_info);
+					}
 					m_frame_callback("yuv", data.buf, data.width, data.height, m_frame_info[m_decoded_frame_num]);
 				}
-				if (m_decoded_frame_num == m_packet_frame_num) {
-					m_frame_info = {};
-				} else {
-					//console.log("packet & decode are not same:"
-					//	+ m_decoded_frame_num);
+				var frame_info = {};
+				for (var i = m_decoded_frame_num; i <= m_packet_frame_num; i++) {
+					if (m_frame_info[i]) {
+						frame_info[i] = m_frame_info[i];
+					} else {
+						console.log("no view quat info:" + i);
+					}
 				}
+				m_frame_info = frame_info;
+				// if (m_decoded_frame_num != m_packet_frame_num) {
+				// console.log("packet & decode are not synchronized:"
+				// + m_decoded_frame_num + "-" + m_packet_frame_num);
+				//				}
 			}, false);
 	} else {
 		var script = document.createElement('script');
@@ -85,6 +100,13 @@ function H264Decoder(callback) {
 					var nal_type = 0;
 					var nal_len = 0;
 					var _nal_len = 0;
+					if ((m_active_frame[0][4] & 0x1f) == 6) {// sei
+						var str = String.fromCharCode
+							.apply("", m_active_frame[0].subarray(4), 0);
+						m_frame_info[(m_packet_frame_num + 1)] = str;
+						m_active_frame.shift();
+						//console.log("sei : " + (m_packet_frame_num + 1));
+					}
 					for (var i = 0; i < m_active_frame.length; i++) {
 						if (i == 0) {
 							nal_len = m_active_frame[i][0] << 24
@@ -99,7 +121,7 @@ function H264Decoder(callback) {
 							_nal_len += m_active_frame[i].length;
 						}
 					}
-					// console.log("nal_type:" + nal_type);
+					//console.log("nal_type:" + nal_type);
 					if (nal_len != _nal_len) {
 						console.log("error : " + nal_len);
 						m_active_frame = null;
@@ -124,14 +146,9 @@ function H264Decoder(callback) {
 							return;
 						}
 					}
-					if (nal_type == 6) {// sei
-						var str = String.fromCharCode.apply("", nal_buffer);
-						m_frame_info[m_packet_frame_num + 1] = str;
-						m_active_frame = null;
-						return;
-					}
 					if (nal_type == 1 || nal_type == 5) {// frame
 						m_packet_frame_num++;
+						//console.log("packet_frame_num:" + m_packet_frame_num);
 					}
 					if (worker) {
 						worker.postMessage({

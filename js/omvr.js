@@ -235,7 +235,12 @@ function OMVR() {
 					}
 				}
 			}
-			m_tex_quat = tex_quat || m_view_quat.clone();
+			if (tex_quat) {
+				m_tex_quat = tex_quat;
+			} else {
+				console.log("no view quat info");
+				m_tex_quat = m_view_quat.clone();
+			}
 			if (type == "raw_bmp") {
 				self.setModel(self.vertex_type, "bmp");
 
