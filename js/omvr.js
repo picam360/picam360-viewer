@@ -3,8 +3,14 @@
  */
 
 function OMVR() {
+	var m_view_quat_1 = new THREE.Quaternion();
 	var m_view_quat = new THREE.Quaternion();
 	var m_tex_quat = new THREE.Quaternion();
+	var m_view_tex_diff_quat = new THREE.Quaternion();
+	var m_view_quat_1_time = new Date().getTime();
+	var m_view_quat_time = new Date().getTime();
+	var m_view_av_rad = 0;
+	var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
 	var m_camera, m_scene, m_renderer, m_mesh;
 
@@ -15,7 +21,9 @@ function OMVR() {
 
 	var m_maxfov = 150;
 	var m_view_fov = 120;
+	var m_fov_margin = 10;
 	var m_videoTexture_fov = 120;
+	var m_videoTexture_ttl = 0;
 	var m_videoTexture_width = 512;
 	var m_videoTexture_height = 512;
 	var m_videoImage;
@@ -155,8 +163,47 @@ function OMVR() {
 	var stereoEnabled = false;
 
 	var self = {
-		setCameraQuaternion : function(value) {
+		set_view_quaternion : function(value) {
+			m_view_quat_1 = m_view_quat;
+			m_view_quat_1_time = m_view_quat_time;
 			m_view_quat = value;
+			m_view_quat_time = new Date().getTime();
+
+			var diff_time = (m_view_quat_time - m_view_quat_1_time) / 1000;
+			var diff_quat = m_view_quat_1.clone().conjugate()
+				.multiply(m_view_quat);
+			var cos = diff_quat.w;
+			var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+				* diff_quat.y + diff_quat.z * diff_quat.z);
+			m_view_av_rad = (Math.atan2(sin, cos) * 2) / diff_time;
+			// console.log("cos:" + cos + ",sin:" + sin + ",av:"
+			// + (180 * m_view_av_rad / Math.PI));
+			if (sin == 0) {
+				m_view_av_n = new THREE.Vector3(0, 0, 1);
+			} else {
+				m_view_av_n = new THREE.Vector3(diff_quat.x / sin, diff_quat.y
+					/ sin, diff_quat.z / sin);
+			}
+		},
+		predict_view_quaternion : function(dt) {
+			var cos = Math.cos(m_view_av_rad * dt / 2);
+			var sin = Math.sin(m_view_av_rad * dt / 2);
+			var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
+				* m_view_av_n.y, sin * m_view_av_n.z, cos);
+			return m_view_quat.multiply(diff_quat);
+		},
+		get_adaptive_texture_fov : function(dt) {
+			var diff_quat = m_view_tex_diff_quat;
+			var cos = diff_quat.w;
+			var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+				* diff_quat.y + diff_quat.z * diff_quat.z);
+			var diff_theta = Math.atan2(sin, cos) * 2;
+			var fov = m_view_fov + m_fov_margin + 180 * Math.abs(diff_theta)
+				/ Math.PI;
+			if (fov > m_maxfov) {
+				fov = m_maxfov;
+			}
+			return fov;
 		},
 
 		fps : 0,
@@ -232,6 +279,10 @@ function OMVR() {
 						var z = parseFloat(_split[4]);
 						var w = parseFloat(_split[5]);
 						tex_quat = new THREE.Quaternion(x, y, z, w);
+					} else if (_split[0] == "fov") {
+						m_videoTexture_fov = parseFloat(_split[2]);
+					} else if (_split[0] == "tk") { // ttl_key
+						m_videoTexture_ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
 					}
 				}
 			}
@@ -492,25 +543,24 @@ function OMVR() {
 		checkImageLastUpdate : true,
 
 		animate : function(elapsedTime) {
+			m_view_tex_diff_quat = m_tex_quat.clone().conjugate()
+				.multiply(m_view_quat);
 			if (m_mesh && m_mesh.material.uniforms.unif_matrix) {
 				var euler_correct = new THREE.Euler(THREE.Math.degToRad(-90), THREE.Math
 					.degToRad(180), THREE.Math.degToRad(0), "YXZ");
 				var quat_correct = new THREE.Quaternion();
 				quat_correct.setFromEuler(euler_correct);
 
-				var view_quat = m_view_quat.clone();
 				if (self.vertex_type == "board") {
 					if (self.anti_delay) {
-						var tex_quat = m_tex_quat.clone();
-						view_quat = tex_quat.clone().conjugate()
-							.multiply(view_quat);
-						view_quat = quat_correct.clone().multiply(view_quat)
+						var diff_quat = quat_correct.clone()
+							.multiply(m_view_tex_diff_quat)
 							.multiply(quat_correct.clone().conjugate());
 						m_mesh.material.uniforms.unif_matrix.value
-							.makeRotationFromQuaternion(view_quat);
+							.makeRotationFromQuaternion(diff_quat);
 					}
 				} else {
-					view_quat = view_quat.clone().multiply(quat_correct);
+					var view_quat = m_view_quat.clone().multiply(quat_correct);
 					m_mesh.material.uniforms.unif_matrix.value
 						.makeRotationFromQuaternion(view_quat);
 				}

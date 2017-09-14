@@ -32,7 +32,7 @@ var SIGNALING_SECURE = true;
 var app = (function() {
 	var tilt = 0;
 	var socket;
-	var fov = 120;
+	var m_view_fov = 120;
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
@@ -194,7 +194,7 @@ var app = (function() {
 				}
 			},
 			get_fov : function() {
-				return fov;
+				return m_view_fov;
 			},
 			set_fov : function(value) {
 				self.send_command(CAPTURE_DOMAIN + "set_fov 0="
@@ -382,11 +382,11 @@ var app = (function() {
 				view_offset = new THREE.Quaternion().setFromEuler(euler);
 			}
 			if (query['fov']) {
-				fov = parseFloat(query['fov']);
+				m_view_fov = parseFloat(query['fov']);
 			}
 			if (query['fps']) {
 				target_fps = parseFloat(query['fps']);
-			}			
+			}
 			if (query['auto-scroll']) {
 				auto_scroll = parseBoolean(query['auto-scroll']);
 			}
@@ -480,7 +480,7 @@ var app = (function() {
 								var view_offset_quat = self.plugin_host
 									.get_view_offset();
 								var view_quat = view_offset_quat.multiply(quat);
-								omvr.setCameraQuaternion(view_quat);
+								omvr.set_view_quaternion(view_quat);
 								if (auto_scroll) {
 									var view_offset_diff_quat = new THREE.Quaternion()
 										.setFromEuler(new THREE.Euler(THREE.Math
@@ -494,10 +494,11 @@ var app = (function() {
 							}, 33);// 30hz
 
 							if (default_image_url) {
+								omvr.setViewFov(m_view_fov);
 								omvr.setModel("window", "rgb");
 								omvr.loadTexture(default_image_url);
 							} else {
-								omvr.setTexureFov(fov);
+								omvr.setViewFov(m_view_fov);
 								omvr.anti_delay = anti_delay;
 								omvr.setModel("board", "rgb");
 							}
@@ -532,9 +533,16 @@ var app = (function() {
 												.get_view_offset()
 												.multiply(quat);
 											var cmd = UPSTREAM_DOMAIN
-												+ "set_view_quaternion 0="
-												+ quat.x + "," + quat.y + ","
-												+ quat.z + "," + quat.w;
+												+ sprintf("set_view_quaternion 0=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+											if (anti_delay) {
+												var fov = omvr
+													.get_adaptive_texture_fov();
+												var key = new Date().getTime()
+													.toString();
+												cmd += sprintf(" fov=%.3f key=%s", fov, key);
+											}else{
+												cmd += sprintf(" fov=%.3f", m_view_fov);
+											}
 											return cmd;
 										}
 									} else if (packet.GetPayloadType() == PT_STATUS) {// status

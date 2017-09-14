@@ -15,5 +15,9 @@ void main(void) {
 
 	vec4 pos = unif_matrix * vec4(position, 1.0);
 
-	tcoord = (vec2(pos.x / pos.z * tex_scalex, pos.y / pos.z * tex_scaley) + vec2(1, 1)) * vec2(0.5, 0.5);
+	if (pos.z > 0.0) {
+		tcoord = (vec2(pos.x / pos.z * tex_scalex, pos.y / pos.z * tex_scaley) + vec2(1, 1)) * vec2(0.5, 0.5);
+	} else {
+		tcoord = vec2(-1.0, -1.0);
+	}
 }
