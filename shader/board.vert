@@ -9,15 +9,16 @@ uniform mat4 unif_matrix;
 const float M_PI = 3.1415926535;
 
 varying vec2 tcoord;
+varying vec4 pos;
 
 void main(void) {
-	gl_Position = vec4(position.x / position.z * frame_scalex, position.y / position.z * frame_scaley, 1.0, 1.0);
+	float x = position.x / position.z;
+	float y = position.y / position.z;
+	gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
 
-	vec4 pos = unif_matrix * vec4(position, 1.0);
+	pos = unif_matrix * vec4(position, 1.0);
 
-	if (pos.z > 0.0) {
-		tcoord = (vec2(pos.x / pos.z * tex_scalex, pos.y / pos.z * tex_scaley) + vec2(1, 1)) * vec2(0.5, 0.5);
-	} else {
-		tcoord = vec2(-1.0, -1.0);
-	}
+	float tex_x = pos.x / pos.z;
+	float tex_y = pos.y / pos.z;
+	tcoord = (vec2(tex_x * tex_scalex, tex_y * tex_scaley) + vec2(1, 1)) * vec2(0.5, 0.5);
 }

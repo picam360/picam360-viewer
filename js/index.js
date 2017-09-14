@@ -32,11 +32,12 @@ var SIGNALING_SECURE = true;
 var app = (function() {
 	var tilt = 0;
 	var socket;
+	var m_fov_margin = 10;
 	var m_view_fov = 120;
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
-	var anti_delay = false;
+	var anti_delay = true;
 	var debug = 0;
 
 	// main canvas
@@ -384,6 +385,10 @@ var app = (function() {
 			if (query['fov']) {
 				m_view_fov = parseFloat(query['fov']);
 			}
+			if (query['fov_margin']) {
+				m_fov_margin = parseFloat(query['fov_margin']);
+			}
+
 			if (query['fps']) {
 				target_fps = parseFloat(query['fps']);
 			}
@@ -498,6 +503,7 @@ var app = (function() {
 								omvr.setModel("window", "rgb");
 								omvr.loadTexture(default_image_url);
 							} else {
+								omvr.set_fov_margin(m_fov_margin);
 								omvr.setViewFov(m_view_fov);
 								omvr.anti_delay = anti_delay;
 								omvr.setModel("board", "rgb");
@@ -528,21 +534,23 @@ var app = (function() {
 											.decode(packet.GetPayload(), packet
 												.GetPayloadLength());
 										if (cmd_request) {
+											var key = new Date().getTime()
+												.toString();
+											var fov = m_view_fov;
 											var quat = mpu.get_quaternion();
 											quat = self.plugin_host
 												.get_view_offset()
 												.multiply(quat);
-											var cmd = UPSTREAM_DOMAIN
-												+ sprintf("set_view_quaternion 0=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
 											if (anti_delay) {
-												var fov = omvr
+												fov = omvr
 													.get_adaptive_texture_fov();
-												var key = new Date().getTime()
-													.toString();
-												cmd += sprintf(" fov=%.3f key=%s", fov, key);
-											}else{
-												cmd += sprintf(" fov=%.3f", m_view_fov);
+												quat = omvr
+													.predict_view_quaternion();
 											}
+											var cmd = UPSTREAM_DOMAIN;
+											cmd += sprintf("set_view_quaternion 0=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+											cmd += sprintf(" fov=%.3f key=%s", fov
+												.toFixed(0), key);
 											return cmd;
 										}
 									} else if (packet.GetPayloadType() == PT_STATUS) {// status

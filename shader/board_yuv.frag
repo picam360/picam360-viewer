@@ -1,11 +1,13 @@
-varying vec2 tcoord;
 uniform sampler2D tex_y;
 uniform sampler2D tex_u;
 uniform sampler2D tex_v;
 uniform mat4 YUV2RGB;
 
+varying vec2 tcoord;
+varying vec4 pos;
+
 void main(void) {
-	if (tcoord.x < 0.0 || tcoord.x > 1.0 || tcoord.y < 0.0 || tcoord.y > 1.0) {
+	if (pos.z <= 0.2 || tcoord.x < 0.0 || tcoord.x > 1.0 || tcoord.y < 0.0 || tcoord.y > 1.0) {
 		gl_FragColor = vec4(0, 0, 0, 1);
 	} else {
 		float y = texture2D(tex_y, tcoord).r;

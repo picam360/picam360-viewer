@@ -19,6 +19,7 @@ function OMVR() {
 	var m_context;
 	var m_effect;
 
+	var m_limit_fov = 180;
 	var m_maxfov = 150;
 	var m_view_fov = 120;
 	var m_fov_margin = 10;
@@ -163,6 +164,9 @@ function OMVR() {
 	var stereoEnabled = false;
 
 	var self = {
+		set_fov_margin : function(value) {
+			m_fov_margin = value;
+		},
 		set_view_quaternion : function(value) {
 			m_view_quat_1 = m_view_quat;
 			m_view_quat_1_time = m_view_quat_time;
@@ -185,14 +189,15 @@ function OMVR() {
 					/ sin, diff_quat.z / sin);
 			}
 		},
-		predict_view_quaternion : function(dt) {
-			var cos = Math.cos(m_view_av_rad * dt / 2);
-			var sin = Math.sin(m_view_av_rad * dt / 2);
+		predict_view_quaternion : function() {
+			var rad = m_view_av_rad * m_videoTexture_ttl;
+			var cos = Math.cos(rad / 2);
+			var sin = Math.sin(rad / 2);
 			var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
 				* m_view_av_n.y, sin * m_view_av_n.z, cos);
-			return m_view_quat.multiply(diff_quat);
+			return m_view_quat.clone().multiply(diff_quat);
 		},
-		get_adaptive_texture_fov : function(dt) {
+		get_adaptive_texture_fov : function() {
 			var diff_quat = m_view_tex_diff_quat;
 			var cos = diff_quat.w;
 			var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
@@ -282,7 +287,9 @@ function OMVR() {
 					} else if (_split[0] == "fov") {
 						m_videoTexture_fov = parseFloat(_split[2]);
 					} else if (_split[0] == "tk") { // ttl_key
-						m_videoTexture_ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
+						var ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
+						m_videoTexture_ttl = m_videoTexture_ttl * 0.9 + ttl
+							* 0.1;
 					}
 				}
 			}
@@ -291,6 +298,17 @@ function OMVR() {
 			} else {
 				console.log("no view quat info");
 				m_tex_quat = m_view_quat.clone();
+			}
+			{
+				var diff_quat = m_tex_quat.clone().conjugate()
+					.multiply(m_view_quat);
+				var cos = diff_quat.w;
+				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+					* diff_quat.y + diff_quat.z * diff_quat.z);
+				var diff_deg = 180 * (Math.atan2(sin, cos) * 2) / Math.PI;
+				var view_limit_fov = (m_videoTexture_fov - m_view_fov) / 2;
+				m_limit_fov = Math.max(Math.abs(diff_deg), view_limit_fov);
+				console.log("limit_fov:" + m_limit_fov);
 			}
 			if (type == "raw_bmp") {
 				self.setModel(self.vertex_type, "bmp");
@@ -553,8 +571,36 @@ function OMVR() {
 
 				if (self.vertex_type == "board") {
 					if (self.anti_delay) {
-						var diff_quat = quat_correct.clone()
-							.multiply(m_view_tex_diff_quat)
+						var diff_quat = m_view_tex_diff_quat;
+						{// limit fov
+							var cos = diff_quat.w;
+							var sin = Math.sqrt(diff_quat.x * diff_quat.x
+								+ diff_quat.y * diff_quat.y + diff_quat.z
+								* diff_quat.z);
+							var diff_deg = 180 * (Math.atan2(sin, cos) * 2)
+								/ Math.PI;
+
+							if (Math.abs(diff_deg) > m_limit_fov) {
+								if (diff_deg < -m_limit_fov) {
+									diff_deg = -m_limit_fov;
+								} else if (diff_deg > m_limit_fov) {
+									diff_deg = m_limit_fov;
+								}
+								if (sin == 0) {
+									diff_quat = new THREE.Quaternion(0, 0, 0, 1);
+								} else {
+									var _cos = Math.cos((diff_deg / 2)
+										* Math.PI / 180);
+									var _sin = Math.sin((diff_deg / 2)
+										* Math.PI / 180);
+									diff_quat = new THREE.Quaternion(diff_quat.x
+										/ sin * _sin, diff_quat.y / sin * _sin, diff_quat.z
+										/ sin * _sin, _cos);
+								}
+							}
+						}
+
+						diff_quat = quat_correct.clone().multiply(diff_quat)
 							.multiply(quat_correct.clone().conjugate());
 						m_mesh.material.uniforms.unif_matrix.value
 							.makeRotationFromQuaternion(diff_quat);
@@ -573,7 +619,7 @@ function OMVR() {
 					var fov_rad = m_view_fov * Math.PI / 180.0;
 					var fov_gain = Math.tan(fov_rad / 2);
 					var scale = 1.0 / fov_gain;
-					if (window_aspect > 1.0) {
+					if (window_aspect < 1.0) {
 						m_mesh.material.uniforms.frame_scalex.value = scale
 							/ window_aspect;
 						m_mesh.material.uniforms.frame_scaley.value = scale;
