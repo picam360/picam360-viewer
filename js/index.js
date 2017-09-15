@@ -37,7 +37,8 @@ var app = (function() {
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
-	var anti_delay = true;
+	var m_anti_delay = true;
+	var m_fpp = true;
 	var debug = 0;
 
 	// main canvas
@@ -405,7 +406,10 @@ var app = (function() {
 				view_offset_lock = parseBoolean(query['view-offset-lock']);
 			}
 			if (query['anti-delay']) {
-				anti_delay = parseBoolean(query['anti-delay']);
+				m_anti_delay = parseBoolean(query['anti-delay']);
+			}
+			if (query['fpp']) {
+				m_fpp = parseBoolean(query['fpp']);
 			}
 
 			self.plugin_host = PluginHost(self);
@@ -505,7 +509,7 @@ var app = (function() {
 							} else {
 								omvr.set_fov_margin(m_fov_margin);
 								omvr.setViewFov(m_view_fov);
-								omvr.anti_delay = anti_delay;
+								omvr.anti_delay = m_anti_delay;
 								omvr.setModel("board", "rgb");
 							}
 
@@ -541,9 +545,11 @@ var app = (function() {
 											quat = self.plugin_host
 												.get_view_offset()
 												.multiply(quat);
-											if (anti_delay) {
+											if (m_anti_delay) {
 												fov = omvr
 													.get_adaptive_texture_fov();
+											}
+											if (m_fpp) {
 												quat = omvr
 													.predict_view_quaternion();
 											}

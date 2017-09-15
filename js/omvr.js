@@ -288,8 +288,10 @@ function OMVR() {
 						m_videoTexture_fov = parseFloat(_split[2]);
 					} else if (_split[0] == "tk") { // ttl_key
 						var ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
-						m_videoTexture_ttl = m_videoTexture_ttl * 0.9 + ttl
-							* 0.1;
+						if (!isNaN(ttl)) {
+							m_videoTexture_ttl = m_videoTexture_ttl * 0.9 + ttl
+								* 0.1;
+						}
 					}
 				}
 			}
@@ -308,7 +310,7 @@ function OMVR() {
 				var diff_deg = 180 * (Math.atan2(sin, cos) * 2) / Math.PI;
 				var view_limit_fov = (m_videoTexture_fov - m_view_fov) / 2;
 				m_limit_fov = Math.max(Math.abs(diff_deg), view_limit_fov);
-				console.log("limit_fov:" + m_limit_fov);
+				// console.log("limit_fov:" + m_limit_fov);
 			}
 			if (type == "raw_bmp") {
 				self.setModel(self.vertex_type, "bmp");
