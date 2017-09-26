@@ -729,8 +729,12 @@ var app = (function() {
 
 				var divStatus = document.getElementById("divStatus");
 				if (divStatus) {
-					divStatus.innerHTML = "ttl:"
-						+ (omvr.get_ttl() * 1000).toFixed(0) + "ms";
+					var status = "";
+					status += "ttl:" + (omvr.get_ttl() * 1000).toFixed(0)
+						+ "ms<br/>";
+					status += "texture fps:"
+						+ omvr.get_texture_fps().toFixed(3) + "<br/>";
+					divStatus.innerHTML = status;
 				}
 
 				omvr.animate();

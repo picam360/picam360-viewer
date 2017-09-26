@@ -23,16 +23,18 @@ function OMVR() {
 	var m_maxfov = 150;
 	var m_view_fov = 120;
 	var m_fov_margin = 10;
-	var m_videoTexture_fov = 120;
-	var m_videoTexture_ttl = 0;
-	var m_videoTexture_width = 512;
-	var m_videoTexture_height = 512;
+	var m_texture_fov = 120;
+	var m_texture_ttl = 0;
+	var m_texture_fps = 0;
+	var m_texture_last_time = 0;
+	var m_texture_width = 512;
+	var m_texture_height = 512;
 	var m_videoImage;
 	var m_videoImageContext;
-	var m_videoTexture;
-	var m_videoTexture_y;
-	var m_videoTexture_u;
-	var m_videoTexture_v;
+	var m_texture;
+	var m_texture_y;
+	var m_texture_u;
+	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
 
@@ -190,7 +192,7 @@ function OMVR() {
 			}
 		},
 		predict_view_quaternion : function() {
-			var rad = m_view_av_rad * m_videoTexture_ttl;
+			var rad = m_view_av_rad * m_texture_ttl;
 			var cos = Math.cos(rad / 2);
 			var sin = Math.sin(rad / 2);
 			var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
@@ -216,10 +218,15 @@ function OMVR() {
 		vertex_type : "",
 		fragment_type : "",
 		anti_delay : false,
-		
-		get_ttl : function(){
-			return m_videoTexture_ttl;
+
+		get_ttl : function() {
+			return m_texture_ttl;
 		},
+
+		get_texture_fps : function() {
+			return m_texture_fps;
+		},		
+		
 
 		loadTexture : function(image_url, image_type) {
 
@@ -245,8 +252,8 @@ function OMVR() {
 								m_videoImageContext.fillStyle = '#000000';
 								m_videoImageContext
 									.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
-								m_videoTexture = new THREE.Texture(m_videoImage);
-								setTextureFunc(m_videoTexture);
+								m_texture = new THREE.Texture(m_videoImage);
+								setTextureFunc(m_texture);
 								m_video
 									.removeEventListener("canplay", arguments.callee, false);
 							}, false);
@@ -272,10 +279,8 @@ function OMVR() {
 			}
 		},
 
-		handle_frame_info : function(info) {
-		},
-
 		handle_frame : function(type, data, width, height, info) {
+			var now = new Date().getTime();
 			var tex_quat;
 			var vertex_type = self.vertex_type;
 			if (info) {
@@ -290,11 +295,11 @@ function OMVR() {
 						var w = parseFloat(_split[5]);
 						tex_quat = new THREE.Quaternion(x, y, z, w);
 					} else if (_split[0] == "fov") {
-						m_videoTexture_fov = parseFloat(_split[2]);
+						m_texture_fov = parseFloat(_split[2]);
 					} else if (_split[0] == "ttl_key") { // ttl_key
-						var ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
+						var ttl = (now - parseFloat(_split[2])) / 1000;
 						if (!isNaN(ttl)) {
-							m_videoTexture_ttl = m_videoTexture_ttl * 0.9 + ttl
+							m_texture_ttl = m_texture_ttl * 0.9 + ttl
 								* 0.1;
 						}
 					} else if (_split[0] == "mode") {
@@ -307,6 +312,13 @@ function OMVR() {
 						}
 					}
 				}
+			}
+			{// fps
+				if (m_texture_last_time) {
+					var fps = 1000 / (now - m_texture_last_time);
+					m_texture_fps = m_texture_fps * 0.9 + fps * 0.1;
+				}
+				m_texture_last_time = now;
 			}
 			if (tex_quat) {
 				m_tex_quat = tex_quat;
@@ -322,7 +334,7 @@ function OMVR() {
 			if (type == "raw_bmp") {
 				self.setModel(vertex_type, "bmp");
 
-				var img = m_videoTexture.image;
+				var img = m_texture.image;
 				var header = get_bmp_header(width, height, 8);
 				var raw_data = new Uint8Array(data);
 				var blob = new Blob([header, raw_data], {
@@ -358,24 +370,24 @@ function OMVR() {
 				var vRowCnt = uRowCnt;
 
 				var gl = m_renderer.context;
-				m_renderer.setTexture(m_videoTexture_y, 0);
+				m_renderer.setTexture(m_texture_y, 0);
 				gl
 					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, yDataPerRow, yRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, yData);
 
-				m_renderer.setTexture(m_videoTexture_u, 0);
+				m_renderer.setTexture(m_texture_u, 0);
 				gl
 					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, uDataPerRow, uRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, uData);
 
-				m_renderer.setTexture(m_videoTexture_v, 0);
+				m_renderer.setTexture(m_texture_v, 0);
 				gl
 					.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, vDataPerRow, vRowCnt, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, vData);
 
-				m_videoTexture_width = width;
-				m_videoTexture_height = height;
+				m_texture_width = width;
+				m_texture_height = height;
 			} else if (type == "blob") {
 				self.setModel(vertex_type, "bmp");
 
-				var img = m_videoTexture.image;
+				var img = m_texture.image;
 				var url = window.URL || window.webkitURL;
 				if (img.src && img.src.indexOf("blob") == 0) {
 					url.revokeObjectURL(img.src);
@@ -413,29 +425,29 @@ function OMVR() {
 			window.addEventListener('resize', onWindowResize, false);
 
 			// texture
-			m_videoTexture = new THREE.Texture(new Image());
-			m_videoTexture.needsUpdate = true;
-			m_videoTexture.generateMipmaps = false;// performance
-			m_videoTexture.minFilter = THREE.LinearFilter;// performance
-			m_videoTexture.anisotropy = m_renderer.getMaxAnisotropy();
+			m_texture = new THREE.Texture(new Image());
+			m_texture.needsUpdate = true;
+			m_texture.generateMipmaps = false;// performance
+			m_texture.minFilter = THREE.LinearFilter;// performance
+			m_texture.anisotropy = m_renderer.getMaxAnisotropy();
 
-			m_videoTexture_y = new THREE.Texture(new Image());
-			m_videoTexture_y.needsUpdate = true;
-			m_videoTexture_y.generateMipmaps = false;// performance
-			m_videoTexture_y.minFilter = THREE.LinearFilter;// performance
-			m_videoTexture_y.anisotropy = m_renderer.getMaxAnisotropy();
+			m_texture_y = new THREE.Texture(new Image());
+			m_texture_y.needsUpdate = true;
+			m_texture_y.generateMipmaps = false;// performance
+			m_texture_y.minFilter = THREE.LinearFilter;// performance
+			m_texture_y.anisotropy = m_renderer.getMaxAnisotropy();
 
-			m_videoTexture_u = new THREE.Texture(new Image());
-			m_videoTexture_u.needsUpdate = true;
-			m_videoTexture_u.generateMipmaps = false;// performance
-			m_videoTexture_u.minFilter = THREE.LinearFilter;// performance
-			m_videoTexture_u.anisotropy = m_renderer.getMaxAnisotropy();
+			m_texture_u = new THREE.Texture(new Image());
+			m_texture_u.needsUpdate = true;
+			m_texture_u.generateMipmaps = false;// performance
+			m_texture_u.minFilter = THREE.LinearFilter;// performance
+			m_texture_u.anisotropy = m_renderer.getMaxAnisotropy();
 
-			m_videoTexture_v = new THREE.Texture(new Image());
-			m_videoTexture_v.needsUpdate = true;
-			m_videoTexture_v.generateMipmaps = false;// performance
-			m_videoTexture_v.minFilter = THREE.LinearFilter;// performance
-			m_videoTexture_v.anisotropy = m_renderer.getMaxAnisotropy();
+			m_texture_v = new THREE.Texture(new Image());
+			m_texture_v.needsUpdate = true;
+			m_texture_v.generateMipmaps = false;// performance
+			m_texture_v.minFilter = THREE.LinearFilter;// performance
+			m_texture_v.anisotropy = m_renderer.getMaxAnisotropy();
 
 			// load shader
 			var loaded_shader_num = 0;
@@ -483,7 +495,7 @@ function OMVR() {
 		},
 
 		setTexureFov : function(value) {
-			m_videoTexture_fov = value;
+			m_texture_fov = value;
 		},
 
 		setViewFov : function(value) {
@@ -491,11 +503,11 @@ function OMVR() {
 		},
 
 		setTextureImg : function(texture) {
-			m_videoTexture_width = texture.width;
-			m_videoTexture_height = texture.height;
+			m_texture_width = texture.width;
+			m_texture_height = texture.height;
 
-			m_videoTexture.image = texture;
-			m_videoTexture.needsUpdate = true;
+			m_texture.image = texture;
+			m_texture.needsUpdate = true;
 		},
 
 		setModel : function(vertex_type, fragment_type) {
@@ -547,19 +559,19 @@ function OMVR() {
 					},
 					tex : {
 						type : 't',
-						value : m_videoTexture
+						value : m_texture
 					},
 					tex_y : {
 						type : 't',
-						value : m_videoTexture_y
+						value : m_texture_y
 					},
 					tex_u : {
 						type : 't',
-						value : m_videoTexture_u
+						value : m_texture_u
 					},
 					tex_v : {
 						type : 't',
-						value : m_videoTexture_v
+						value : m_texture_v
 					},
 					YUV2RGB : {
 						type : 'm4',
@@ -596,7 +608,7 @@ function OMVR() {
 				quat_correct.setFromEuler(euler_correct);
 
 				if (self.vertex_type == "angular") {
-					var fov_rad = m_videoTexture_fov * Math.PI / 180.0;
+					var fov_rad = m_texture_fov * Math.PI / 180.0;
 					var angular_r = Math.sqrt(2.0);
 					var angular_gain = (fov_rad / 2)
 						/ Math.asin(1.0 / angular_r);
