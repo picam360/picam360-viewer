@@ -216,6 +216,10 @@ function OMVR() {
 		vertex_type : "",
 		fragment_type : "",
 		anti_delay : false,
+		
+		get_ttl : function(){
+			return m_videoTexture_ttl;
+		},
 
 		loadTexture : function(image_url, image_type) {
 

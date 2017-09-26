@@ -726,6 +726,13 @@ var app = (function() {
 		},
 		start_animate : function() {
 			setInterval(function() {
+
+				var divStatus = document.getElementById("divStatus");
+				if (divStatus) {
+					divStatus.innerHTML = "ttl:"
+						+ (omvr.get_ttl() * 1000).toFixed(0) + "ms";
+				}
+
 				omvr.animate();
 			}, 1000 / target_fps);
 		},
