@@ -26,7 +26,7 @@ function OMVR() {
 	var m_texture_fov = 120;
 	var m_texture_ttl = 0;
 	var m_texture_fps = 0;
-	var m_texture_last_time = 0;
+	var m_texture_num = 0;
 	var m_texture_width = 512;
 	var m_texture_height = 512;
 	var m_videoImage;
@@ -37,6 +37,9 @@ function OMVR() {
 	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
+
+	var m_texture_tmp_time = 0;
+	var m_texture_tmp_num = 0;
 
 	var m_yuv_canvas = null;
 
@@ -225,8 +228,7 @@ function OMVR() {
 
 		get_texture_fps : function() {
 			return m_texture_fps;
-		},		
-		
+		},
 
 		loadTexture : function(image_url, image_type) {
 
@@ -280,6 +282,8 @@ function OMVR() {
 		},
 
 		handle_frame : function(type, data, width, height, info) {
+			m_texture_num++;
+
 			var now = new Date().getTime();
 			var tex_quat;
 			var vertex_type = self.vertex_type;
@@ -299,8 +303,7 @@ function OMVR() {
 					} else if (_split[0] == "ttl_key") { // ttl_key
 						var ttl = (now - parseFloat(_split[2])) / 1000;
 						if (!isNaN(ttl)) {
-							m_texture_ttl = m_texture_ttl * 0.9 + ttl
-								* 0.1;
+							m_texture_ttl = m_texture_ttl * 0.9 + ttl * 0.1;
 						}
 					} else if (_split[0] == "mode") {
 						switch (_split[2]) {
@@ -314,11 +317,15 @@ function OMVR() {
 				}
 			}
 			{// fps
-				if (m_texture_last_time) {
-					var fps = 1000 / (now - m_texture_last_time);
+				if (m_texture_tmp_time == 0) {
+					m_texture_tmp_time = now;
+				} else if (now - m_texture_tmp_time > 200) {
+					var fps = (m_texture_num - m_texture_tmp_num) * 1000
+						/ (now - m_texture_tmp_time);
 					m_texture_fps = m_texture_fps * 0.9 + fps * 0.1;
+					m_texture_tmp_num = m_texture_num;
+					m_texture_tmp_time = now;
 				}
-				m_texture_last_time = now;
 			}
 			if (tex_quat) {
 				m_tex_quat = tex_quat;
