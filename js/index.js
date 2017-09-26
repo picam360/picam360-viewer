@@ -32,8 +32,8 @@ var SIGNALING_SECURE = true;
 var app = (function() {
 	var tilt = 0;
 	var socket;
-	var m_fov_margin = 10;
-	var m_view_fov = 120;
+	var m_fov_margin = 30;
+	var m_view_fov = 90;
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
