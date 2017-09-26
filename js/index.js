@@ -38,7 +38,7 @@ var app = (function() {
 	var auto_scroll = false;
 	var view_offset_lock = false;
 	var m_anti_delay = true;
-	var m_fpp = true;
+	var m_fpp = false;
 	var debug = 0;
 
 	// main canvas
@@ -504,13 +504,13 @@ var app = (function() {
 
 							if (default_image_url) {
 								omvr.setViewFov(m_view_fov);
-								omvr.setModel("window", "rgb");
+								omvr.setModel("equirectangular", "rgb");
 								omvr.loadTexture(default_image_url);
 							} else {
 								omvr.set_fov_margin(m_fov_margin);
 								omvr.setViewFov(m_view_fov);
 								omvr.anti_delay = m_anti_delay;
-								omvr.setModel("board", "rgb");
+								omvr.setModel("window", "rgb");
 							}
 
 							// video decoder
@@ -548,10 +548,10 @@ var app = (function() {
 											if (m_anti_delay) {
 												fov = omvr
 													.get_adaptive_texture_fov();
-											}
-											if (m_fpp) {
-												quat = omvr
-													.predict_view_quaternion();
+												if (m_fpp) {
+													quat = omvr
+														.predict_view_quaternion();
+												}
 											}
 											var cmd = UPSTREAM_DOMAIN;
 											cmd += sprintf("set_view_quaternion 0=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);

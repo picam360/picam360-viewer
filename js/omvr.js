@@ -205,8 +205,8 @@ function OMVR() {
 			var diff_theta = Math.atan2(sin, cos) * 2;
 			var fov = m_view_fov + m_fov_margin + 180 * Math.abs(diff_theta)
 				/ Math.PI;
-			if (fov > m_maxfov) {
-				fov = m_maxfov;
+			if (fov > m_limit_fov) {
+				fov = m_limit_fov;
 			}
 			return fov;
 		},
@@ -273,12 +273,13 @@ function OMVR() {
 
 		handle_frame : function(type, data, width, height, info) {
 			var tex_quat;
+			var vertex_type = self.vertex_type;
 			if (info) {
 				var split = info.split(' ');
 				for (var i = 0; i < split.length; i++) {
 					var separator = (/[=,\"]/);
 					var _split = split[i].split(separator);
-					if (_split[0] == "vq") { // view quaternion
+					if (_split[0] == "view_quat") { // view quaternion
 						var x = parseFloat(_split[2]);
 						var y = parseFloat(_split[3]);
 						var z = parseFloat(_split[4]);
@@ -286,11 +287,19 @@ function OMVR() {
 						tex_quat = new THREE.Quaternion(x, y, z, w);
 					} else if (_split[0] == "fov") {
 						m_videoTexture_fov = parseFloat(_split[2]);
-					} else if (_split[0] == "tk") { // ttl_key
+					} else if (_split[0] == "ttl_key") { // ttl_key
 						var ttl = (new Date().getTime() - parseFloat(_split[2])) / 1000;
 						if (!isNaN(ttl)) {
 							m_videoTexture_ttl = m_videoTexture_ttl * 0.9 + ttl
 								* 0.1;
+						}
+					} else if (_split[0] == "mode") {
+						switch (_split[2]) {
+							case "WINDOW" :
+							case "EQUIRECTANGULAR" :
+							case "ANGULAR" :
+								vertex_type = _split[2].toLowerCase();
+								break;
 						}
 					}
 				}
@@ -301,19 +310,13 @@ function OMVR() {
 				console.log("no view quat info");
 				m_tex_quat = m_view_quat.clone();
 			}
-			{
-				var diff_quat = m_tex_quat.clone().conjugate()
-					.multiply(m_view_quat);
-				var cos = diff_quat.w;
-				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
-					* diff_quat.y + diff_quat.z * diff_quat.z);
-				var diff_deg = 180 * (Math.atan2(sin, cos) * 2) / Math.PI;
-				var view_limit_fov = (m_videoTexture_fov - m_view_fov) / 2;
-				m_limit_fov = Math.max(Math.abs(diff_deg), view_limit_fov);
-				// console.log("limit_fov:" + m_limit_fov);
+			if (vertex_type == "window") {
+				m_limit_fov = m_view_fov;
+			} else if (vertex_type == "angular") {
+				m_limit_fov = 360;
 			}
 			if (type == "raw_bmp") {
-				self.setModel(self.vertex_type, "bmp");
+				self.setModel(vertex_type, "bmp");
 
 				var img = m_videoTexture.image;
 				var header = get_bmp_header(width, height, 8);
@@ -330,7 +333,7 @@ function OMVR() {
 				// + " : " + m_active_frame.length);
 				blob = null;
 			} else if (type == "yuv") {
-				self.setModel(self.vertex_type, "yuv");
+				self.setModel(vertex_type, "yuv");
 
 				var raw_data = new Uint8Array(data);
 				var ylen = width * height;
@@ -366,7 +369,7 @@ function OMVR() {
 				m_videoTexture_width = width;
 				m_videoTexture_height = height;
 			} else if (type == "blob") {
-				self.setModel(self.vertex_type, "bmp");
+				self.setModel(vertex_type, "bmp");
 
 				var img = m_videoTexture.image;
 				var url = window.URL || window.webkitURL;
@@ -436,20 +439,29 @@ function OMVR() {
 				url : "shader/window.vert?cache=no",
 				shader : "window_vertex_shader"
 			}, {
-				url : "shader/window_yuv.frag?cache=no",
+				url : "shader/texture_yuv.frag?cache=no",
 				shader : "window_yuv_fragment_shader"
 			}, {
-				url : "shader/window_rgb.frag?cache=no",
+				url : "shader/texture_rgb.frag?cache=no",
 				shader : "window_rgb_fragment_shader"
 			}, {
-				url : "shader/board.vert?cache=no",
-				shader : "board_vertex_shader"
+				url : "shader/angular.vert?cache=no",
+				shader : "angular_vertex_shader"
 			}, {
-				url : "shader/board_yuv.frag?cache=no",
-				shader : "board_yuv_fragment_shader"
+				url : "shader/texture_yuv.frag?cache=no",
+				shader : "angular_yuv_fragment_shader"
 			}, {
-				url : "shader/board_rgb.frag?cache=no",
-				shader : "board_rgb_fragment_shader"
+				url : "shader/texture_rgb.frag?cache=no",
+				shader : "angular_rgb_fragment_shader"
+			}, {
+				url : "shader/equirectangular.vert?cache=no",
+				shader : "equirectangular_vertex_shader"
+			}, {
+				url : "shader/equirectangular_yuv.frag?cache=no",
+				shader : "equirectangular_yuv_fragment_shader"
+			}, {
+				url : "shader/equirectangular_rgb.frag?cache=no",
+				shader : "equirectangular_rgb_fragment_shader"
 			}, ];
 			shader_list.forEach(function(item) {
 				loadFile(item.url, function(shader) {
@@ -521,6 +533,14 @@ function OMVR() {
 						type : 'f',
 						value : 1
 					},
+					angular_gain : {
+						type : 'f',
+						value : 1
+					},
+					angular_r : {
+						type : 'f',
+						value : 1
+					},
 					tex : {
 						type : 't',
 						value : m_videoTexture
@@ -571,43 +591,23 @@ function OMVR() {
 				var quat_correct = new THREE.Quaternion();
 				quat_correct.setFromEuler(euler_correct);
 
-				if (self.vertex_type == "board") {
+				if (self.vertex_type == "angular") {
+					var fov_rad = m_videoTexture_fov * Math.PI / 180.0;
+					var angular_r = Math.sqrt(2.0);
+					var angular_gain = (fov_rad / 2)
+						/ Math.asin(1.0 / angular_r);
+					m_mesh.material.uniforms.angular_gain.value = angular_gain;
+					m_mesh.material.uniforms.angular_r.value = angular_r;
+
 					if (self.anti_delay) {
 						var diff_quat = m_view_tex_diff_quat;
-						{// limit fov
-							var cos = diff_quat.w;
-							var sin = Math.sqrt(diff_quat.x * diff_quat.x
-								+ diff_quat.y * diff_quat.y + diff_quat.z
-								* diff_quat.z);
-							var diff_deg = 180 * (Math.atan2(sin, cos) * 2)
-								/ Math.PI;
-
-							if (Math.abs(diff_deg) > m_limit_fov) {
-								if (diff_deg < -m_limit_fov) {
-									diff_deg = -m_limit_fov;
-								} else if (diff_deg > m_limit_fov) {
-									diff_deg = m_limit_fov;
-								}
-								if (sin == 0) {
-									diff_quat = new THREE.Quaternion(0, 0, 0, 1);
-								} else {
-									var _cos = Math.cos((diff_deg / 2)
-										* Math.PI / 180);
-									var _sin = Math.sin((diff_deg / 2)
-										* Math.PI / 180);
-									diff_quat = new THREE.Quaternion(diff_quat.x
-										/ sin * _sin, diff_quat.y / sin * _sin, diff_quat.z
-										/ sin * _sin, _cos);
-								}
-							}
-						}
 
 						diff_quat = quat_correct.clone().multiply(diff_quat)
 							.multiply(quat_correct.clone().conjugate());
 						m_mesh.material.uniforms.unif_matrix.value
 							.makeRotationFromQuaternion(diff_quat);
 					}
-				} else {
+				} else if (self.vertex_type == "equirectangular") {
 					var view_quat = m_view_quat.clone().multiply(quat_correct);
 					m_mesh.material.uniforms.unif_matrix.value
 						.makeRotationFromQuaternion(view_quat);
@@ -630,19 +630,6 @@ function OMVR() {
 						m_mesh.material.uniforms.frame_scaley.value = scale
 							* window_aspect;
 					}
-				}
-
-				if (self.vertex_type == "board") {
-					var texture_aspect = m_videoTexture_width
-						/ m_videoTexture_height;
-					var fov_rad = m_view_fov * Math.PI / 180.0;
-					var fov_gain = Math.tan(fov_rad / 2);
-					var tex_fov_rad = m_videoTexture_fov * Math.PI / 180.0;
-					var tex_fov_gain = Math.tan(tex_fov_rad / 2);
-					var scale = (1.0 / fov_gain) * (fov_gain / tex_fov_gain);
-					m_mesh.material.uniforms.tex_scalex.value = scale;
-					m_mesh.material.uniforms.tex_scaley.value = scale
-						* texture_aspect;
 				}
 			}
 			if (stereoEnabled) {
