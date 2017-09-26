@@ -27,6 +27,7 @@ function OMVR() {
 	var m_texture_ttl = 0;
 	var m_texture_fps = 0;
 	var m_texture_num = 0;
+	var m_texture_elapsed = 0;
 	var m_texture_width = 512;
 	var m_texture_height = 512;
 	var m_videoImage;
@@ -222,12 +223,16 @@ function OMVR() {
 		fragment_type : "",
 		anti_delay : false,
 
-		get_ttl : function() {
+		get_texture_ttl : function() {
 			return m_texture_ttl;
 		},
 
 		get_texture_fps : function() {
 			return m_texture_fps;
+		},
+
+		get_texture_elapsed : function() {
+			return m_texture_elapsed;
 		},
 
 		loadTexture : function(image_url, image_type) {
@@ -301,10 +306,14 @@ function OMVR() {
 					} else if (_split[0] == "fov") {
 						m_texture_fov = parseFloat(_split[2]);
 					} else if (_split[0] == "ttl_key") { // ttl_key
-						var ttl = (now - parseFloat(_split[2])) / 1000;
-						if (!isNaN(ttl)) {
-							m_texture_ttl = m_texture_ttl * 0.9 + ttl * 0.1;
+						var value = (now - parseFloat(_split[2])) / 1000;
+						if (!isNaN(value)) {
+							m_texture_ttl = m_texture_ttl * 0.9 + value * 0.1;
 						}
+					} else if (_split[0] == "elapsed") {
+						var value = parseFloat(_split[2]);
+						m_texture_elapsed = m_texture_elapsed * 0.9 + value
+							* 0.1;
 					} else if (_split[0] == "mode") {
 						switch (_split[2]) {
 							case "WINDOW" :
@@ -320,9 +329,9 @@ function OMVR() {
 				if (m_texture_tmp_time == 0) {
 					m_texture_tmp_time = now;
 				} else if (now - m_texture_tmp_time > 200) {
-					var fps = (m_texture_num - m_texture_tmp_num) * 1000
+					var value = (m_texture_num - m_texture_tmp_num) * 1000
 						/ (now - m_texture_tmp_time);
-					m_texture_fps = m_texture_fps * 0.9 + fps * 0.1;
+					m_texture_fps = m_texture_fps * 0.9 + value * 0.1;
 					m_texture_tmp_num = m_texture_num;
 					m_texture_tmp_time = now;
 				}

@@ -730,10 +730,12 @@ var app = (function() {
 				var divStatus = document.getElementById("divStatus");
 				if (divStatus) {
 					var status = "";
-					status += "ttl:" + (omvr.get_ttl() * 1000).toFixed(0)
-						+ "ms<br/>";
 					status += "texture fps:"
 						+ omvr.get_texture_fps().toFixed(3) + "<br/>";
+					status += "texture ttl:" + (omvr.get_texture_ttl() * 1000).toFixed(0)
+					+ "ms<br/>";
+					status += "texture elapsed:" + (omvr.get_texture_elapsed() * 1000).toFixed(0)
+					+ "ms<br/>";
 					divStatus.innerHTML = status;
 				}
 
