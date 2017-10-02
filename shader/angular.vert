@@ -2,15 +2,14 @@
 uniform float frame_scalex;
 uniform float frame_scaley;
 //angular map params
-//coner pitch PI : angular_r = M_SQRT_2 && angular_gain = M_PI / asin(1.0 / angular_r) 
-//mirror-ball : angular_r = 1.0 && angular_gain = M_PI / asin(1.0 / angular_r) 
-//axsis edge fov_rad : angular_r = 1.0 && angular_gain = fov_rad / asin(1.0 / angular_r) 
-uniform float angular_gain;
-uniform float angular_r;
+uniform float angular_pitch_2_r[256];
 
 uniform mat4 unif_matrix;
 
 const float M_PI = 3.1415926535;
+const float M_PI_DIV_2 = M_PI / 2.0;
+const float M_PI_DIV_4 = M_PI / 4.0;
+const float M_SQRT_2 = 1.4142135623;
 
 varying vec2 tcoord;
 
@@ -23,9 +22,18 @@ void main(void) {
 
 	float pitch = acos(pos.z);
 	float roll = atan(pos.y, pos.x);
-	float _pitch = pitch / angular_gain;
-	float r = (_pitch > M_PI / 2.0) ? angular_r : sin(_pitch) * angular_r;
-	//pitch = angular_gain * asin(r / angular_r) ;
+	
+	float indexf = pitch / M_PI * 255.0;
+	int index = int(indexf);
+	float index_sub = indexf - float(index);
+	float r = angular_pitch_2_r[index] * (1.0 - index_sub) + angular_pitch_2_r[index + 1] * index_sub;
+	if (r < M_SQRT_2 && r > 1.0) {
+		int roll_index = int(roll / M_PI_DIV_2);
+		float roll_base = float(roll_index) * M_PI_DIV_2 + (roll > 0.0 ? M_PI_DIV_4 : -M_PI_DIV_4);
+		float roll_diff = roll - roll_base;
+		float roll_gain = (M_PI - 4.0 * acos(1.0 / r)) / M_PI;
+		roll = roll_diff * roll_gain + roll_base;
+	}
 
 	float tex_x = r * cos(roll); //[-1:1]
 	float tex_y = r * sin(roll); //[-1:1]

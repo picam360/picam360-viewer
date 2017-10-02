@@ -322,6 +322,7 @@ function OMVR() {
 								vertex_type = _split[2].toLowerCase();
 								break;
 						}
+						// vertex_type = "window";//for debug
 					}
 				}
 			}
@@ -565,13 +566,9 @@ function OMVR() {
 						type : 'f',
 						value : 1
 					},
-					angular_gain : {
-						type : 'f',
-						value : 1
-					},
-					angular_r : {
-						type : 'f',
-						value : 1
+					angular_pitch_2_r : {
+						type : 'fv1',
+						value : []
 					},
 					tex : {
 						type : 't',
@@ -624,12 +621,32 @@ function OMVR() {
 				quat_correct.setFromEuler(euler_correct);
 
 				if (self.vertex_type == "angular") {
+					var stepnum = 256;
 					var fov_rad = m_texture_fov * Math.PI / 180.0;
-					var angular_r = Math.sqrt(2.0);
-					var angular_gain = (fov_rad / 2)
-						/ Math.asin(1.0 / angular_r);
-					m_mesh.material.uniforms.angular_gain.value = angular_gain;
-					m_mesh.material.uniforms.angular_r.value = angular_r;
+					var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
+					var y_ary = [0.0, fov_rad, Math.PI];
+					var x_ary2 = [];
+					var y_ary2 = [];
+					for (var i = 0; i < stepnum; i++) {
+						x_ary2[i] = Math.sqrt(2.0) * i / (stepnum - 1);
+						y_ary2[i] = spline(x_ary2[i], x_ary, y_ary);
+					}
+					var x_ary3 = [];
+					var y_ary3 = [];
+					for (var i = 0; i < stepnum; i++) {
+						x_ary3[i] = Math.PI * i / (stepnum - 1);
+						for (var j = 0; j < stepnum - 1; j++) {
+							if (x_ary3[i] >= y_ary2[j]
+								&& x_ary3[i] < y_ary2[j + 1]) {
+								var ratio = (x_ary3[i] - y_ary2[j])
+									/ (y_ary2[j + 1] - y_ary2[j]);
+								y_ary3[i] = ratio * (x_ary2[j + 1] - x_ary2[j])
+									+ x_ary2[j];
+								break;
+							}
+						}
+					}
+					m_mesh.material.uniforms.angular_pitch_2_r.value = y_ary3;
 
 					if (self.anti_delay) {
 						var diff_quat = m_view_tex_diff_quat;
