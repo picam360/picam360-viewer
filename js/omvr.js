@@ -37,7 +37,7 @@ function OMVR() {
 	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
-	var m_angular_pitch_2_r_cache = [];
+	var m_pitch_2_r_cache = [];
 
 	var m_texture_tmp_time = 0;
 	var m_texture_tmp_num = 0;
@@ -224,6 +224,7 @@ function OMVR() {
 		fps : 0,
 		checkImageDelay : 1000,
 		vertex_type : "",
+		vertex_type_forcibly : "",
 		fragment_type : "",
 
 		get_texture_ttl : function() {
@@ -321,13 +322,15 @@ function OMVR() {
 						switch (_split[2]) {
 							case "WINDOW" :
 							case "EQUIRECTANGULAR" :
-							case "ANGULAR" :
+							case "PICAM360MAP" :
 								vertex_type = _split[2].toLowerCase();
 								break;
 						}
-						// vertex_type = "window";//for debug
 					}
 				}
+			}
+			if (self.vertex_type_forcibly) {
+				vertex_type = self.vertex_type_forcibly;
 			}
 			{// fps
 				if (m_texture_tmp_time == 0) {
@@ -348,7 +351,7 @@ function OMVR() {
 			}
 			if (vertex_type == "window") {
 				m_limit_fov = m_view_fov;
-			} else if (vertex_type == "angular") {
+			} else if (vertex_type == "picam360map") {
 				m_limit_fov = 180;
 			}
 			if (type == "raw_bmp") {
@@ -481,14 +484,14 @@ function OMVR() {
 				url : "shader/texture_rgb.frag?cache=no",
 				shader : "window_rgb_fragment_shader"
 			}, {
-				url : "shader/angular.vert?cache=no",
-				shader : "angular_vertex_shader"
+				url : "shader/picam360map.vert?cache=no",
+				shader : "picam360map_vertex_shader"
 			}, {
 				url : "shader/texture_yuv.frag?cache=no",
-				shader : "angular_yuv_fragment_shader"
+				shader : "picam360map_yuv_fragment_shader"
 			}, {
 				url : "shader/texture_rgb.frag?cache=no",
-				shader : "angular_rgb_fragment_shader"
+				shader : "picam360map_rgb_fragment_shader"
 			}, {
 				url : "shader/equirectangular.vert?cache=no",
 				shader : "equirectangular_vertex_shader"
@@ -569,7 +572,7 @@ function OMVR() {
 						type : 'f',
 						value : 1
 					},
-					angular_pitch_2_r : {
+					pitch_2_r : {
 						type : 'fv1',
 						value : []
 					},
@@ -623,9 +626,9 @@ function OMVR() {
 				var quat_correct = new THREE.Quaternion();
 				quat_correct.setFromEuler(euler_correct);
 
-				if (self.vertex_type == "angular") {
+				if (self.vertex_type == "picam360map") {
 					{// pitch to r look-up table
-						if (!m_angular_pitch_2_r_cache[m_texture_fov]) {
+						if (!m_pitch_2_r_cache[m_texture_fov]) {
 							var stepnum = 256;
 							var fov_rad = m_texture_fov * Math.PI / 180.0;
 							var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
@@ -659,9 +662,9 @@ function OMVR() {
 							x_ary3[stepnum3 - 1] = Math.PI;
 							y_ary3[stepnum3 - 1] = Math.sqrt(2.0);
 							
-							m_angular_pitch_2_r_cache[m_texture_fov] = y_ary3;
+							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
 						}
-						m_mesh.material.uniforms.angular_pitch_2_r.value = m_angular_pitch_2_r_cache[m_texture_fov];
+						m_mesh.material.uniforms.pitch_2_r.value = m_pitch_2_r_cache[m_texture_fov];
 					}
 
 					{// focal point shift

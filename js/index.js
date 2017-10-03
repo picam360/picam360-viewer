@@ -38,6 +38,7 @@ var app = (function() {
 	var view_offset_lock = false;
 	var m_anti_delay = false;
 	var m_fpp = false;
+	var m_vertex_type = "";
 	var debug = 0;
 
 	// main canvas
@@ -385,6 +386,9 @@ var app = (function() {
 			if (query['fov']) {
 				m_view_fov = parseFloat(query['fov']);
 			}
+			if (query['vertex_type']) {
+				m_vertex_type = query['vertex_type'];
+			}
 
 			if (query['fps']) {
 				target_fps = parseFloat(query['fps']);
@@ -507,6 +511,7 @@ var app = (function() {
 								omvr.anti_delay = m_anti_delay;
 								omvr.setModel("window", "rgb");
 							}
+							omvr.vertex_type_forcibly = m_vertex_type;
 
 							// video decoder
 							h264_decoder = H264Decoder();

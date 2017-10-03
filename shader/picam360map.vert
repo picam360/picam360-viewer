@@ -5,7 +5,7 @@ const float STEPNUM_M1 = 63.0;
 uniform float frame_scalex;
 uniform float frame_scaley;
 //angular map params
-uniform float angular_pitch_2_r[STEPNUM];
+uniform float pitch_2_r[STEPNUM];
 
 uniform mat4 unif_matrix;
 
@@ -29,7 +29,7 @@ void main(void) {
 	float indexf = pitch / M_PI * STEPNUM_M1;
 	int index = int(indexf);
 	float index_sub = indexf - float(index);
-	float r = angular_pitch_2_r[index] * (1.0 - index_sub) + angular_pitch_2_r[index + 1] * index_sub;
+	float r = pitch_2_r[index] * (1.0 - index_sub) + pitch_2_r[index + 1] * index_sub;
 	if (r < M_SQRT_2 && r > 1.0) {
 		int roll_index = int(roll / M_PI_DIV_2);
 		float roll_base = float(roll_index) * M_PI_DIV_2 + (roll > 0.0 ? M_PI_DIV_4 : -M_PI_DIV_4);
