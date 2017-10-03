@@ -32,12 +32,11 @@ var SIGNALING_SECURE = true;
 var app = (function() {
 	var tilt = 0;
 	var socket;
-	var m_fov_margin = 0;
 	var m_view_fov = 90;
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
-	var m_anti_delay = true;
+	var m_anti_delay = false;
 	var m_fpp = false;
 	var debug = 0;
 
@@ -386,9 +385,6 @@ var app = (function() {
 			if (query['fov']) {
 				m_view_fov = parseFloat(query['fov']);
 			}
-			if (query['fov_margin']) {
-				m_fov_margin = parseFloat(query['fov_margin']);
-			}
 
 			if (query['fps']) {
 				target_fps = parseFloat(query['fps']);
@@ -507,7 +503,6 @@ var app = (function() {
 								omvr.setModel("equirectangular", "rgb");
 								omvr.loadTexture(default_image_url);
 							} else {
-								omvr.set_fov_margin(m_fov_margin);
 								omvr.setViewFov(m_view_fov);
 								omvr.anti_delay = m_anti_delay;
 								omvr.setModel("window", "rgb");
@@ -732,10 +727,12 @@ var app = (function() {
 					var status = "";
 					status += "texture fps:"
 						+ omvr.get_texture_fps().toFixed(3) + "<br/>";
-					status += "texture ttl:" + (omvr.get_texture_ttl() * 1000).toFixed(0)
-					+ "ms<br/>";
-					status += "texture elapsed:" + (omvr.get_texture_elapsed() * 1000).toFixed(0)
-					+ "ms<br/>";
+					status += "texture ttl:"
+						+ (omvr.get_texture_ttl() * 1000).toFixed(0)
+						+ "ms<br/>";
+					status += "texture elapsed:"
+						+ (omvr.get_texture_elapsed() * 1000).toFixed(0)
+						+ "ms<br/>";
 					divStatus.innerHTML = status;
 				}
 

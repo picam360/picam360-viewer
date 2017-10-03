@@ -1,8 +1,11 @@
 //position is windowed sphere
+const int STEPNUM = 64;
+const float STEPNUM_M1 = 63.0;
+
 uniform float frame_scalex;
 uniform float frame_scaley;
 //angular map params
-uniform float angular_pitch_2_r[256];
+uniform float angular_pitch_2_r[STEPNUM];
 
 uniform mat4 unif_matrix;
 
@@ -23,7 +26,7 @@ void main(void) {
 	float pitch = acos(pos.z);
 	float roll = atan(pos.y, pos.x);
 	
-	float indexf = pitch / M_PI * 255.0;
+	float indexf = pitch / M_PI * STEPNUM_M1;
 	int index = int(indexf);
 	float index_sub = indexf - float(index);
 	float r = angular_pitch_2_r[index] * (1.0 - index_sub) + angular_pitch_2_r[index + 1] * index_sub;

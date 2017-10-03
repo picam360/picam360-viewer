@@ -21,9 +21,8 @@ function OMVR() {
 
 	var m_limit_fov = 180;
 	var m_maxfov = 150;
-	var m_view_fov = 120;
-	var m_fov_margin = 10;
-	var m_texture_fov = 120;
+	var m_view_fov = 90;
+	var m_texture_fov = 90;
 	var m_texture_ttl = 0;
 	var m_texture_fps = 0;
 	var m_texture_num = 0;
@@ -38,6 +37,7 @@ function OMVR() {
 	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
+	var m_angular_pitch_2_r_cache = [];
 
 	var m_texture_tmp_time = 0;
 	var m_texture_tmp_num = 0;
@@ -170,9 +170,6 @@ function OMVR() {
 	var stereoEnabled = false;
 
 	var self = {
-		set_fov_margin : function(value) {
-			m_fov_margin = value;
-		},
 		set_view_quaternion : function(value) {
 			m_view_quat_1 = m_view_quat;
 			m_view_quat_1_time = m_view_quat_time;
@@ -209,8 +206,15 @@ function OMVR() {
 			var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
 				* diff_quat.y + diff_quat.z * diff_quat.z);
 			var diff_theta = Math.atan2(sin, cos) * 2;
-			var fov = m_view_fov + m_fov_margin + 180 * Math.abs(diff_theta)
-				/ Math.PI;
+			while (Math.abs(diff_theta) > Math.PI) {
+				if (diff_theta > 0) {
+					diff_theta -= 2 * Math.PI;
+				} else {
+					diff_theta += 2 * Math.PI;
+				}
+			}
+			var fov = m_view_fov + 180 * Math.abs(diff_theta) / Math.PI;
+			fov = Math.round(fov / 5) * 5;
 			if (fov > m_limit_fov) {
 				fov = m_limit_fov;
 			}
@@ -221,7 +225,6 @@ function OMVR() {
 		checkImageDelay : 1000,
 		vertex_type : "",
 		fragment_type : "",
-		anti_delay : false,
 
 		get_texture_ttl : function() {
 			return m_texture_ttl;
@@ -346,7 +349,7 @@ function OMVR() {
 			if (vertex_type == "window") {
 				m_limit_fov = m_view_fov;
 			} else if (vertex_type == "angular") {
-				m_limit_fov = 360;
+				m_limit_fov = 180;
 			}
 			if (type == "raw_bmp") {
 				self.setModel(vertex_type, "bmp");
@@ -621,34 +624,47 @@ function OMVR() {
 				quat_correct.setFromEuler(euler_correct);
 
 				if (self.vertex_type == "angular") {
-					var stepnum = 256;
-					var fov_rad = m_texture_fov * Math.PI / 180.0;
-					var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
-					var y_ary = [0.0, fov_rad, Math.PI];
-					var x_ary2 = [];
-					var y_ary2 = [];
-					for (var i = 0; i < stepnum; i++) {
-						x_ary2[i] = Math.sqrt(2.0) * i / (stepnum - 1);
-						y_ary2[i] = spline(x_ary2[i], x_ary, y_ary);
-					}
-					var x_ary3 = [];
-					var y_ary3 = [];
-					for (var i = 0; i < stepnum; i++) {
-						x_ary3[i] = Math.PI * i / (stepnum - 1);
-						for (var j = 0; j < stepnum - 1; j++) {
-							if (x_ary3[i] >= y_ary2[j]
-								&& x_ary3[i] < y_ary2[j + 1]) {
-								var ratio = (x_ary3[i] - y_ary2[j])
-									/ (y_ary2[j + 1] - y_ary2[j]);
-								y_ary3[i] = ratio * (x_ary2[j + 1] - x_ary2[j])
-									+ x_ary2[j];
-								break;
+					{// pitch to r look-up table
+						if (!m_angular_pitch_2_r_cache[m_texture_fov]) {
+							var stepnum = 256;
+							var fov_rad = m_texture_fov * Math.PI / 180.0;
+							var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
+							var y_ary = [0.0, fov_rad, Math.PI];
+							var x_ary2 = [];
+							var y_ary2 = [];
+							for (var i = 0; i < stepnum; i++) {
+								x_ary2[i] = Math.sqrt(2.0) * i / (stepnum - 1);
+								y_ary2[i] = spline(x_ary2[i], x_ary, y_ary);
 							}
+							// invert x y
+							var stepnum3 = 64;
+							var x_ary3 = [];
+							var y_ary3 = [];
+							x_ary3[0] = 0.0;
+							y_ary3[0] = 0.0;
+							for (var i = 1; i < stepnum3 - 1; i++) {
+								x_ary3[i] = Math.PI * i / (stepnum3 - 1);
+								for (var j = 0; j < stepnum - 1; j++) {
+									if (x_ary3[i] >= y_ary2[j]
+										&& x_ary3[i] < y_ary2[j + 1]) {
+										var ratio = (x_ary3[i] - y_ary2[j])
+											/ (y_ary2[j + 1] - y_ary2[j]);
+										y_ary3[i] = ratio
+											* (x_ary2[j + 1] - x_ary2[j])
+											+ x_ary2[j];
+										break;
+									}
+								}
+							}
+							x_ary3[stepnum3 - 1] = Math.PI;
+							y_ary3[stepnum3 - 1] = Math.sqrt(2.0);
+							
+							m_angular_pitch_2_r_cache[m_texture_fov] = y_ary3;
 						}
+						m_mesh.material.uniforms.angular_pitch_2_r.value = m_angular_pitch_2_r_cache[m_texture_fov];
 					}
-					m_mesh.material.uniforms.angular_pitch_2_r.value = y_ary3;
 
-					if (self.anti_delay) {
+					{// focal point shift
 						var diff_quat = m_view_tex_diff_quat;
 
 						diff_quat = quat_correct.clone().multiply(diff_quat)
