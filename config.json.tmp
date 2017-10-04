@@ -1,6 +1,4 @@
 {
 	"plugin_paths" : [
-		"plugins/mouse.js",
-		"plugins/icade.js"
 	]
 }

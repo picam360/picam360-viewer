@@ -59,7 +59,9 @@ function Rtp() {
 					sum_packet += packets[i].byteLength;
 					if (i == 0) {
 						var cmd = m_callback(PacketHeader(packets[i]), true);
-						rtp_callback(cmd);
+						if (rtp_callback) {
+							rtp_callback(cmd);
+						}
 					} else {
 						m_callback(PacketHeader(packets[i]), false);
 					}
