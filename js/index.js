@@ -231,13 +231,6 @@ var app = (function() {
 					});
 				}
 			},
-			p2p : function(bln) {
-				if (bln) {
-					core.start_p2p();
-				} else {
-					core.stop_p2p();
-				}
-			},
 			call : function(bln) {
 				if (bln) {
 					core.start_call();
