@@ -38,7 +38,6 @@ function Rtcp() {
 	var m_sequencenumber = 0;
 	var m_timestamp = 0;
 	var m_src = 0;
-	var m_ws = null;
 	var m_conn = null;
 	// copy ArrayBuffer
 	function copy(dst, dst_offset, src, src_offset, len) {
@@ -51,18 +50,15 @@ function Rtcp() {
 		}))).buffer;
 	}
 	var self = {
-		set_websocket : function(ws) {
-			m_ws = ws;
-		},
-		set_peerconnection : function(conn) {
+		set_connection : function(conn) {
 			m_conn = conn;
 		},
 		// @data : ArrayBuffer
 		sendpacket : function(pack) {
-			if (m_conn) {
+			if (m_conn.constructor.name == "r") {
+				m_conn.emit('data', pack);
+			} else {
 				m_conn.send(pack);
-			} else if (m_ws) {
-				m_ws.emit('rtcp', pack);
 			}
 		},
 		// @data : ArrayBuffer

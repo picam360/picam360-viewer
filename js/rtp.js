@@ -59,7 +59,7 @@ function Rtp() {
 					sum_packet += packets[i].byteLength;
 					if (i == 0) {
 						var cmd = m_callback(PacketHeader(packets[i]), true);
-						if (rtp_callback) {
+						if (cmd && rtp_callback) {
 							rtp_callback(cmd);
 						}
 					} else {
@@ -89,22 +89,7 @@ function Rtp() {
 		set_passthrough_callback : function(callback) {
 			m_passthrough_callback = callback;
 		},
-		set_websocket : function(ws) {
-			m_ws = ws;
-			if (!m_ws) {
-				return;
-			}
-			ws.on('rtp', function(packets, rtp_callback) {
-				if (ws != m_ws) {
-					return;
-				}
-				self.packet_handler(packets, rtp_callback);
-				if (m_passthrough_callback) {
-					m_passthrough_callback(packets, rtp_callback);
-				}
-			});
-		},
-		set_peerconnection : function(conn, rtp_callback) {
+		set_connection : function(conn, rtp_callback) {
 			m_conn = conn;
 			if (!m_conn) {
 				return;

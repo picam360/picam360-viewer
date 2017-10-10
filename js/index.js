@@ -454,7 +454,7 @@ var app = (function() {
 								}
 							}
 							var cmd = UPSTREAM_DOMAIN;
-							cmd += sprintf("set_view_quaternion 0=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+							cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
 							cmd += sprintf(" fov=%.3f key=%s", fov.toFixed(0), key);
 							return cmd;
 						}
@@ -506,16 +506,18 @@ var app = (function() {
 			var query = GetQueryString();
 			if (query['p2p-uuid']) {
 				self.start_p2p(query['p2p-uuid'], function(peer_conn) {
-					rtp.set_peerconnection(peer_conn, function(cmd) {
-						cmd2upstream_list.push(cmd);
+					rtp.set_connection(peer_conn, function(cmd) {
+						self.plugin_host.send_command(cmd);
 					});
-					rtcp.set_peerconnection(peer_conn);
+					rtcp.set_connection(peer_conn);
 					callback();
 				});
 			} else {
 				self.start_ws(function(socket) {
-					rtp.set_websocket(socket);
-					rtcp.set_websocket(socket);
+					rtp.set_connection(socket, function(cmd) {
+						self.plugin_host.send_command(cmd);
+					});
+					rtcp.set_connection(socket);
 					callback();
 				});
 			}
@@ -731,8 +733,6 @@ var app = (function() {
 		stop_p2p : function() {
 			peer = null;
 			document.getElementById("uiCall").style.display = "none";
-			rtp.set_peerconnection(null);
-			rtcp.set_peerconnection(null);
 		},
 		start_call : function() {
 			p2p_uuid_call = uuid();
