@@ -55,10 +55,10 @@ function Rtcp() {
 		},
 		// @data : ArrayBuffer
 		sendpacket : function(pack) {
-			if (m_conn.constructor.name == "r") {
-				m_conn.emit('data', pack);
-			} else {
+			if (m_conn.peerConnection) { // webrtc
 				m_conn.send(pack);
+			} else {
+				m_conn.emit('data', pack);
 			}
 		},
 		// @data : ArrayBuffer
