@@ -652,8 +652,8 @@ var app = (function() {
 			if (query['fov']) {
 				m_view_fov = parseFloat(query['fov']);
 			}
-			if (query['vertex_type']) {
-				m_vertex_type = query['vertex_type'];
+			if (query['vertex-type']) {
+				m_vertex_type = query['vertex-type'];
 			}
 
 			if (query['fps']) {

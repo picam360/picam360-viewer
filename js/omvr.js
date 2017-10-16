@@ -12,7 +12,7 @@ function OMVR() {
 	var m_view_av_rad = 0;
 	var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
-	var m_camera, m_scene, m_renderer, m_mesh;
+	var m_camera, m_scene, m_renderer;
 
 	var m_window_mode = false;
 	var m_canvas;
@@ -162,6 +162,59 @@ function OMVR() {
 
 		var geometry = new THREE.Geometry();
 		geometry.type = 'SphereWindowGeometry';
+		geometry.fromBufferGeometry(bufferGeometry);
+
+		return geometry;
+	}
+
+	function quaterSphereGeometry(num_of_steps, offset) {
+		var bufferGeometry = new THREE.BufferGeometry();
+		bufferGeometry.type = 'QuaterSphereBufferGeometry';
+
+		var vertexCount = ((num_of_steps + 1) * (num_of_steps / 4 + 1));
+
+		var positions = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
+
+		var indices = [];
+		var vertices = [];
+		var index = 0;
+		for (var i = 0; i <= num_of_steps; i++) {
+			var theta = i * Math.PI / num_of_steps;
+			var verticesRow = [];
+			for (var j = 0; j <= num_of_steps / 4; j++) {
+				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
+				var x = Math.sin(theta) * Math.cos(phi);
+				var y = Math.sin(theta) * Math.sin(phi);
+				var z = Math.cos(theta);
+
+				positions.setXYZ(index, x, y, z);
+
+				verticesRow.push(index);
+
+				index++;
+			}
+			vertices.push(verticesRow);
+		}
+
+		for (var i = 0; i < num_of_steps; i++) {
+			for (var j = 0; j < num_of_steps; j++) {
+				var v1 = vertices[i][j + 1];
+				var v2 = vertices[i][j];
+				var v3 = vertices[i + 1][j];
+				var v4 = vertices[i + 1][j + 1];
+
+				indices.push(v1, v2, v4);
+				indices.push(v2, v3, v4);
+			}
+		}
+
+		bufferGeometry.setIndex(new (positions.count > 65535
+			? THREE.Uint32Attribute
+			: THREE.Uint16Attribute)(indices, 1));
+		bufferGeometry.addAttribute('position', positions);
+
+		var geometry = new THREE.Geometry();
+		geometry.type = 'QuaterSphereGeometry';
 		geometry.fromBufferGeometry(bufferGeometry);
 
 		return geometry;
@@ -424,7 +477,7 @@ function OMVR() {
 
 			m_canvas = canvas;
 
-			m_camera = new THREE.PerspectiveCamera(75, window.innerWidth
+			m_camera = new THREE.PerspectiveCamera(150, window.innerWidth
 				/ window.innerHeight, 1, 1100);
 			m_camera.position = new THREE.Vector3(0, 0, 0);
 			m_camera.target = new THREE.Vector3(0, 0, -1);
@@ -478,19 +531,19 @@ function OMVR() {
 				url : "shader/window.vert?cache=no",
 				shader : "window_vertex_shader"
 			}, {
-				url : "shader/texture_yuv.frag?cache=no",
+				url : "shader/window_yuv.frag?cache=no",
 				shader : "window_yuv_fragment_shader"
 			}, {
-				url : "shader/texture_rgb.frag?cache=no",
+				url : "shader/window_rgb.frag?cache=no",
 				shader : "window_rgb_fragment_shader"
 			}, {
 				url : "shader/picam360map.vert?cache=no",
 				shader : "picam360map_vertex_shader"
 			}, {
-				url : "shader/texture_yuv.frag?cache=no",
+				url : "shader/picam360map_yuv.frag?cache=no",
 				shader : "picam360map_yuv_fragment_shader"
 			}, {
-				url : "shader/texture_rgb.frag?cache=no",
+				url : "shader/picam360map_rgb.frag?cache=no",
 				shader : "picam360map_rgb_fragment_shader"
 			}, {
 				url : "shader/equirectangular.vert?cache=no",
@@ -546,81 +599,99 @@ function OMVR() {
 			m_camera.up = new THREE.Vector3(0, 1, 0);
 			m_camera.lookAt(m_camera.target);
 
-			var geometry = windowGeometry(m_maxfov, m_maxfov, 64);
-
-			// position is
-			// x:[-1,1],
-			// y:[-1,1]
-			var material = new THREE.ShaderMaterial({
-				vertexShader : m_shaders[vertex_type + "_vertex_shader"],
-				fragmentShader : m_shaders[vertex_type + "_" + fragment_type
-					+ "_fragment_shader"],
-				uniforms : {
-					frame_scalex : {
-						type : 'f',
-						value : 1
-					},
-					frame_scaley : {
-						type : 'f',
-						value : 1
-					},
-					tex_scalex : {
-						type : 'f',
-						value : 1
-					},
-					tex_scaley : {
-						type : 'f',
-						value : 1
-					},
-					pitch_2_r : {
-						type : 'fv1',
-						value : []
-					},
-					tex : {
-						type : 't',
-						value : m_texture
-					},
-					tex_y : {
-						type : 't',
-						value : m_texture_y
-					},
-					tex_u : {
-						type : 't',
-						value : m_texture_u
-					},
-					tex_v : {
-						type : 't',
-						value : m_texture_v
-					},
-					YUV2RGB : {
-						type : 'm4',
-						value : YUV2RGB
-					},
-					unif_matrix : {
-						type : 'm4',
-						value : new THREE.Matrix4()
-					},
-				},
-				side : THREE.DoubleSide,
-				blending : THREE.NormalBlending,
-				transparent : true,
-				depthTest : false
-			});
-
-			m_mesh = new THREE.Mesh(geometry, material);
-			m_mesh.material.needsUpdate = true;
-			for (var i = 0; i < m_scene.children.length; i++) {
+			for (var i = m_scene.children.length - 1; i >= 0; i--) {
 				m_scene.remove(m_scene.children[i]);
 			}
-			m_scene.add(m_mesh);
+
+			for (var k = 0; k < 4; k++) {
+				var geometry;
+				if (self.vertex_type == "picam360map") {
+					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
+				} else {
+					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
+				}
+
+				// position is
+				// x:[-1,1],
+				// y:[-1,1]
+				var material = new THREE.ShaderMaterial({
+					vertexShader : m_shaders[vertex_type + "_vertex_shader"],
+					fragmentShader : m_shaders[vertex_type + "_"
+						+ fragment_type + "_fragment_shader"],
+					uniforms : {
+						material_index : {
+							type : 'f',
+							value : k
+						},
+						frame_scalex : {
+							type : 'f',
+							value : 1
+						},
+						frame_scaley : {
+							type : 'f',
+							value : 1
+						},
+						tex_scalex : {
+							type : 'f',
+							value : 1
+						},
+						tex_scaley : {
+							type : 'f',
+							value : 1
+						},
+						pitch_2_r : {
+							type : 'fv1',
+							value : []
+						},
+						tex : {
+							type : 't',
+							value : m_texture
+						},
+						tex_y : {
+							type : 't',
+							value : m_texture_y
+						},
+						tex_u : {
+							type : 't',
+							value : m_texture_u
+						},
+						tex_v : {
+							type : 't',
+							value : m_texture_v
+						},
+						YUV2RGB : {
+							type : 'm4',
+							value : YUV2RGB
+						},
+						unif_matrix : {
+							type : 'm4',
+							value : new THREE.Matrix4()
+						},
+					},
+					side : THREE.DoubleSide,
+					blending : THREE.NormalBlending,
+					transparent : true,
+					depthTest : false
+				});
+
+				var mesh = new THREE.Mesh(geometry, material);
+				mesh.material.needsUpdate = true;
+				m_scene.add(mesh);
+			}
 		},
 
 		checkImageLastUpdate : true,
 
+		setShaderParam : function(name, value) {
+			for (var i = 0; i < m_scene.children.length; i++) {
+				m_scene.children[i].material.uniforms[name].value = value;
+			}
+		},
+
 		animate : function(elapsedTime) {
 			m_view_tex_diff_quat = m_tex_quat.clone().conjugate()
 				.multiply(m_view_quat);
-			if (m_mesh && m_mesh.material.uniforms.unif_matrix) {
+			{
 				var euler_correct = new THREE.Euler(THREE.Math.degToRad(-90), THREE.Math
 					.degToRad(180), THREE.Math.degToRad(0), "YXZ");
 				var quat_correct = new THREE.Quaternion();
@@ -661,24 +732,23 @@ function OMVR() {
 							}
 							x_ary3[stepnum3 - 1] = Math.PI;
 							y_ary3[stepnum3 - 1] = Math.sqrt(2.0);
-							
+
 							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
 						}
-						m_mesh.material.uniforms.pitch_2_r.value = m_pitch_2_r_cache[m_texture_fov];
+						self
+							.setShaderParam("pitch_2_r", m_pitch_2_r_cache[m_texture_fov]);
 					}
-
 					{// focal point shift
 						var diff_quat = m_view_tex_diff_quat;
-
 						diff_quat = quat_correct.clone().multiply(diff_quat)
 							.multiply(quat_correct.clone().conjugate());
-						m_mesh.material.uniforms.unif_matrix.value
-							.makeRotationFromQuaternion(diff_quat);
+						self.setShaderParam("unif_matrix", new THREE.Matrix4()
+							.makeRotationFromQuaternion(diff_quat.conjugate()));
 					}
 				} else if (self.vertex_type == "equirectangular") {
 					var view_quat = m_view_quat.clone().multiply(quat_correct);
-					m_mesh.material.uniforms.unif_matrix.value
-						.makeRotationFromQuaternion(view_quat);
+					self.setShaderParam("unif_matrix", new THREE.Matrix4()
+						.makeRotationFromQuaternion(view_quat));
 				}
 
 				{
@@ -690,13 +760,13 @@ function OMVR() {
 					var fov_gain = Math.tan(fov_rad / 2);
 					var scale = 1.0 / fov_gain;
 					if (window_aspect < 1.0) {
-						m_mesh.material.uniforms.frame_scalex.value = scale
-							/ window_aspect;
-						m_mesh.material.uniforms.frame_scaley.value = scale;
+						self.setShaderParam("frame_scalex", scale
+							/ window_aspect);
+						self.setShaderParam("frame_scaley", scale);
 					} else {
-						m_mesh.material.uniforms.frame_scalex.value = scale;
-						m_mesh.material.uniforms.frame_scaley.value = scale
-							* window_aspect;
+						self.setShaderParam("frame_scalex", scale);
+						self.setShaderParam("frame_scaley", scale
+							* window_aspect);
 					}
 				}
 			}
