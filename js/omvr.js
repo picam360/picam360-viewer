@@ -362,7 +362,7 @@ function OMVR() {
 						tex_quat = new THREE.Quaternion(x, y, z, w);
 					} else if (_split[0] == "fov") {
 						m_texture_fov = parseFloat(_split[2]);
-					} else if (_split[0] == "ttl_key") { // ttl_key
+					} else if (_split[0] == "client_key") { // ttl
 						var value = (now - parseFloat(_split[2])) / 1000;
 						if (!isNaN(value)) {
 							m_texture_ttl = m_texture_ttl * 0.9 + value * 0.1;

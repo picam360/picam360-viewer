@@ -43,7 +43,7 @@ function Rtp() {
 	var m_callback = null;
 	var m_passthrough_callback = null;
 	var self = {
-		packet_handler : function(packets, rtp_callback) {
+		packet_handler : function(packets) {
 			var packet_time = Date.now();
 			var sum_packet = 0;
 			// console.log("packets : " + packets.length);
@@ -57,17 +57,8 @@ function Rtp() {
 				// });
 				for (var i = 0; i < packets.length; i++) {
 					sum_packet += packets[i].byteLength;
-					if (i == 0) {
-						var cmd = m_callback(PacketHeader(packets[i]), true);
-						if (cmd && rtp_callback) {
-							rtp_callback(cmd);
-						}
-					} else {
-						m_callback(PacketHeader(packets[i]), false);
-					}
+					m_callback(PacketHeader(packets[i]));
 				}
-			} else {
-				rtp_callback(null);
 			}
 
 			{ // bandwidth
@@ -89,7 +80,7 @@ function Rtp() {
 		set_passthrough_callback : function(callback) {
 			m_passthrough_callback = callback;
 		},
-		set_connection : function(conn, rtp_callback) {
+		set_connection : function(conn) {
 			m_conn = conn;
 			if (!m_conn) {
 				return;
@@ -98,7 +89,7 @@ function Rtp() {
 				if (conn != m_conn) {
 					return;
 				}
-				self.packet_handler(data, rtp_callback);
+				self.packet_handler(data);
 			});
 		},
 	};

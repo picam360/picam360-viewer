@@ -423,68 +423,50 @@ var app = (function() {
 			rtp = Rtp();
 			rtcp = Rtcp();
 			// set rtp callback
-			rtp
-				.set_callback(function(packet, cmd_request) {
-					if (packet.GetPayloadType() == PT_CAM_BASE) {// image
-						if (mjpeg_decoder) {
-							mjpeg_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
-						if (h264_decoder) {
-							h264_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
-						if (cmd_request) {
-							var key = new Date().getTime().toString();
-							var fov = m_view_fov;
-							var quat = mpu.get_quaternion();
-							quat = self.plugin_host.get_view_offset()
-								.multiply(quat);
-							if (m_anti_delay) {
-								fov = omvr.get_adaptive_texture_fov();
-								if (m_fpp) {
-									quat = omvr.predict_view_quaternion();
-								}
-							}
-							var cmd = UPSTREAM_DOMAIN;
-							cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
-							cmd += sprintf(" fov=%.3f key=%s", fov.toFixed(0), key);
-							return cmd;
-						}
-					} else if (packet.GetPayloadType() == PT_STATUS) {// status
-						var str = String.fromCharCode
-							.apply("", new Uint8Array(packet.GetPayload()));
-						var split = str.split('"');
-						var name = UPSTREAM_DOMAIN + split[1];
-						var value = split[3];
-						if (watches[name]) {
-							watches[name](value);
-						}
-					} else if (packet.GetPayloadType() == PT_FILE) {// file
-						var array = packet.GetPayload();
-						var view = new DataView(array.buffer, array.byteOffset);
-						var header_size = view.getUint16(0, false);
-						var header = array.slice(2, 2 + header_size);
-						var header_str = String.fromCharCode.apply("", header);
-						var data = array.slice(2 + header_size);
-						var key = "dummy";
-						var split = header_str.split(" ");
-						for (var i = 0; i < split.length; i++) {
-							var separator = (/[=,\"]/);
-							var _split = split[i].split(separator);
-							if (_split[0] == "key") { // view quaternion
-								key = _split[2];
-							}
-						}
-						for (var i = 0; i < filerequest_list.length; i++) {
-							if (filerequest_list[i].key == key) {
-								filerequest_list[i].callback(data);
-								filerequest_list.splice(i, 1);
-								break;
-							}
+			rtp.set_callback(function(packet) {
+				if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+					if (mjpeg_decoder) {
+						mjpeg_decoder.decode(packet.GetPayload(), packet
+							.GetPayloadLength());
+					}
+					if (h264_decoder) {
+						h264_decoder.decode(packet.GetPayload(), packet
+							.GetPayloadLength());
+					}
+				} else if (packet.GetPayloadType() == PT_STATUS) {// status
+					var str = String.fromCharCode
+						.apply("", new Uint8Array(packet.GetPayload()));
+					var split = str.split('"');
+					var name = UPSTREAM_DOMAIN + split[1];
+					var value = split[3];
+					if (watches[name]) {
+						watches[name](value);
+					}
+				} else if (packet.GetPayloadType() == PT_FILE) {// file
+					var array = packet.GetPayload();
+					var view = new DataView(array.buffer, array.byteOffset);
+					var header_size = view.getUint16(0, false);
+					var header = array.slice(2, 2 + header_size);
+					var header_str = String.fromCharCode.apply("", header);
+					var data = array.slice(2 + header_size);
+					var key = "dummy";
+					var split = header_str.split(" ");
+					for (var i = 0; i < split.length; i++) {
+						var separator = (/[=,\"]/);
+						var _split = split[i].split(separator);
+						if (_split[0] == "key") { // view quaternion
+							key = _split[2];
 						}
 					}
-				});
+					for (var i = 0; i < filerequest_list.length; i++) {
+						if (filerequest_list[i].key == key) {
+							filerequest_list[i].callback(data);
+							filerequest_list.splice(i, 1);
+							break;
+						}
+					}
+				}
+			});
 			// command to upstream
 			setInterval(function() {
 				if (!cmd2upstream_list.length) {
@@ -499,21 +481,50 @@ var app = (function() {
 			var query = GetQueryString();
 			if (query['p2p-uuid']) {
 				self.start_p2p(query['p2p-uuid'], function(peer_conn) {
-					rtp.set_connection(peer_conn, function(cmd) {
-						self.plugin_host.send_command(cmd);
-					});
+					rtp.set_connection(peer_conn);
 					rtcp.set_connection(peer_conn);
 					callback();
 				});
 			} else {
 				self.start_ws(function(socket) {
-					rtp.set_connection(socket, function(cmd) {
-						self.plugin_host.send_command(cmd);
-					});
+					rtp.set_connection(socket);
 					rtcp.set_connection(socket);
 					callback();
 				});
 			}
+		},
+
+		handle_frame : function(type, data, width, height, info) {
+			{
+				var server_key = "";
+				if (info) {
+					var split = info.split(' ');
+					for (var i = 0; i < split.length; i++) {
+						var separator = (/[=,\"]/);
+						var _split = split[i].split(separator);
+						if (_split[0] == "server_key") {
+							server_key = _split[2];
+						}
+					}
+				}
+				var client_key = new Date().getTime().toString();
+				var fov = m_view_fov;
+				var quat = mpu.get_quaternion();
+				quat = self.plugin_host.get_view_offset().multiply(quat);
+				if (m_anti_delay) {
+					fov = omvr.get_adaptive_texture_fov();
+					if (m_fpp) {
+						quat = omvr.predict_view_quaternion();
+					}
+				}
+				var cmd = UPSTREAM_DOMAIN;
+				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+				cmd += sprintf(" fov=%.3f client_key=%s server_key=%s", fov
+					.toFixed(0), client_key, server_key);
+				self.plugin_host.send_command(cmd);
+			}
+
+			omvr.handle_frame(type, data, width, height, info);
 		},
 
 		init_webgl : function() {
@@ -554,8 +565,8 @@ var app = (function() {
 					// video decoder
 					h264_decoder = H264Decoder();
 					mjpeg_decoder = MjpegDecoder();
-					h264_decoder.set_frame_callback(omvr.handle_frame);
-					mjpeg_decoder.set_frame_callback(omvr.handle_frame);
+					h264_decoder.set_frame_callback(self.handle_frame);
+					mjpeg_decoder.set_frame_callback(self.handle_frame);
 
 					// motion processer unit
 					mpu = MPU(self.plugin_host);
