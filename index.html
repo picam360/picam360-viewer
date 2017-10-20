@@ -121,7 +121,7 @@
 				type="checkbox"
 				name="radioInfoType"
 				id="menu_button_visible"
-				onclick="app.plugin_host.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' + (this.checked?'1':'0'));"
+				onclick="app.plugin_host.set_menu_visible(this.checked);"
 			>
 			<button class="button-bar__button">Menu</button>
 		</div>
@@ -197,7 +197,9 @@
 		class="main_view"
 		id="container"
 	>
-		<canvas id="vrCanvas"></canvas>
+		<canvas id="panorama"></canvas>
+		<div id="overlay">
+		</div>
 	</div>
 	</ons-page> </ons-navigator> </ons-template>
 

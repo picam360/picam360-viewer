@@ -342,6 +342,10 @@ function OMVR() {
 					break;
 			}
 		},
+		
+		get_frame_num : function(){
+			return m_texture_num;
+		},
 
 		handle_frame : function(type, data, width, height, info) {
 			m_texture_num++;

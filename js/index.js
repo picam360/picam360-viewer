@@ -44,6 +44,8 @@ var app = (function() {
 
 	// main canvas
 	var canvas;
+	// overlay
+	var overlay;
 	// webgl handling
 	var omvr;
 	// data stream handling
@@ -242,6 +244,15 @@ var app = (function() {
 				if (level && level <= debug) {
 					console.log(str);
 				}
+			},
+			set_menu_visible : function(bln) {
+				// self.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' +
+				// (bln?'1':'0'));
+				overlay.style.visibility = bln ? "visible" : "hidden";
+			},
+			set_info : function(str) {
+				overlay.innerHTML = str;
+				overlay.style.visibility = str ? "visible" : "hidden";
 			},
 		};
 		return self;
@@ -480,13 +491,17 @@ var app = (function() {
 			}, 10);// 100hz
 			var query = GetQueryString();
 			if (query['p2p-uuid']) {
+				self.plugin_host.set_info("connecting via webrtc...");
 				self.start_p2p(query['p2p-uuid'], function(peer_conn) {
+					self.plugin_host.set_info("waiting image...");
 					rtp.set_connection(peer_conn);
 					rtcp.set_connection(peer_conn);
 					callback();
 				});
 			} else {
+				self.plugin_host.set_info("connecting via websocket...");
 				self.start_ws(function(socket) {
+					self.plugin_host.set_info("waiting image...");
 					rtp.set_connection(socket);
 					rtcp.set_connection(socket);
 					callback();
@@ -495,6 +510,9 @@ var app = (function() {
 		},
 
 		handle_frame : function(type, data, width, height, info) {
+			if (omvr.get_frame_num() == 0) {
+				self.plugin_host.set_info("");
+			}
 			{
 				var server_key = "";
 				if (info) {
@@ -528,7 +546,8 @@ var app = (function() {
 		},
 
 		init_webgl : function() {
-			canvas = document.getElementById('vrCanvas');
+			canvas = document.getElementById('panorama');
+			overlay = document.getElementById('overlay');
 			// webgl handling
 			omvr = OMVR();
 			omvr
@@ -578,6 +597,14 @@ var app = (function() {
 		},
 
 		init_watch : function() {
+			self.plugin_host.add_watch("upstream.error", function(value) {
+				switch (value.toLowerCase()) {
+					case "exceeded_num_of_clients" :
+						self.plugin_host
+							.set_info("error : Exceeded num of clients");
+						break;
+				}
+			});
 			self.plugin_host
 				.add_watch("upstream.is_recording", function(value) {
 					set_is_recording(value.toLowerCase() == 'true');
@@ -708,14 +735,6 @@ var app = (function() {
 				socket.on("disconnect", function() {
 					console.log("disconnected");
 				});
-				socket.on("custom_error", function(event) {
-					console.log("error : " + event);
-					switch (event) {
-						case "exceeded_num_of_clients" :
-							alert("The number of clients is exceeded.");
-							break;
-					}
-				});
 			});
 		},
 		start_p2p : function(p2p_uuid, callback) {
@@ -725,6 +744,12 @@ var app = (function() {
 				secure : SIGNALING_SECURE,
 				key : P2P_API_KEY,
 				debug : debug
+			});
+			peer.on('error', function(err) {
+				if (err.type == "peer-unavailable") {
+					self.plugin_host.set_info("error : Could not connect "
+						+ p2p_uuid);
+				}
 			});
 			peer_conn = peer.connect(p2p_uuid, {
 				constraints : {}

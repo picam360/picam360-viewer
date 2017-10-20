@@ -61,9 +61,7 @@ body {
     color: white;
     font-family: monospace;
     padding: 1em;
-    border-radius: 1em;
-    border: 2px solid #f00;
-    text-shadow: 0px 0px 5px white;
+    visibility:hidden;
 }
 
 h1 {
