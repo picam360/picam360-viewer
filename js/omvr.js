@@ -26,7 +26,10 @@ function OMVR() {
 	var m_texture_ttl = 0;
 	var m_texture_fps = 0;
 	var m_texture_num = 0;
-	var m_texture_elapsed = 0;
+	var m_texture_idle_time = 0;
+	var m_texture_processed = 0;
+	var m_texture_encoded = 0;
+	var m_texture_decoded = 0;
 	var m_texture_width = 512;
 	var m_texture_height = 512;
 	var m_videoImage;
@@ -280,16 +283,19 @@ function OMVR() {
 		vertex_type_forcibly : "",
 		fragment_type : "",
 
-		get_texture_ttl : function() {
-			return m_texture_ttl;
-		},
-
-		get_texture_fps : function() {
-			return m_texture_fps;
-		},
-
-		get_texture_elapsed : function() {
-			return m_texture_elapsed;
+		get_info : function() {
+			var transfer = m_texture_ttl - m_texture_processed
+				- m_texture_encoded - m_texture_decoded;
+			var info = {
+				ttl : m_texture_ttl,
+				fps : m_texture_fps,
+				idle_time : m_texture_idle_time,
+				processed : m_texture_processed,
+				encoded : m_texture_encoded,
+				decoded : m_texture_decoded,
+				transfer : transfer,
+			};
+			return info;
 		},
 
 		loadTexture : function(image_url, image_type) {
@@ -342,47 +348,72 @@ function OMVR() {
 					break;
 			}
 		},
-		
-		get_frame_num : function(){
+
+		get_frame_num : function() {
 			return m_texture_num;
 		},
 
-		handle_frame : function(type, data, width, height, info) {
+		handle_frame : function(type, data, width, height, info, time) {
 			m_texture_num++;
 
 			var now = new Date().getTime();
 			var tex_quat;
 			var vertex_type = self.vertex_type;
 			if (info) {
+				var map = [];
 				var split = info.split(' ');
 				for (var i = 0; i < split.length; i++) {
 					var separator = (/[=,\"]/);
 					var _split = split[i].split(separator);
-					if (_split[0] == "view_quat") { // view quaternion
-						var x = parseFloat(_split[2]);
-						var y = parseFloat(_split[3]);
-						var z = parseFloat(_split[4]);
-						var w = parseFloat(_split[5]);
-						tex_quat = new THREE.Quaternion(x, y, z, w);
-					} else if (_split[0] == "fov") {
-						m_texture_fov = parseFloat(_split[2]);
-					} else if (_split[0] == "client_key") { // ttl
-						var value = (now - parseFloat(_split[2])) / 1000;
-						if (!isNaN(value)) {
-							m_texture_ttl = m_texture_ttl * 0.9 + value * 0.1;
-						}
-					} else if (_split[0] == "elapsed") {
-						var value = parseFloat(_split[2]);
-						m_texture_elapsed = m_texture_elapsed * 0.9 + value
-							* 0.1;
-					} else if (_split[0] == "mode") {
-						switch (_split[2]) {
-							case "WINDOW" :
-							case "EQUIRECTANGULAR" :
-							case "PICAM360MAP" :
-								vertex_type = _split[2].toLowerCase();
-								break;
-						}
+					map[_split[0]] = _split;
+				}
+				if (map["view_quat"]) { // view quaternion
+					var x = parseFloat(map["view_quat"][2]);
+					var y = parseFloat(map["view_quat"][3]);
+					var z = parseFloat(map["view_quat"][4]);
+					var w = parseFloat(map["view_quat"][5]);
+					tex_quat = new THREE.Quaternion(x, y, z, w);
+				}
+				if (map["fov"]) {
+					m_texture_fov = parseFloat(map["fov"][2]);
+				}
+				if (map["client_key"]) { // ttl
+					var idle_time = 0;
+					if (map["idle_time"]) {
+						idle_time = parseFloat(map["idle_time"][2]);
+					}
+					var value = (now - parseFloat(map["client_key"][2])) / 1000
+						- idle_time;
+					if (!isNaN(value)) {
+						m_texture_ttl = m_texture_ttl * 0.9 + value * 0.1;
+					}
+				}
+				if (map["idle_time"]) {
+					var value = parseFloat(map["idle_time"][2]);
+					m_texture_idle_time = m_texture_idle_time * 0.9 + value
+						* 0.1;
+				}
+				if (map["frame_processed"]) {
+					var value = parseFloat(map["frame_processed"][2]);
+					m_texture_processed = m_texture_processed * 0.9 + value
+						* 0.1;
+				}
+				if (map["encoded"]) {
+					var value = parseFloat(map["encoded"][2]);
+					m_texture_encoded = m_texture_encoded * 0.9 + value * 0.1;
+
+				}
+				{// decoded
+					var decoded = (now - time) / 1000;
+					m_texture_decoded = m_texture_decoded * 0.9 + decoded * 0.1;
+				}
+				if (map["mode"]) {
+					switch (map["mode"][2]) {
+						case "WINDOW" :
+						case "EQUIRECTANGULAR" :
+						case "PICAM360MAP" :
+							vertex_type = map["mode"][2].toLowerCase();
+							break;
 					}
 				}
 			}

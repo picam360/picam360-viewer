@@ -509,7 +509,7 @@ var app = (function() {
 			}
 		},
 
-		handle_frame : function(type, data, width, height, info) {
+		handle_frame : function(type, data, width, height, info, time) {
 			if (omvr.get_frame_num() == 0) {
 				self.plugin_host.set_info("");
 			}
@@ -542,7 +542,7 @@ var app = (function() {
 				self.plugin_host.send_command(cmd);
 			}
 
-			omvr.handle_frame(type, data, width, height, info);
+			omvr.handle_frame(type, data, width, height, info, time);
 		},
 
 		init_webgl : function() {
@@ -805,15 +805,21 @@ var app = (function() {
 
 				var divStatus = document.getElementById("divStatus");
 				if (divStatus) {
+					var texture_info = omvr.get_info();
 					var status = "";
-					status += "texture fps:"
-						+ omvr.get_texture_fps().toFixed(3) + "<br/>";
-					status += "texture ttl:"
-						+ (omvr.get_texture_ttl() * 1000).toFixed(0)
+					status += "texture<br/>";
+					status += "fps:" + texture_info.fps.toFixed(3) + "<br/>";
+					status += "ttl:" + (texture_info.ttl * 1000).toFixed(0)
 						+ "ms<br/>";
-					status += "texture elapsed:"
-						+ (omvr.get_texture_elapsed() * 1000).toFixed(0)
+					status += "processed:"
+						+ (texture_info.processed * 1000).toFixed(0)
 						+ "ms<br/>";
+					status += "encoded:"
+						+ (texture_info.encoded * 1000).toFixed(0) + "ms<br/>";
+					status += "decoded:"
+						+ (texture_info.decoded * 1000).toFixed(0) + "ms<br/>";
+					status += "transfer:"
+						+ (texture_info.transfer * 1000).toFixed(0) + "ms<br/>";
 					divStatus.innerHTML = status;
 				}
 

@@ -35,7 +35,7 @@ function H264Decoder(callback) {
 						console.log("no view quat info:" + m_decoded_frame_num
 							+ ":" + m_frame_info);
 					}
-					m_frame_callback("yuv", data.buf, data.width, data.height, m_frame_info[m_decoded_frame_num]);
+					m_frame_callback("yuv", data.buf, data.width, data.height, m_frame_info[m_decoded_frame_num].info, m_frame_info[m_decoded_frame_num].time);
 				}
 				var frame_info = {};
 				for (var i = m_decoded_frame_num; i <= m_packet_frame_num; i++) {
@@ -108,7 +108,10 @@ function H264Decoder(callback) {
 				if ((m_active_frame[0][4] & 0x1f) == 6) {// sei
 					var str = String.fromCharCode.apply("", m_active_frame[0]
 						.subarray(4), 0);
-					m_frame_info[(m_packet_frame_num + 1)] = str;
+					m_frame_info[(m_packet_frame_num + 1)] = {
+						info : str,
+						time : new Date().getTime()
+					};
 					m_active_frame.shift();
 					// console.log("sei : " + (m_packet_frame_num + 1));
 				}
