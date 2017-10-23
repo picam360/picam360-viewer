@@ -824,7 +824,7 @@ var app = (function() {
 					var rtp_info = rtp.get_info();
 					status += "packet<br/>";
 					status += "bitrate:" + rtp_info.bitrate.toFixed(3)
-						+ "Mbps<br/>";
+						+ "Mbit/s<br/>";
 					
 					divStatus.innerHTML = status;
 				}
