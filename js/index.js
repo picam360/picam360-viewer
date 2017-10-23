@@ -805,8 +805,8 @@ var app = (function() {
 
 				var divStatus = document.getElementById("divStatus");
 				if (divStatus) {
-					var texture_info = omvr.get_info();
 					var status = "";
+					var texture_info = omvr.get_info();
 					status += "texture<br/>";
 					status += "fps:" + texture_info.fps.toFixed(3) + "<br/>";
 					status += "ttl:" + (texture_info.ttl * 1000).toFixed(0)
@@ -820,6 +820,12 @@ var app = (function() {
 						+ (texture_info.decoded * 1000).toFixed(0) + "ms<br/>";
 					status += "transfer:"
 						+ (texture_info.transfer * 1000).toFixed(0) + "ms<br/>";
+
+					var rtp_info = rtp.get_info();
+					status += "packet<br/>";
+					status += "bitrate:" + rtp_info.bitrate.toFixed(3)
+						+ "Mbps<br/>";
+					
 					divStatus.innerHTML = status;
 				}
 

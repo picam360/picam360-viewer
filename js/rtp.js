@@ -35,14 +35,19 @@ function PacketHeader(pack) {
 }
 
 function Rtp() {
-	var m_bandwidth = 0;
+	var m_bitrate = 0;
 	var m_last_packet_time = Date.now();
-	var m_debugoutput_time = Date.now();
 	var m_ws = null;
 	var m_conn = null;
 	var m_callback = null;
 	var m_passthrough_callback = null;
 	var self = {
+		get_info : function() {
+			var info = {
+				bitrate : m_bitrate,
+			};
+			return info;
+		},
 		packet_handler : function(packets) {
 			var packet_time = Date.now();
 			var sum_packet = 0;
@@ -61,16 +66,11 @@ function Rtp() {
 				}
 			}
 
-			{ // bandwidth
+			{ // bitrate
 				var diff_usec = (packet_time - m_last_packet_time) * 1000;
 				var tmp = 8.0 * sum_packet / Math.max(diff_usec, 1); // Mbps
 				var w = diff_usec / 1000000 / 10;
-				m_bandwidth = m_bandwidth * (1.0 - w) + tmp * w;
-				if (packet_time - m_debugoutput_time > 10 * 1000) {
-					m_debugoutput_time = packet_time;
-					console.log("bandwidth : " + m_bandwidth.toFixed(3)
-						+ "Mbps");
-				}
+				m_bitrate = m_bitrate * (1.0 - w) + tmp * w;
 			}
 			m_last_packet_time = packet_time;
 		},
