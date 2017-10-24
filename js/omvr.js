@@ -414,6 +414,8 @@ function OMVR() {
 						case "PICAM360MAP" :
 							vertex_type = map["mode"][2].toLowerCase();
 							break;
+						default :
+							vertex_type = "window";
 					}
 				}
 			}

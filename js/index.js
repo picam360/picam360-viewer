@@ -219,23 +219,39 @@ var app = (function() {
 				return view_offset.clone();
 			},
 			snap : function() {
-				socket.emit('snap', function(filename) {
-					console.log("save image!: " + filename);
-					downloadAsFile('picam360.jpeg', server_url + "img/"
-						+ filename);
+				var key = uuid();
+				self.send_command(SERVER_DOMAIN + "snap " + key);
+				filerequest_list.push({
+					filename : 'picam360.jpeg',
+					key : key,
+					callback : function(data) {
+						var blob = new Blob([data], {
+							type : "image/jpeg"
+						});
+						var url = (URL || webkitURL || mozURL)
+							.createObjectURL(blob);
+						downloadAsFile('picam360.jpeg', url);
+					}
 				});
 			},
 			rec : function() {
 				if (is_recording) {
-					socket.emit('stop_record', function(filename) {
-						console.log("save video!: " + filename);
-						downloadAsFile('picam360.mp4', server_url + "img/"
-							+ filename);
+					var key = uuid();
+					self.send_command(SERVER_DOMAIN + "stop_record " + key);
+					filerequest_list.push({
+						filename : 'picam360.mp4',
+						key : key,
+						callback : function(data) {
+							var blob = new Blob([data], {
+								type : "video/mp4"
+							});
+							var url = (URL || webkitURL || mozURL)
+								.createObjectURL(blob);
+							downloadAsFile('picam360.mp4', url);
+						}
 					});
 				} else {
-					socket.emit('start_record', function() {
-						console.log("start_record");
-					});
+					self.send_command(SERVER_DOMAIN + "start_record");
 				}
 			},
 			call : function(bln) {
