@@ -873,7 +873,8 @@ var app = (function() {
 						status += "texture<br/>";
 						status += "fps:" + texture_info.fps.toFixed(3)
 							+ "<br/>";
-						status += "rtt:" + (texture_info.rtt * 1000).toFixed(0)
+						status += "latency:"
+							+ (texture_info.latency * 1000).toFixed(0)
 							+ "ms<br/>";
 						status += "processed:"
 							+ (texture_info.processed * 1000).toFixed(0)
@@ -884,8 +885,7 @@ var app = (function() {
 						status += "decoded:"
 							+ (texture_info.decoded * 1000).toFixed(0)
 							+ "ms<br/>";
-						status += "transfer:"
-							+ (texture_info.transfer * 1000).toFixed(0)
+						status += "rtt:" + (texture_info.rtt * 1000).toFixed(0)
 							+ "ms<br/>";
 						status += "<br/>";
 					}
