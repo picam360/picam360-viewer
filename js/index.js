@@ -73,6 +73,10 @@ var app = (function() {
 	var cmd2upstream_list = [];
 	var filerequest_list = [];
 
+	var m_menu_visible = false;
+	var m_info = "";
+	var m_menu = "";
+
 	function set_is_recording(value) {
 		if (is_recording != value) {
 			is_recording = value;
@@ -248,11 +252,13 @@ var app = (function() {
 			set_menu_visible : function(bln) {
 				// self.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' +
 				// (bln?'1':'0'));
-				overlay.style.visibility = bln ? "visible" : "hidden";
+				m_menu_visible = bln;
+				overlay.style.visibility = m_menu_visible
+					? "visible"
+					: "hidden";
 			},
 			set_info : function(str) {
 				overlay.innerHTML = str;
-				overlay.style.visibility = str ? "visible" : "hidden";
 			},
 		};
 		return self;
@@ -512,6 +518,7 @@ var app = (function() {
 		handle_frame : function(type, data, width, height, info, time) {
 			if (omvr.get_frame_num() == 0) {
 				self.plugin_host.set_info("");
+				self.plugin_host.set_menu_visible(false);
 			}
 			{
 				var server_key = "";
@@ -546,8 +553,6 @@ var app = (function() {
 		},
 
 		init_webgl : function() {
-			canvas = document.getElementById('panorama');
-			overlay = document.getElementById('overlay');
 			// webgl handling
 			omvr = OMVR();
 			omvr
@@ -617,6 +622,13 @@ var app = (function() {
 					document.getElementById("uiCall").style.display = "none";
 				}
 			});
+			self.plugin_host.add_watch("upstream.info", function(value) {
+				m_info = value;
+			});
+			self.plugin_host.add_watch("upstream.menu", function(value) {
+				m_menu = value;
+			});
+
 			self.plugin_host
 				.add_watch("upstream.request_call", function(value) {
 					if (p2p_uuid_call == value) {
@@ -713,7 +725,11 @@ var app = (function() {
 				m_fpp = parseBoolean(query['fpp']);
 			}
 
+			canvas = document.getElementById('panorama');
+			overlay = document.getElementById('overlay');
+
 			self.plugin_host = PluginHost(self);
+			self.plugin_host.set_menu_visible(true);
 			self.init_common_options();
 			self.init_webgl();
 			self.init_watch();
@@ -723,19 +739,22 @@ var app = (function() {
 		},
 		start_ws : function(callback) {
 			// websocket
-			jQuery.getScript(server_url + 'socket.io/socket.io.js', function() {
-				// connect websocket
-				socket = io.connect(server_url);
+			jQuery.getScript(server_url + 'socket.io/socket.io.js')
+				.done(function(script, textStatus) {
+					// connect websocket
+					socket = io.connect(server_url);
 
-				socket.on("connect", function() {
-					console.log("connected : " + socket.id);
+					socket.on("connect", function() {
+						console.log("connected : " + socket.id);
 
-					callback(socket);
+						callback(socket);
+					});
+					socket.on("disconnect", function() {
+						console.log("disconnected");
+					});
+				}).fail(function(jqxhr, settings, exception) {
+					self.plugin_host.set_info("error : Could not connect");
 				});
-				socket.on("disconnect", function() {
-					console.log("disconnected");
-				});
-			});
 		},
 		start_p2p : function(p2p_uuid, callback) {
 			peer = new Peer({
@@ -757,6 +776,9 @@ var app = (function() {
 			peer_conn.on('open', function() {
 				console.log("p2p connection established as downstream.");
 				callback(peer_conn);
+				peer_conn.on('close', function() {
+					console.log("p2p connection closed.");
+				});
 			});
 		},
 		stop_p2p : function() {
@@ -804,31 +826,85 @@ var app = (function() {
 		},
 		start_animate : function() {
 			setInterval(function() {
-
+				if (omvr.get_frame_num() == 0) {
+					return;
+				}
 				var divStatus = document.getElementById("divStatus");
 				if (divStatus) {
 					var status = "";
 					var texture_info = omvr.get_info();
-					status += "texture<br/>";
-					status += "fps:" + texture_info.fps.toFixed(3) + "<br/>";
-					status += "ttl:" + (texture_info.ttl * 1000).toFixed(0)
-						+ "ms<br/>";
-					status += "processed:"
-						+ (texture_info.processed * 1000).toFixed(0)
-						+ "ms<br/>";
-					status += "encoded:"
-						+ (texture_info.encoded * 1000).toFixed(0) + "ms<br/>";
-					status += "decoded:"
-						+ (texture_info.decoded * 1000).toFixed(0) + "ms<br/>";
-					status += "transfer:"
-						+ (texture_info.transfer * 1000).toFixed(0) + "ms<br/>";
+					{
+						status += "texture<br/>";
+						status += "fps:" + texture_info.fps.toFixed(3)
+							+ "<br/>";
+						status += "ttl:" + (texture_info.ttl * 1000).toFixed(0)
+							+ "ms<br/>";
+						status += "processed:"
+							+ (texture_info.processed * 1000).toFixed(0)
+							+ "ms<br/>";
+						status += "encoded:"
+							+ (texture_info.encoded * 1000).toFixed(0)
+							+ "ms<br/>";
+						status += "decoded:"
+							+ (texture_info.decoded * 1000).toFixed(0)
+							+ "ms<br/>";
+						status += "transfer:"
+							+ (texture_info.transfer * 1000).toFixed(0)
+							+ "ms<br/>";
+						status += "<br/>";
+					}
 
-					var rtp_info = rtp.get_info();
-					status += "packet<br/>";
-					status += "bitrate:" + rtp_info.bitrate.toFixed(3)
-						+ "Mbit/s<br/>";
+					{
+						var rtp_info = rtp.get_info();
+						status += "packet<br/>";
+						status += "bitrate:" + rtp_info.bitrate.toFixed(3)
+							+ "Mbit/s<br/>";
+						status += "<br/>";
+					}
+
+					{
+						status += "upstream<br/>";
+						status += m_info.replace(/\n/gm, "<br/>");
+						status += "<br/>";
+					}
 
 					divStatus.innerHTML = status;
+				}
+				if (m_menu_visible) {
+					var info = "";
+					{
+						var defualt_color = "#ffffff";
+						var activated_color = "#00ffff";
+						var selected_color = "#ff00ff";
+						var marked_color = "#ffff00";
+						var rows = m_menu.split("\n");
+						var _nodes_index = rows[0].split(",");
+						var nodes_index = [];
+						for (var i = 0; i < _nodes_index.length; i++) {
+							nodes_index[_nodes_index[i].toLowerCase()] = i;
+						}
+						info += "<pre align=\"left\">";
+						for (var i = 1; i < rows.length; i++) {
+							if (!rows[i]) {
+								continue;
+							}
+							var nodes = rows[i].split(",");
+							var color = nodes[nodes_index["selected"]] == "1"
+								? selected_color
+								: nodes[nodes_index["activated"]] == "1"
+									? activated_color
+									: nodes[nodes_index["marked"]] == "1"
+										? marked_color
+										: defualt_color;
+							info += " ".repeat(4 * nodes[nodes_index["depth"]])
+								+ "<font color=\"" + color + "\">"
+								+ nodes[nodes_index["name"]] + "</font>"
+								+ "<br/>";
+						}
+						info += "</pre>";
+					}
+
+					self.plugin_host.set_info(info);
 				}
 
 				omvr.animate();
