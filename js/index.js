@@ -224,8 +224,8 @@ var app = (function() {
 				filerequest_list.push({
 					filename : 'picam360.jpeg',
 					key : key,
-					callback : function(data) {
-						var blob = new Blob([data], {
+					callback : function(chunk_array) {
+						var blob = new Blob(chunk_array, {
 							type : "image/jpeg"
 						});
 						var url = (URL || webkitURL || mozURL)
@@ -241,8 +241,8 @@ var app = (function() {
 					filerequest_list.push({
 						filename : 'picam360.mp4',
 						key : key,
-						callback : function(data) {
-							var blob = new Blob([data], {
+						callback : function(chunk_array) {
+							var blob = new Blob(chunk_array, {
 								type : "video/mp4"
 							});
 							var url = (URL || webkitURL || mozURL)
@@ -393,9 +393,9 @@ var app = (function() {
 		init_options : function(callback) {
 			// @data : uint8array
 			self
-				.getFile("config.json", function(data) {
+				.getFile("config.json", function(chunk_array) {
 					var _options = [];
-					var txt = String.fromCharCode.apply("", data);
+					var txt = String.fromCharCode.apply("", chunk_array[0]);
 					if (txt) {
 						_options = JSON.parse(txt);
 					}
@@ -404,7 +404,7 @@ var app = (function() {
 						function load_plugin(idx) {
 							self
 								.getFile(_options.plugin_paths[idx], function(
-									data) {
+									chunk_array) {
 									var script_str = String.fromCharCode
 										.apply("", data);
 									var script = document
@@ -433,7 +433,7 @@ var app = (function() {
 									};
 									console.log("loding : "
 										+ _options.plugin_paths[idx]);
-									var blob = new Blob([data], {
+									var blob = new Blob(chunk_array, {
 										type : "text/javascript"
 									});
 									var url = window.URL || window.webkitURL;
@@ -484,19 +484,32 @@ var app = (function() {
 					var header_str = String.fromCharCode.apply("", header);
 					var data = array.slice(2 + header_size);
 					var key = "dummy";
+					var seq = 0;
+					var eof = false;
 					var split = header_str.split(" ");
 					for (var i = 0; i < split.length; i++) {
 						var separator = (/[=,\"]/);
 						var _split = split[i].split(separator);
-						if (_split[0] == "key") { // view quaternion
+						if (_split[0] == "key") {
 							key = _split[2];
+						} else if (_split[0] == "seq") {
+							seq = parseInt(_split[2]);
+						} else if (_split[0] == "eof") {
+							eof = _split[2] == "true";
 						}
 					}
 					for (var i = 0; i < filerequest_list.length; i++) {
 						if (filerequest_list[i].key == key) {
-							filerequest_list[i].callback(data);
-							filerequest_list.splice(i, 1);
-							break;
+							if (seq == 0) {
+								filerequest_list[i].chunk_array = [];
+							}
+							filerequest_list[i].chunk_array.push(data);
+							if (eof) {
+								filerequest_list[i]
+									.callback(filerequest_list[i].chunk_array);
+								filerequest_list.splice(i, 1);
+								break;
+							}
 						}
 					}
 				}
