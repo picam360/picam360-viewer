@@ -873,7 +873,7 @@ var app = (function() {
 						status += "texture<br/>";
 						status += "fps:" + texture_info.fps.toFixed(3)
 							+ "<br/>";
-						status += "ttl:" + (texture_info.ttl * 1000).toFixed(0)
+						status += "rtt:" + (texture_info.rtt * 1000).toFixed(0)
 							+ "ms<br/>";
 						status += "processed:"
 							+ (texture_info.processed * 1000).toFixed(0)

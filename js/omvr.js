@@ -23,7 +23,7 @@ function OMVR() {
 	var m_maxfov = 150;
 	var m_view_fov = 90;
 	var m_texture_fov = 90;
-	var m_texture_ttl = 0;
+	var m_texture_rtt = 0;
 	var m_texture_fps = 0;
 	var m_texture_num = 0;
 	var m_texture_idle_time = 0;
@@ -249,7 +249,7 @@ function OMVR() {
 			}
 		},
 		predict_view_quaternion : function() {
-			var rad = m_view_av_rad * m_texture_ttl;
+			var rad = m_view_av_rad * m_texture_rtt;
 			var cos = Math.cos(rad / 2);
 			var sin = Math.sin(rad / 2);
 			var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
@@ -284,10 +284,10 @@ function OMVR() {
 		fragment_type : "",
 
 		get_info : function() {
-			var transfer = m_texture_ttl - m_texture_processed
+			var transfer = m_texture_rtt - m_texture_processed
 				- m_texture_encoded - m_texture_decoded;
 			var info = {
-				ttl : m_texture_ttl,
+				rtt : m_texture_rtt,
 				fps : m_texture_fps,
 				idle_time : m_texture_idle_time,
 				processed : m_texture_processed,
@@ -377,7 +377,7 @@ function OMVR() {
 				if (map["fov"]) {
 					m_texture_fov = parseFloat(map["fov"][2]);
 				}
-				if (map["client_key"]) { // ttl
+				if (map["client_key"]) { // rtt
 					var idle_time = 0;
 					if (map["idle_time"]) {
 						idle_time = parseFloat(map["idle_time"][2]);
@@ -385,7 +385,7 @@ function OMVR() {
 					var value = (now - parseFloat(map["client_key"][2])) / 1000
 						- idle_time;
 					if (!isNaN(value)) {
-						m_texture_ttl = m_texture_ttl * 0.9 + value * 0.1;
+						m_texture_rtt = m_texture_rtt * 0.9 + value * 0.1;
 					}
 				}
 				if (map["idle_time"]) {

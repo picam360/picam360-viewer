@@ -105,8 +105,7 @@ var create_plugin = (function() {
 						break;
 					case "MENU_VISIBLE" :
 						menu_visible = !menu_visible;
-						m_plugin_host.send_command(SYSTEM_DOMAIN
-							+ "set_menu_visible " + (menu_visible ? "1" : "0"));
+						m_plugin_host.set_menu_visible(menu_visible);
 						break;
 					case "SELECT_ACTIVE_MENU" :
 						m_plugin_host.send_command(SYSTEM_DOMAIN
