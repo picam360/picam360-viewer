@@ -73,6 +73,7 @@ var app = (function() {
 	var cmd2upstream_list = [];
 	var filerequest_list = [];
 
+	var m_frame_active = false;
 	var m_menu_visible = false;
 	var m_info = "";
 	var m_menu = "";
@@ -516,9 +517,10 @@ var app = (function() {
 		},
 
 		handle_frame : function(type, data, width, height, info, time) {
-			if (omvr.get_frame_num() == 0) {
+			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
+				m_frame_active = true;
 			}
 			{
 				var server_key = "";
@@ -750,7 +752,10 @@ var app = (function() {
 						callback(socket);
 					});
 					socket.on("disconnect", function() {
-						console.log("disconnected");
+						self.plugin_host
+							.set_info("websocket connection closed");
+						self.plugin_host.set_menu_visible(true);
+						m_frame_active = false;
 					});
 				}).fail(function(jqxhr, settings, exception) {
 					self.plugin_host.set_info("error : Could not connect");
@@ -777,7 +782,9 @@ var app = (function() {
 				console.log("p2p connection established as downstream.");
 				callback(peer_conn);
 				peer_conn.on('close', function() {
-					console.log("p2p connection closed.");
+					self.plugin_host.set_info("p2p connection closed");
+					self.plugin_host.set_menu_visible(true);
+					m_frame_active = false;
 				});
 			});
 		},
@@ -826,7 +833,7 @@ var app = (function() {
 		},
 		start_animate : function() {
 			setInterval(function() {
-				if (omvr.get_frame_num() == 0) {
+				if (!m_frame_active) {
 					return;
 				}
 				var divStatus = document.getElementById("divStatus");
