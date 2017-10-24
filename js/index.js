@@ -406,7 +406,7 @@ var app = (function() {
 								.getFile(_options.plugin_paths[idx], function(
 									chunk_array) {
 									var script_str = String.fromCharCode
-										.apply("", data);
+										.apply("", chunk_array[0]);
 									var script = document
 										.createElement('script');
 									script.onload = function() {
