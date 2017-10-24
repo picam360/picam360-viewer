@@ -651,6 +651,8 @@ var app = (function() {
 							setTimeout(function() {
 								audio.play();
 							}, 2000);
+							self.plugin_host.send_command(SERVER_DOMAIN
+								+ "request_call " + "");// reset
 						});
 					}, function(err) {
 						console.log('Failed to get local stream', err);
@@ -825,7 +827,7 @@ var app = (function() {
 					status += "packet<br/>";
 					status += "bitrate:" + rtp_info.bitrate.toFixed(3)
 						+ "Mbit/s<br/>";
-					
+
 					divStatus.innerHTML = status;
 				}
 
