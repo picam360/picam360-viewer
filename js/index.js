@@ -202,8 +202,8 @@ var app = (function() {
 				return m_view_fov;
 			},
 			set_fov : function(value) {
-				self.send_command(CAPTURE_DOMAIN + "set_fov 0="
-					+ value.toFixed(0));
+				m_view_fov = value;
+				omvr.setViewFov(m_view_fov);
 			},
 			set_stereo : function(value) {
 				omvr.setStereoEnabled(value);
@@ -567,11 +567,10 @@ var app = (function() {
 				var fov = m_view_fov;
 				var quat = mpu.get_quaternion();
 				quat = self.plugin_host.get_view_offset().multiply(quat);
-				if (m_anti_delay) {
-					fov = omvr.get_adaptive_texture_fov();
-					if (m_fpp) {
-						quat = omvr.predict_view_quaternion();
-					}
+				fov = omvr.get_adaptive_texture_fov();
+				fov = (fov / 5).toFixed(0) * 5;
+				if (m_fpp) {
+					quat = omvr.predict_view_quaternion();
 				}
 				var cmd = UPSTREAM_DOMAIN;
 				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);

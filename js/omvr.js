@@ -223,6 +223,54 @@ function OMVR() {
 		return geometry;
 	}
 
+	function CubicBezPoint(p0, p1, p2, p3, d) {
+
+		var o = {
+			x : 0,
+			y : 0
+		};
+
+		var v = (1 - d) * (1 - d) * (1 - d);
+		o.x += v * p0.x;
+		o.y += v * p0.y;
+
+		v = 3 * d * (1 - d) * (1 - d);
+		o.x += v * p1.x;
+		o.y += v * p1.y;
+
+		v = 3 * d * d * (1 - d);
+		o.x += v * p2.x;
+		o.y += v * p2.y;
+
+		v = d * d * d;
+		o.x += v * p3.x;
+		o.y += v * p3.y;
+
+		return o;
+	}
+
+	function QuadraticBezPoint(p0, p1, p2, d) {
+
+		var o = {
+			x : 0,
+			y : 0
+		};
+
+		var v = (1 - d) * (1 - d);
+		o.x += v * p0.x;
+		o.y += v * p0.y;
+
+		v = 2 * d * (1 - d);
+		o.x += v * p1.x;
+		o.y += v * p1.y;
+
+		v = d * d;
+		o.x += v * p2.x;
+		o.y += v * p2.y;
+
+		return o;
+	}
+
 	var stereoEnabled = false;
 
 	var self = {
@@ -641,17 +689,19 @@ function OMVR() {
 				m_scene.remove(m_scene.children[i]);
 			}
 
-			for (var k = 0; k < 4; k++) {
+			var num_of_materials = (self.vertex_type == "picam360map") ? 4 : 1;
+			for (var k = 0; k < num_of_materials; k++) {
 				var geometry;
 				if (self.vertex_type == "picam360map") {
 					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
-				} else {
+				} else if (self.vertex_type == "equirectangular") {
 					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
+				} else if (self.vertex_type == "window") {
+					// position is x:[-1,1],y:[-1,1]
+					geometry = new THREE.PlaneGeometry(2, 2);
+				} else {
+					continue;
 				}
-
-				// position is
-				// x:[-1,1],
-				// y:[-1,1]
 				var material = new THREE.ShaderMaterial({
 					vertexShader : m_shaders[vertex_type + "_vertex_shader"],
 					fragmentShader : m_shaders[vertex_type + "_"
@@ -739,37 +789,54 @@ function OMVR() {
 					{// pitch to r look-up table
 						if (!m_pitch_2_r_cache[m_texture_fov]) {
 							var stepnum = 256;
+							var fov_min = 30;
+							var fov_max = 120;
+							var fov_factor = 1.0
+								- (Math
+									.min(Math.max(m_texture_fov / 2.0, fov_min), fov_max) - fov_min)
+								/ (fov_max - fov_min) / 2.0;
 							var fov_rad = m_texture_fov * Math.PI / 180.0;
 							var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
 							var y_ary = [0.0, fov_rad, Math.PI];
 							var x_ary2 = [];
 							var y_ary2 = [];
+							var p0 = {
+								x : 0.0,
+								y : 0.0
+							};
+							var p1 = {
+								x : fov_factor,
+								y : -fov_factor + 1.0
+							};
+							var p2 = {
+								x : 1.0,
+								y : 1.0
+							};
 							for (var i = 0; i < stepnum; i++) {
-								x_ary2[i] = Math.sqrt(2.0) * i / (stepnum - 1);
-								y_ary2[i] = spline(x_ary2[i], x_ary, y_ary);
+								var p = QuadraticBezPoint(p0, p1, p2, i
+									/ (stepnum - 1));
+								x_ary2[i] = p.x;
+								y_ary2[i] = p.y;
 							}
 							// invert x y
 							var stepnum3 = 64;
 							var x_ary3 = [];
 							var y_ary3 = [];
-							x_ary3[0] = 0.0;
-							y_ary3[0] = 0.0;
-							for (var i = 1; i < stepnum3 - 1; i++) {
-								x_ary3[i] = Math.PI * i / (stepnum3 - 1);
+							for (var i = 0; i < stepnum3; i++) {
+								x_ary3[i] = i / (stepnum3 - 1);
 								for (var j = 0; j < stepnum - 1; j++) {
 									if (x_ary3[i] >= y_ary2[j]
-										&& x_ary3[i] < y_ary2[j + 1]) {
+										&& x_ary3[i] <= y_ary2[j + 1]) {
 										var ratio = (x_ary3[i] - y_ary2[j])
 											/ (y_ary2[j + 1] - y_ary2[j]);
 										y_ary3[i] = ratio
 											* (x_ary2[j + 1] - x_ary2[j])
 											+ x_ary2[j];
+										y_ary3[i] *= Math.sqrt(2.0);
 										break;
 									}
 								}
 							}
-							x_ary3[stepnum3 - 1] = Math.PI;
-							y_ary3[stepnum3 - 1] = Math.sqrt(2.0);
 
 							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
 						}
