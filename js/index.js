@@ -37,7 +37,7 @@ var app = (function() {
 	var target_fps = 10;
 	var auto_scroll = false;
 	var view_offset_lock = false;
-	var m_anti_delay = false;
+	var m_afov = false;
 	var m_fpp = false;
 	var m_vertex_type = "";
 	var debug = 0;
@@ -567,8 +567,10 @@ var app = (function() {
 				var fov = m_view_fov;
 				var quat = mpu.get_quaternion();
 				quat = self.plugin_host.get_view_offset().multiply(quat);
-				fov = omvr.get_adaptive_texture_fov();
-				fov = (fov / 5).toFixed(0) * 5;
+				if (m_afov) {
+					fov = omvr.get_adaptive_texture_fov();
+					fov = (fov / 5).toFixed(0) * 5;
+				}
 				if (m_fpp) {
 					quat = omvr.predict_view_quaternion();
 				}
@@ -611,7 +613,6 @@ var app = (function() {
 						omvr.loadTexture(default_image_url);
 					} else {
 						omvr.setViewFov(m_view_fov);
-						omvr.anti_delay = m_anti_delay;
 						omvr.setModel("window", "rgb");
 					}
 					omvr.vertex_type_forcibly = m_vertex_type;
@@ -748,8 +749,8 @@ var app = (function() {
 			if (query['view-offset-lock']) {
 				view_offset_lock = parseBoolean(query['view-offset-lock']);
 			}
-			if (query['anti-delay']) {
-				m_anti_delay = parseBoolean(query['anti-delay']);
+			if (query['afov']) {
+				m_afov = parseBoolean(query['afov']);
 			}
 			if (query['fpp']) {
 				m_fpp = parseBoolean(query['fpp']);
