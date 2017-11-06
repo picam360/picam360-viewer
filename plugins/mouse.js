@@ -67,12 +67,25 @@ var create_plugin = (function() {
 		var mouseupFunc = function() {
 			down = false;
 		};
+		var mousewheelFunc = function(e) {
+			fov += e.wheelDelta < 0 ? 5 : -5;
+			if (fov > 150) {
+				fov = 150;
+			} else if (fov < 30) {
+				fov = 30;
+			}
+			if (m_plugin_host) {
+				m_plugin_host.set_fov(fov);
+			}
+
+		};
 		document.addEventListener("touchstart", mousedownFunc);
 		document.addEventListener("touchmove", mousemoveFunc);
 		document.addEventListener("touchend", mouseupFunc);
 		document.addEventListener("mousedown", mousedownFunc);
 		document.addEventListener("mousemove", mousemoveFunc);
 		document.addEventListener("mouseup", mouseupFunc);
+		document.addEventListener("mousewheel", mousewheelFunc);
 
 		var _fov = 70;
 		function gestureStartHandler(e) {
