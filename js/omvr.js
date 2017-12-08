@@ -837,6 +837,13 @@ function OMVR() {
 									}
 								}
 							}
+							var resol_ary = [];
+							for (var i = 0; i < stepnum3 - 1; i++) {
+								resol_ary[i] = m_texture_width
+									* (y_ary3[i + 1] - y_ary3[i]) * stepnum3;
+								// console.log("" + (x_ary3[i] * 180) + ","
+								// + y_ary3[i] + "," + resol_ary[i]);
+							}
 
 							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
 						}
