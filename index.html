@@ -198,8 +198,7 @@
 		id="container"
 	>
 		<canvas id="panorama"></canvas>
-		<div id="overlay">
-		</div>
+		<div id="overlay"></div>
 	</div>
 	</ons-page> </ons-navigator> </ons-template>
 
@@ -259,7 +258,8 @@
 		ons.ready(function() {
 
 			document.addEventListener("touchmove", function(event) {
-				if (!menu.isMenuOpened()) {
+				if (!menu.isMenuOpened()
+					&& app.navi.getCurrentPage().name != "about.html") {
 					event.preventDefault();
 				}
 			});
