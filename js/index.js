@@ -399,6 +399,10 @@ var app = (function() {
 					if (txt) {
 						_options = JSON.parse(txt);
 					}
+					var query = GetQueryString();
+					if (_options.fov && !query.fov) {
+						self.plugin_host.set_fov(_options.fov);
+					}
 					if (_options.plugin_paths
 						&& _options.plugin_paths.length != 0) {
 						function load_plugin(idx) {
