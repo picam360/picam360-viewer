@@ -4,6 +4,31 @@ var create_plugin = (function() {
 	var abs_pitch = 0;
 	var abs_yaw = 0;
 
+	function GetQueryString() {
+		var result = {};
+		if (1 < window.location.search.length) {
+			var query = window.location.search.substring(1);
+			var parameters = query.split('&');
+
+			for (var i = 0; i < parameters.length; i++) {
+				var element = parameters[i].split('=');
+
+				var paramName = decodeURIComponent(element[0]);
+				var paramValue = decodeURIComponent(element[1]);
+
+				result[paramName] = paramValue;
+			}
+		}
+		return result;
+	}
+
+	var query = GetQueryString();
+	if (query['view-offset']) {
+		var split = query['view-offset'].split(',');
+		abs_pitch = parseFloat(split[0]);
+		abs_yaw = parseFloat(split[1]);
+	}
+
 	function init() {
 		var down = false;
 		var swipeable = false;
@@ -42,7 +67,7 @@ var create_plugin = (function() {
 			var pitch_diff = -dy * fov / 300;
 
 			var view_offset_quat = m_plugin_host.get_view_offset();
-			if (false) {
+			if (query['view-offset-relative'] == "true") {
 				var view_quat = m_plugin_host.get_view_quaternion()
 					|| new THREE.Quaternion();
 				var quat = view_offset_quat.clone().multiply(view_quat);
