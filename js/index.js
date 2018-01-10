@@ -164,7 +164,7 @@ var app = (function() {
 		function handle_command(cmd) {
 			var split = cmd.split(' ');
 			if (split[0] == "set_stereo") {
-				plugin_host.set_stereo(split[1] == "true" || split[1] == "1");
+				self.set_stereo(split[1] == "true" || split[1] == "1");
 			}
 		}
 

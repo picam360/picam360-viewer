@@ -23,6 +23,9 @@ var create_plugin = (function() {
 			event_handler : function(sender, event) {
 				if (sender == "ICADE") {
 					switch (event) {
+						case "A_BUTTON_UP" :
+							event = "FIRE";
+							break;
 						case "B_BUTTON_UP" :
 							event = "STEREO_ENABLED";
 							break;
@@ -130,6 +133,9 @@ var create_plugin = (function() {
 			},
 			event_handler_act : function(event) {
 				switch (event) {
+					case "FIRE" :
+						m_plugin_host.send_command(NEKOJARA_DOMAIN + "fire");
+						break;
 					case "PID_ENABLED" :
 						pid_enabled = !pid_enabled;
 						m_plugin_host.send_command(NEKOJARA_DOMAIN
