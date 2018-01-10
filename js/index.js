@@ -106,6 +106,7 @@ var app = (function() {
 		}
 		return result;
 	}
+	var query = GetQueryString();
 
 	function execCopy(string) {
 		var temp = document.createElement('textarea');
@@ -399,7 +400,6 @@ var app = (function() {
 					if (txt) {
 						_options = JSON.parse(txt);
 					}
-					var query = GetQueryString();
 					if (_options.fov && !query.fov) {
 						self.plugin_host.set_fov(_options.fov);
 					}
@@ -529,7 +529,6 @@ var app = (function() {
 				rtcp.sendpacket(rtcp.buildpacket(cmd, 101));
 				app.rtcp_command_id++;
 			}, 10);// 100hz
-			var query = GetQueryString();
 			if (query['p2p-uuid']) {
 				self.plugin_host.set_info("connecting via webrtc...");
 				self.start_p2p(query['p2p-uuid'], function(peer_conn) {
@@ -569,17 +568,32 @@ var app = (function() {
 				}
 				var client_key = new Date().getTime().toString();
 				var fov = m_view_fov;
-				var quat = mpu.get_quaternion();
-				quat = self.plugin_host.get_view_offset().multiply(quat);
+				var quat = self.plugin_host.get_view_quaternion()
+					|| new THREE.Quaternion();
+				var view_offset_quat = self.plugin_host.get_view_offset()
+					|| new THREE.Quaternion();
+				var view_quat;
+				if (query['view-offset-relative'] == "true") {
+					view_quat = view_offset_quat.multiply(quat);
+				} else {
+					var euler = new THREE.Euler()
+						.setFromQuaternion(quat, "YXZ");
+					var euler_offset = new THREE.Euler()
+						.setFromQuaternion(view_offset_quat, "YXZ");
+					euler.x += euler_offset.x;
+					euler.y += euler_offset.y;
+					euler.z += euler_offset.z;
+					view_quat = new THREE.Quaternion().setFromEuler(euler);
+				}
 				if (m_afov) {
 					fov = omvr.get_adaptive_texture_fov();
 					fov = (fov / 5).toFixed(0) * 5;
 				}
 				if (m_fpp) {
-					quat = omvr.predict_view_quaternion();
+					view_quat = omvr.predict_view_quaternion();
 				}
 				var cmd = UPSTREAM_DOMAIN;
-				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", quat.x, quat.y, quat.z, quat.w);
+				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
 				cmd += sprintf(" fov=%.3f client_key=%s server_key=%s", fov
 					.toFixed(0), client_key, server_key);
 				self.plugin_host.send_command(cmd);
@@ -597,8 +611,22 @@ var app = (function() {
 						var quat = self.plugin_host.get_view_quaternion()
 							|| new THREE.Quaternion();
 						var view_offset_quat = self.plugin_host
-							.get_view_offset();
-						var view_quat = view_offset_quat.multiply(quat);
+							.get_view_offset()
+							|| new THREE.Quaternion();
+						var view_quat;
+						if (query['view-offset-relative'] == "true") {
+							view_quat = view_offset_quat.multiply(quat);
+						} else {
+							var euler = new THREE.Euler()
+								.setFromQuaternion(quat, "YXZ");
+							var euler_offset = new THREE.Euler()
+								.setFromQuaternion(view_offset_quat, "YXZ");
+							euler.x += euler_offset.x;
+							euler.y += euler_offset.y;
+							euler.z += euler_offset.z;
+							view_quat = new THREE.Quaternion()
+								.setFromEuler(euler);
+						}
 						omvr.set_view_quaternion(view_quat);
 						if (auto_scroll) {
 							var view_offset_diff_quat = new THREE.Quaternion()
@@ -612,6 +640,7 @@ var app = (function() {
 					}, 33);// 30hz
 
 					if (default_image_url) {
+						m_frame_active = true;
 						omvr.setViewFov(m_view_fov);
 						omvr.setModel("equirectangular", "rgb");
 						omvr.loadTexture(default_image_url);
@@ -718,7 +747,6 @@ var app = (function() {
 			function parseBoolean(str) {
 				return str == "yes" || str == "on" || str == "true";
 			}
-			var query = GetQueryString();
 			if (query['server-url']) {
 				server_url = query['server-url'];
 			}
