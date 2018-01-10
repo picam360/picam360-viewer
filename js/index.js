@@ -580,7 +580,8 @@ var app = (function() {
 						.setFromQuaternion(quat, "YXZ");
 					var euler_offset = new THREE.Euler()
 						.setFromQuaternion(view_offset_quat, "YXZ");
-					euler.x += euler_offset.x;
+					euler.x = Math
+						.min(Math.max(euler.x + euler_offset.x, 0), 180);
 					euler.y += euler_offset.y;
 					euler.z += euler_offset.z;
 					view_quat = new THREE.Quaternion().setFromEuler(euler);
@@ -621,7 +622,8 @@ var app = (function() {
 								.setFromQuaternion(quat, "YXZ");
 							var euler_offset = new THREE.Euler()
 								.setFromQuaternion(view_offset_quat, "YXZ");
-							euler.x += euler_offset.x;
+							euler.x = Math.min(Math.max(euler.x
+								+ euler_offset.x, 0), 180);
 							euler.y += euler_offset.y;
 							euler.z += euler_offset.z;
 							view_quat = new THREE.Quaternion()
