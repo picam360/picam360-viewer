@@ -572,20 +572,7 @@ var app = (function() {
 					|| new THREE.Quaternion();
 				var view_offset_quat = self.plugin_host.get_view_offset()
 					|| new THREE.Quaternion();
-				var view_quat;
-				if (query['view-offset-relative'] == "true") {
-					view_quat = view_offset_quat.multiply(quat);
-				} else {
-					var euler = new THREE.Euler()
-						.setFromQuaternion(quat, "YXZ");
-					var euler_offset = new THREE.Euler()
-						.setFromQuaternion(view_offset_quat, "YXZ");
-					euler.x = Math
-						.min(Math.max(euler.x + euler_offset.x, 0), 180);
-					euler.y += euler_offset.y;
-					euler.z += euler_offset.z;
-					view_quat = new THREE.Quaternion().setFromEuler(euler);
-				}
+				var view_quat = view_offset_quat.multiply(quat);
 				if (m_afov) {
 					fov = omvr.get_adaptive_texture_fov();
 					fov = (fov / 5).toFixed(0) * 5;
@@ -614,21 +601,7 @@ var app = (function() {
 						var view_offset_quat = self.plugin_host
 							.get_view_offset()
 							|| new THREE.Quaternion();
-						var view_quat;
-						if (query['view-offset-relative'] == "true") {
-							view_quat = view_offset_quat.multiply(quat);
-						} else {
-							var euler = new THREE.Euler()
-								.setFromQuaternion(quat, "YXZ");
-							var euler_offset = new THREE.Euler()
-								.setFromQuaternion(view_offset_quat, "YXZ");
-							euler.x = Math.min(Math.max(euler.x
-								+ euler_offset.x, 0), 180);
-							euler.y += euler_offset.y;
-							euler.z += euler_offset.z;
-							view_quat = new THREE.Quaternion()
-								.setFromEuler(euler);
-						}
+						var view_quat = view_offset_quat.multiply(quat);
 						omvr.set_view_quaternion(view_quat);
 						if (auto_scroll) {
 							var view_offset_diff_quat = new THREE.Quaternion()

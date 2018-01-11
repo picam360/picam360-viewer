@@ -66,10 +66,11 @@ var create_plugin = (function() {
 			var roll_diff = dx * fov / 300;
 			var pitch_diff = -dy * fov / 300;
 
-			var view_offset_quat = m_plugin_host.get_view_offset();
+			var view_offset_quat = m_plugin_host.get_view_offset()
+				|| new THREE.Quaternion();
+			var view_quat = m_plugin_host.get_view_quaternion()
+				|| new THREE.Quaternion();
 			if (query['view-offset-relative'] == "true") {
-				var view_quat = m_plugin_host.get_view_quaternion()
-					|| new THREE.Quaternion();
 				var quat = view_offset_quat.clone().multiply(view_quat);
 				var view_offset_diff_quat = new THREE.Quaternion()
 					.setFromEuler(new THREE.Euler(THREE.Math
@@ -91,12 +92,18 @@ var create_plugin = (function() {
 				// + THREE.Math.radToDeg(diff_euler.z));
 				// }
 			} else {
-				abs_pitch = Math.min(Math.max(abs_pitch + pitch_diff, 0), 180);
-				abs_yaw = (abs_yaw - roll_diff) % 360;
-				view_offset_quat = new THREE.Quaternion()
+				var yaw_quat = new THREE.Quaternion()
+					.setFromEuler(new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
+						.degToRad(roll_diff), THREE.Math.degToRad(0), "YXZ"));
+				var quat = view_offset_quat.clone().multiply(view_quat);
+				var view_offset_diff_quat = new THREE.Quaternion()
 					.setFromEuler(new THREE.Euler(THREE.Math
-						.degToRad(abs_pitch), THREE.Math.degToRad(abs_yaw), THREE.Math
+						.degToRad(pitch_diff), THREE.Math.degToRad(0), THREE.Math
 						.degToRad(0), "YXZ"));
+				var next_quat = yaw_quat.clone().multiply(quat)
+					.multiply(view_offset_diff_quat);
+				view_offset_quat = next_quat.clone().multiply(view_quat.clone()
+					.conjugate());
 			}
 			m_plugin_host.set_view_offset(view_offset_quat);
 
