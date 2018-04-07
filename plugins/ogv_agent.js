@@ -3,8 +3,8 @@ var create_plugin = (function() {
 	var m_is_init = false;
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
-	var NEKOJARA_DOMAIN = UPSTREAM_DOMAIN + "nekojara.";
-	var OMINI_WHEEL_DOMAIN = UPSTREAM_DOMAIN + "omni_wheel.";
+	var OMNI_LAZER_DOMAIN = UPSTREAM_DOMAIN + "omni_lazer.";
+	var OMNI_WHEEL_DOMAIN = UPSTREAM_DOMAIN + "omni_wheel.";
 	var MOVE_TIMEOUT = 60*1000;//1min
 
 	function init() {
@@ -143,21 +143,21 @@ var create_plugin = (function() {
 			event_handler_act : function(event) {
 				switch (event) {
 				case "FIRE":
-					m_plugin_host.send_command(NEKOJARA_DOMAIN + "fire");
+					m_plugin_host.send_command(OMNI_LAZER_DOMAIN + "fire");
 					break;
 				case "MOVE":
-					var cmd = OMINI_WHEEL_DOMAIN + "move";
+					var cmd = OMNI_WHEEL_DOMAIN + "move";
 					cmd += sprintf(" %.3f %.3f", MOVE_TIMEOUT, 50);
 					m_plugin_host.send_command(cmd);
 					break;
 				case "STOP":
-					var cmd = OMINI_WHEEL_DOMAIN + "stop";
+					var cmd = OMNI_WHEEL_DOMAIN + "stop";
 					cmd += sprintf(" %.3f %.3f", 0, 0);
 					m_plugin_host.send_command(cmd);
 					break;
 				case "PID_ENABLED":
 					pid_enabled = !pid_enabled;
-					m_plugin_host.send_command(NEKOJARA_DOMAIN
+					m_plugin_host.send_command(OMNI_LAZER_DOMAIN
 							+ "set_pid_enabled " + (pid_enabled ? "1" : "0"));
 					break;
 				case "STEREO_ENABLED":
@@ -187,25 +187,25 @@ var create_plugin = (function() {
 				case "INCREMENT_YAW":
 					var quat = m_plugin_host.get_view_quaternion();
 					quat = m_plugin_host.get_view_offset().multiply(quat);
-					var cmd = NEKOJARA_DOMAIN + "increment_yaw " + step;
+					var cmd = OMNI_LAZER_DOMAIN + "increment_yaw " + step;
 					m_plugin_host.send_command(cmd);
 					break;
 				case "DECREMENT_YAW":
 					var quat = m_plugin_host.get_view_quaternion();
 					quat = m_plugin_host.get_view_offset().multiply(quat);
-					var cmd = NEKOJARA_DOMAIN + "increment_yaw -" + step;
+					var cmd = OMNI_LAZER_DOMAIN + "increment_yaw -" + step;
 					m_plugin_host.send_command(cmd);
 					break;
 				case "INCREMENT_PITCH":
 					var quat = m_plugin_host.get_view_quaternion();
 					quat = m_plugin_host.get_view_offset().multiply(quat);
-					var cmd = NEKOJARA_DOMAIN + "increment_pitch " + step;
+					var cmd = OMNI_LAZER_DOMAIN + "increment_pitch " + step;
 					m_plugin_host.send_command(cmd);
 					break;
 				case "DECREMENT_PITCH":
 					var quat = m_plugin_host.get_view_quaternion();
 					quat = m_plugin_host.get_view_offset().multiply(quat);
-					var cmd = NEKOJARA_DOMAIN + "increment_pitch -" + step;
+					var cmd = OMNI_LAZER_DOMAIN + "increment_pitch -" + step;
 					m_plugin_host.send_command(cmd);
 					break;
 				}
