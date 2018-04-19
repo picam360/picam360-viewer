@@ -25,8 +25,11 @@ var create_plugin = (function() {
 			event_handler : function(sender, event) {
 				if (sender == "ICADE") {
 					switch (event) {
-					case "H_BUTTON_UP":
+					case "H_BUTTON_DOWN":
 						event = "FIRE";
+						break;
+					case "H_BUTTON_UP":
+						event = "FIRE_OFF";
 						break;
 					case "B_BUTTON_UP":
 						event = "STEREO_ENABLED";
@@ -144,6 +147,9 @@ var create_plugin = (function() {
 				switch (event) {
 				case "FIRE":
 					m_plugin_host.send_command(OMNI_LAZER_DOMAIN + "fire");
+					break;
+				case "FIRE_OFF":
+					m_plugin_host.send_command(OMNI_LAZER_DOMAIN + "fire_off");
 					break;
 				case "MOVE":
 					var cmd = OMNI_WHEEL_DOMAIN + "move";
