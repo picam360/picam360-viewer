@@ -1,6 +1,8 @@
 var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
+	var m_forward_button = null;
+	var m_lazer_button = null;
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var OMNI_LAZER_DOMAIN = UPSTREAM_DOMAIN + "omni_lazer.";
@@ -29,36 +31,82 @@ var create_plugin = (function() {
 	function create_lazer_button(plugin) {
 		var button = document.createElement("img");
 		button.src = LAZER_ICON;
+
+		var down = false;
+		var sx = 0, sy = 0;
 		var mousedownFunc = function(ev) {
 			plugin.event_handler_act("FIRE");
+
+			if (ev.type == "touchstart") {
+				ev.clientX = ev.pageX;
+				ev.clientY = ev.pageY;
+			}
+			down = true;
+			sx = ev.clientX;
+			sy = ev.clientY;
 		}
 		var mouseupFunc = function() {
 			plugin.event_handler_act("FIRE_OFF");
+
+			down = false;
+		}
+		var mousemoveFunc = function(ev) {
+			if (ev.type == "touchmove") {
+				ev.clientX = ev.pageX;
+				ev.clientY = ev.pageY;
+				ev.button = 0;
+			}
+			if (!down || ev.button != 0) {
+				return;
+			}
+			var dx = -(ev.clientX - sx);
+			var dy = -(ev.clientY - sy);
+
+			var threshold = 5;
+			var roll_diff = parseInt(dx / threshold) * threshold;
+			var pitch_diff = parseInt(dy / threshold) * threshold;
+			sx -= roll_diff;
+			sy -= pitch_diff;
+
+			if (roll_diff == 0) {
+				// do nothing
+			} else {
+				plugin.event_handler_act("INCREMENT_YAW " + roll_diff);
+			}
+			if (pitch_diff == 0) {
+				// do nothing
+			} else {
+				plugin.event_handler_act("INCREMENT_PITCH " + pitch_diff);
+			}
+			ev.preventDefault();
+			ev.stopPropagation();
 		}
 		button.addEventListener("touchstart", mousedownFunc);
 		button.addEventListener("touchend", mouseupFunc);
 		button.addEventListener("mousedown", mousedownFunc);
 		button.addEventListener("mouseup", mouseupFunc);
+		button.addEventListener("touchmove", mousemoveFunc);
+		button.addEventListener("mousemove", mousemoveFunc);
 
 		return button;
 	}
 	function init(plugin) {
-		var foward_button = create_forward_button(plugin);
-		foward_button.style.position = 'absolute';
-		foward_button.width = 50;
-		foward_button.height = 50;
-		foward_button
-			.setAttribute("style", "position:absolute; bottom:50%; right:10px;");
+		m_foward_button = create_forward_button(plugin);
+		m_foward_button.style.position = 'absolute';
+		m_foward_button.width = 50;
+		m_foward_button.height = 50;
+		m_foward_button
+			.setAttribute("style", "position:absolute; bottom:33%; right:10%;");
 
-		var lazer_button = create_lazer_button(plugin);
-		lazer_button.style.position = 'absolute';
-		lazer_button.width = 50;
-		lazer_button.height = 50;
-		lazer_button
-			.setAttribute("style", "position:absolute; bottom:50%; left:10px;");
+		m_lazer_button = create_lazer_button(plugin);
+		m_lazer_button.style.position = 'absolute';
+		m_lazer_button.width = 50;
+		m_lazer_button.height = 50;
+		m_lazer_button
+			.setAttribute("style", "position:absolute; bottom:66%; right:10%;");
 
-		document.body.appendChild(foward_button);
-		document.body.appendChild(lazer_button);
+		document.body.appendChild(m_foward_button);
+		document.body.appendChild(m_lazer_button);
 	}
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
@@ -76,7 +124,19 @@ var create_plugin = (function() {
 				}
 			},
 			event_handler : function(sender, event) {
-				if (sender == "ICADE") {
+				if (sender == "PLUGIN_HOST") {
+					switch (event) {
+						case "STEREO_ENABLED" :
+							m_foward_button.style.display = "none";
+							m_lazer_button.style.display = "none";
+							break;
+						case "STEREO_DISABLED" :
+							m_foward_button.style.display = "block";
+							m_lazer_button.style.display = "block";
+							break;
+					}
+					return;
+				} else if (sender == "ICADE") {
 					switch (event) {
 						case "H_BUTTON_DOWN" :
 							event = "FIRE";
@@ -196,7 +256,8 @@ var create_plugin = (function() {
 				plugin.event_handler_act(event);
 			},
 			event_handler_act : function(event) {
-				switch (event) {
+				var params = event.split(" ");
+				switch (params[0]) {
 					case "FIRE" :
 						m_plugin_host.send_command(OMNI_LAZER_DOMAIN + "fire");
 						break;
@@ -242,26 +303,29 @@ var create_plugin = (function() {
 					case "INCREMENT_YAW" :
 						var quat = m_plugin_host.get_view_quaternion();
 						quat = m_plugin_host.get_view_offset().multiply(quat);
-						var cmd = OMNI_LAZER_DOMAIN + "increment_yaw " + step;
+						var cmd = OMNI_LAZER_DOMAIN + "increment_yaw "
+							+ (params[1] ? params[1] : step);
 						m_plugin_host.send_command(cmd);
 						break;
 					case "DECREMENT_YAW" :
 						var quat = m_plugin_host.get_view_quaternion();
 						quat = m_plugin_host.get_view_offset().multiply(quat);
-						var cmd = OMNI_LAZER_DOMAIN + "increment_yaw -" + step;
+						var cmd = OMNI_LAZER_DOMAIN + "increment_yaw -"
+							+ (params[1] ? params[1] : step);
 						m_plugin_host.send_command(cmd);
 						break;
 					case "INCREMENT_PITCH" :
 						var quat = m_plugin_host.get_view_quaternion();
 						quat = m_plugin_host.get_view_offset().multiply(quat);
-						var cmd = OMNI_LAZER_DOMAIN + "increment_pitch " + step;
+						var cmd = OMNI_LAZER_DOMAIN + "increment_pitch "
+							+ (params[1] ? params[1] : step);
 						m_plugin_host.send_command(cmd);
 						break;
 					case "DECREMENT_PITCH" :
 						var quat = m_plugin_host.get_view_quaternion();
 						quat = m_plugin_host.get_view_offset().multiply(quat);
 						var cmd = OMNI_LAZER_DOMAIN + "increment_pitch -"
-							+ step;
+							+ (params[1] ? params[1] : step);
 						m_plugin_host.send_command(cmd);
 						break;
 				}

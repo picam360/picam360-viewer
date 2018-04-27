@@ -208,6 +208,9 @@ var app = (function() {
 			},
 			set_stereo : function(value) {
 				omvr.setStereoEnabled(value);
+				self.send_event("PLUGIN_HOST", value
+					? "STEREO_ENABLED"
+					: "STEREO_DISABLED");
 			},
 			set_view_offset : function(value) {
 				if (view_offset_lock) {
