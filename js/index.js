@@ -479,7 +479,7 @@ var app = (function() {
 						.apply("", new Uint8Array(packet.GetPayload()));
 					var split = str.split('"');
 					var name = UPSTREAM_DOMAIN + split[1];
-					var value = split[3];
+					var value = decodeURIComponent(split[3]);
 					if (watches[name]) {
 						watches[name](value);
 					}
