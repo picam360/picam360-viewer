@@ -77,7 +77,8 @@ var create_plugin = (function() {
 			});
 
 			var script = document.createElement('script');
-			script.src = "http://www.openlayers.org/api/OpenLayers.js";
+			//script.src = "https://www.openlayers.org/api/OpenLayers.js";
+			script.src = "https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js";
 			document.head.appendChild(script);
 		});
 		m_plugin_host.getFile("plugins/map/map_list_item.html", function(
