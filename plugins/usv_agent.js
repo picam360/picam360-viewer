@@ -2,7 +2,6 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 	var m_forward_button = null;
-	var m_laser_button = null;
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var USVC_DOMAIN = UPSTREAM_DOMAIN + "usvc.";

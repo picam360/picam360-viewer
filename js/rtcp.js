@@ -55,6 +55,9 @@ function Rtcp() {
 		},
 		// @data : ArrayBuffer
 		sendpacket : function(pack) {
+			if(!m_conn){
+				return;
+			}
 			if (m_conn.peerConnection) { // webrtc
 				m_conn.send(pack);
 			} else {

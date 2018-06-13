@@ -143,11 +143,12 @@ var app = (function() {
 
 	function loadFile(path, callback) {
 		var req = new XMLHttpRequest();
+		req.responseType = "arraybuffer";
 		req.open("get", path, true);
 		req.send(null);
 
 		req.onload = function() {
-			callback(req.responseText);
+			callback([new Uint8Array(req.response)]);
 		}
 	}
 
@@ -281,6 +282,20 @@ var app = (function() {
 			set_info : function(str) {
 				overlay.innerHTML = str;
 			},
+			getFile : function(path, callback) {
+				if (core.connected()) {
+					var key = uuid();
+					filerequest_list.push({
+						filename : path,
+						key : key,
+						callback : callback
+					});
+					self.send_command(SERVER_DOMAIN + "get_file " + path + " "
+						+ key);
+				} else {
+					loadFile(path, callback);
+				}
+			},
 		};
 		return self;
 	};
@@ -318,17 +333,6 @@ var app = (function() {
 			});
 		},
 
-		getFile : function(path, callback) {
-			var key = uuid();
-			filerequest_list.push({
-				filename : path,
-				key : key,
-				callback : callback
-			});
-			self.plugin_host.send_command(SERVER_DOMAIN + "get_file " + path
-				+ " " + key);
-		},
-
 		// Bind Event Listeners
 		//
 		// Bind any events that are required on startup. Common events are:
@@ -352,7 +356,8 @@ var app = (function() {
 		},
 
 		init_common_options : function(callback) {
-			loadFile("common_config.json", function(txt) {
+			loadFile("common_config.json", function(chunk_array) {
+				var txt = String.fromCharCode.apply("", chunk_array[0]);
 				if (txt) {
 					options = JSON.parse(txt);
 				}
@@ -396,7 +401,7 @@ var app = (function() {
 
 		init_options : function(callback) {
 			// @data : uint8array
-			self
+			self.plugin_host
 				.getFile("config.json", function(chunk_array) {
 					var _options = [];
 					var txt = String.fromCharCode.apply("", chunk_array[0]);
@@ -409,7 +414,7 @@ var app = (function() {
 					if (_options.plugin_paths
 						&& _options.plugin_paths.length != 0) {
 						function load_plugin(idx) {
-							self
+							self.plugin_host
 								.getFile(_options.plugin_paths[idx], function(
 									chunk_array) {
 									var script_str = String.fromCharCode
@@ -458,7 +463,7 @@ var app = (function() {
 				});
 		},
 
-		init_network : function(callback) {
+		init_network : function(callback, err_callback) {
 			// init network related matters
 			// data stream handling
 			rtp = Rtp();
@@ -539,6 +544,8 @@ var app = (function() {
 					rtp.set_connection(peer_conn);
 					rtcp.set_connection(peer_conn);
 					callback();
+				}, function() {
+					err_callback();
 				});
 			} else {
 				self.plugin_host.set_info("connecting via websocket...");
@@ -547,6 +554,8 @@ var app = (function() {
 					rtp.set_connection(socket);
 					rtcp.set_connection(socket);
 					callback();
+				}, function() {
+					err_callback();
 				});
 			}
 		},
@@ -776,9 +785,11 @@ var app = (function() {
 			self.init_watch();
 			self.init_network(function() {
 				self.init_options();
+			}, function() {
+				self.init_options();
 			});
 		},
-		start_ws : function(callback) {
+		start_ws : function(callback, err_callback) {
 			// websocket
 			jQuery.getScript(server_url + 'socket.io/socket.io.js')
 				.done(function(script, textStatus) {
@@ -798,9 +809,10 @@ var app = (function() {
 					});
 				}).fail(function(jqxhr, settings, exception) {
 					self.plugin_host.set_info("error : Could not connect");
+					err_callback();
 				});
 		},
-		start_p2p : function(p2p_uuid, callback) {
+		start_p2p : function(p2p_uuid, callback, err_callback) {
 			peer = new Peer({
 				host : SIGNALING_HOST,
 				port : SIGNALING_PORT,
@@ -812,6 +824,8 @@ var app = (function() {
 				if (err.type == "peer-unavailable") {
 					self.plugin_host.set_info("error : Could not connect "
 						+ p2p_uuid);
+					peer = null;
+					err_callback();
 				}
 			});
 			peer_conn = peer.connect(p2p_uuid, {
@@ -869,6 +883,9 @@ var app = (function() {
 				+ p2p_uuid_call);
 		},
 		stop_call : function() {
+		},
+		connected : function() {
+			return (socket != null || peer != null);
 		},
 		start_animate : function() {
 			setInterval(function() {
