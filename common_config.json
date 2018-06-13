@@ -1,7 +1,6 @@
 {
 	"plugin_paths" : [
 		"plugins/mouse.js",
-		"plugins/icade.js",
-		"plugins/ogv_agent.js"
+		"plugins/icade.js"
 	]
 }
