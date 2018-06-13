@@ -1,7 +1,7 @@
 var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
-	
+
 	function decodeUtf8(data) {
 		var result = "";
 		var i = 0;
@@ -40,27 +40,16 @@ var create_plugin = (function() {
 		return result;
 	}
 	function map_load() {
-		var options = {
-			controls : [new OpenLayers.Control.Navigation(),
-				new OpenLayers.Control.NavToolbar(),
-				new OpenLayers.Control.PanZoomBar(),
-				new OpenLayers.Control.ScaleLine(),
-				// new OpenLayers.Control.ZoomPanel(),
-				new OpenLayers.Control.Attribution()],
-		};
-
-		var map = new OpenLayers.Map("demoMap", options);
-		map.addLayer(new OpenLayers.Layer.OSM());
-
-		console.log(map.getProjectionObject().getCode());
-
-		map.setCenter(new OpenLayers.LonLat(139.76, 35.68)
-			.transform(new OpenLayers.Projection("EPSG:4326"), // WGS84
-			new OpenLayers.Projection("EPSG:3857") // Google Map / OSM / etc
-			// の球面メルカトル図法,
-			// http://wiki.openstreetmap.org/wiki/Projection
-			), 15);
-
+		var map = new ol.Map({
+			target : 'map',
+			layers : [new ol.layer.Tile({
+				source : new ol.source.OSM()
+			})],
+			view : new ol.View({
+				center : ol.proj.fromLonLat([136.1228505, 35.2937157]),
+				zoom : 8
+			})
+		});
 	}
 	function init(plugin) {
 		m_plugin_host.getFile("plugins/map/map.html", function(chunk_array) {
@@ -77,8 +66,7 @@ var create_plugin = (function() {
 			});
 
 			var script = document.createElement('script');
-			//script.src = "https://www.openlayers.org/api/OpenLayers.js";
-			script.src = "https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js";
+			script.src = "https://openlayers.org/en/v4.6.5/build/ol.js";
 			document.head.appendChild(script);
 		});
 		m_plugin_host.getFile("plugins/map/map_list_item.html", function(
