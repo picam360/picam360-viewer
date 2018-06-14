@@ -1,6 +1,7 @@
 var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
+	var m_post_map_loaded = null;
 
 	function decodeUtf8(data) {
 		var result = "";
@@ -50,6 +51,9 @@ var create_plugin = (function() {
 				zoom : 8
 			})
 		});
+		if(m_post_map_loaded){
+			m_post_map_loaded(map);
+		}
 	}
 	function init(plugin) {
 		m_plugin_host.getFile("plugins/map/map.html", function(chunk_array) {
@@ -80,6 +84,7 @@ var create_plugin = (function() {
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
 		var plugin = {
+			name : "map",
 			init_options : function(options) {
 				if (!m_is_init) {
 					m_is_init = true;
@@ -88,6 +93,9 @@ var create_plugin = (function() {
 			},
 			event_handler : function(sender, event) {
 
+			},
+			set_post_map_loaded : function(callback){
+				m_post_map_loaded = callback;
 			}
 		};
 		return plugin;

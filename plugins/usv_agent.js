@@ -2,6 +2,7 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 	var m_forward_button = null;
+	var m_way_points = [];
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var USVC_DOMAIN = UPSTREAM_DOMAIN + "usvc.";
@@ -61,7 +62,30 @@ var create_plugin = (function() {
 		document.body.appendChild(m_foward_button);
 
 		m_plugin_host.add_watch(USVC_DOMAIN + "way_points", function(ret) {
-			console.log(ret);
+			m_way_points = ret;
+		});
+
+		var map_plugin = m_plugin_host.get_plugin("map");
+		map_plugin.set_post_map_loaded(function(map) {
+			var featureLine = new ol.Feature({
+				geometry : new ol.geom.LineString([])
+			});
+			var sourceLine = new ol.source.Vector({
+				features : [featureLine]
+			});
+			var vectorLine = new ol.layer.Vector({
+				source : sourceLine
+			});
+			map.addLayer(vectorLine);
+
+			setInterval(function() {
+				var points = [];
+				for (var i; i < m_way_points.length; i++) {
+					points[i] = ol.proj.fromLonLat([m_way_points[i][1],
+						m_way_points[i][0]]);
+				}
+				featureLine.setGeometry(new ol.geom.LineString(points));
+			}, 1000);
 		});
 	}
 	return function(plugin_host) {

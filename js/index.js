@@ -171,6 +171,14 @@ var app = (function() {
 		}
 
 		var self = {
+			get_plugin : function(name){
+				for (var i = 0; i < plugins.length; i++) {
+					if (name == plugins[i].name) {
+						return plugins[i];
+					}
+				}
+				return null;
+			},
 			send_command : function(cmd) {
 				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
 					cmd2upstream_list.push(cmd.substr(UPSTREAM_DOMAIN.length));
