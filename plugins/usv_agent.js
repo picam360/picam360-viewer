@@ -2,7 +2,9 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 	var m_forward_button = null;
+
 	var m_way_points = [];
+	var m_gps_point = [];
 
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var USVC_DOMAIN = UPSTREAM_DOMAIN + "usvc.";
@@ -61,30 +63,49 @@ var create_plugin = (function() {
 
 		document.body.appendChild(m_foward_button);
 
-		m_plugin_host.add_watch(USVC_DOMAIN + "way_points", function(ret) {
-			m_way_points = ret;
+		m_plugin_host.add_watch(USVC_DOMAIN + "info", function(ret) {
+			var info = JSON.parse(ret);
+			m_way_points = info.way_points;
+			m_gps_point = info.gps_point;
 		});
 
 		var map_plugin = m_plugin_host.get_plugin("map");
 		map_plugin.set_post_map_loaded(function(map) {
-			var featureLine = new ol.Feature({
-				geometry : new ol.geom.LineString([])
+			// way_points
+			var featureWayPoints = new ol.Feature();
+			// gps_point
+			var featureGpsPoint = new ol.Feature();
+			featureGpsPoint.setStyle(new ol.style.Style({
+				image : new ol.style.Circle({
+					radius : 6,
+					fill : new ol.style.Fill({
+						color : '#3399CC'
+					}),
+					stroke : new ol.style.Stroke({
+						color : '#fff',
+						width : 2
+					})
+				})
+			}));
+			var source = new ol.source.Vector({
+				features : [featureWayPoints, featureGpsPoint]
 			});
-			var sourceLine = new ol.source.Vector({
-				features : [featureLine]
+			var layer = new ol.layer.Vector({
+				source : source
 			});
-			var vectorLine = new ol.layer.Vector({
-				source : sourceLine
-			});
-			map.addLayer(vectorLine);
+			map.addLayer(layer);
 
 			setInterval(function() {
 				var points = [];
-				for (var i; i < m_way_points.length; i++) {
+				for (var i = 0; i < m_way_points.length; i++) {
 					points[i] = ol.proj.fromLonLat([m_way_points[i][1],
 						m_way_points[i][0]]);
 				}
-				featureLine.setGeometry(new ol.geom.LineString(points));
+				featureWayPoints.setGeometry(new ol.geom.LineString(points));
+				if (m_gps_point.length == 2) {
+					featureGpsPoint.setGeometry(new ol.geom.Point(ol.proj
+						.fromLonLat([m_gps_point[1], m_gps_point[0]])));
+				}
 			}, 1000);
 		});
 	}
