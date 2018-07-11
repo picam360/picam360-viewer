@@ -419,6 +419,14 @@ var app = (function() {
 					if (_options.fov && !query.fov) {
 						self.plugin_host.set_fov(_options.fov);
 					}
+					if (_options.view_offset && !query['view-offset']) {
+						var euler = new THREE.Euler(THREE.Math
+							.degToRad(_options.view_offset[0]), THREE.Math
+							.degToRad(_options.view_offset[1]), THREE.Math
+							.degToRad(_options.view_offset[2]), "YXZ");
+
+						view_offset = new THREE.Quaternion().setFromEuler(euler);
+					}
 					if (_options.plugin_paths
 						&& _options.plugin_paths.length != 0) {
 						function load_plugin(idx) {
