@@ -163,7 +163,14 @@ var create_plugin = (function() {
 			m_is_init = true;
 			init();
 		}
-		var plugin = {};
+		var plugin = {
+			init_options : function(options){
+				if(options.view_offset){
+					abs_pitch = options.view_offset[0];
+					abs_yaw = options.view_offset[1];
+				}
+			}
+		};
 		return plugin;
 	}
 })();
