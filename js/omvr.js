@@ -494,10 +494,10 @@ function OMVR() {
 				m_limit_fov = 180;
 			}
 			if (type == "raw_bmp") {
-				self.setModel(vertex_type, "bmp");
+				self.setModel(vertex_type, "rgb");
 
-				var img = m_texture.image;
-				var header = get_bmp_header(width, height, 8);
+				var img = new Image();
+				var header = get_bmp_header(width, height, 32);
 				var raw_data = new Uint8Array(data);
 				var blob = new Blob([header, raw_data], {
 					type : "image/bmp"
@@ -507,6 +507,13 @@ function OMVR() {
 					url.revokeObjectURL(img.src);
 				}
 				img.src = url.createObjectURL(blob);
+				img.onload = function(ev){
+					m_texture_width = img.width;
+					m_texture_height = img.height;
+
+					m_texture.image = img;
+					m_texture.needsUpdate = true;
+				};
 				// console.log(m_target_texture.src + " : " + blob.size
 				// + " : " + m_active_frame.length);
 				blob = null;
@@ -547,14 +554,21 @@ function OMVR() {
 				m_texture_width = width;
 				m_texture_height = height;
 			} else if (type == "blob") {
-				self.setModel(vertex_type, "bmp");
+				self.setModel(vertex_type, "rgb");
 
-				var img = m_texture.image;
+				var img = new Image();
 				var url = window.URL || window.webkitURL;
 				if (img.src && img.src.indexOf("blob") == 0) {
 					url.revokeObjectURL(img.src);
 				}
 				img.src = url.createObjectURL(data);
+				img.onload = function(ev){
+					m_texture_width = img.width;
+					m_texture_height = img.height;
+
+					m_texture.image = img;
+					m_texture.needsUpdate = true;
+				};
 				// console.log(img.src + " : " + blob.size);
 			}
 		},

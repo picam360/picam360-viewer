@@ -54,6 +54,7 @@ var app = (function() {
 	// video decoder
 	var mjpeg_decoder;
 	var h264_decoder;
+	var h265_decoder;
 	// motion processer unit
 	var mpu;
 
@@ -495,6 +496,10 @@ var app = (function() {
 						h264_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 					}
+//					if (h265_decoder) {
+//						h265_decoder.decode(packet.GetPayload(), packet
+//							.GetPayloadLength());
+//					}
 				} else if (packet.GetPayloadType() == PT_STATUS) {// status
 					var str = String.fromCharCode
 						.apply("", new Uint8Array(packet.GetPayload()));
@@ -656,8 +661,10 @@ var app = (function() {
 					// video decoder
 					h264_decoder = H264Decoder();
 					mjpeg_decoder = MjpegDecoder();
+					h265_decoder = H265Decoder();
 					h264_decoder.set_frame_callback(self.handle_frame);
 					mjpeg_decoder.set_frame_callback(self.handle_frame);
+					h265_decoder.set_frame_callback(self.handle_frame);
 
 					// motion processer unit
 					mpu = MPU(self.plugin_host);
