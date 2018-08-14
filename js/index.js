@@ -172,7 +172,7 @@ var app = (function() {
 		}
 
 		var self = {
-			get_plugin : function(name){
+			get_plugin : function(name) {
 				for (var i = 0; i < plugins.length; i++) {
 					if (name == plugins[i].name) {
 						return plugins[i];
@@ -292,7 +292,7 @@ var app = (function() {
 				overlay.innerHTML = str;
 			},
 			getFile : function(path, callback) {
-				if (core.connected()) {
+				if (!query['force-local'] && core.connected()) {
 					var key = uuid();
 					filerequest_list.push({
 						filename : path,
@@ -426,7 +426,8 @@ var app = (function() {
 							.degToRad(_options.view_offset[1]), THREE.Math
 							.degToRad(_options.view_offset[2]), "YXZ");
 
-						view_offset = new THREE.Quaternion().setFromEuler(euler);
+						view_offset = new THREE.Quaternion()
+							.setFromEuler(euler);
 					}
 					if (_options.plugin_paths
 						&& _options.plugin_paths.length != 0) {
@@ -496,10 +497,10 @@ var app = (function() {
 						h264_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 					}
-//					if (h265_decoder) {
-//						h265_decoder.decode(packet.GetPayload(), packet
-//							.GetPayloadLength());
-//					}
+					// if (h265_decoder) {
+					// h265_decoder.decode(packet.GetPayload(), packet
+					// .GetPayloadLength());
+					// }
 				} else if (packet.GetPayloadType() == PT_STATUS) {// status
 					var str = String.fromCharCode
 						.apply("", new Uint8Array(packet.GetPayload()));
