@@ -70,7 +70,7 @@ var create_plugin = (function() {
 			});
 
 			var script = document.createElement('script');
-			script.src = "https://openlayers.org/en/v4.6.5/build/ol.js";
+			script.src = "https://openlayers.org/en/v5.1.3/build/ol.js";
 			document.head.appendChild(script);
 		});
 		m_plugin_host.getFile("plugins/map/map_list_item.html", function(
