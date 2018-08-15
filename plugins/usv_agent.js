@@ -27,7 +27,8 @@ var create_plugin = (function() {
 		button.down = false;
 
 		var sx = 0, sy = 0;
-		var pwm = 1500;
+		var rudder_pwm = 1500;
+		var rudder_pwm_candidate = null;
 		var mousedownFunc = function(ev) {
 			plugin.event_handler_act("MOVE");
 
@@ -37,7 +38,7 @@ var create_plugin = (function() {
 			}
 			sx = ev.clientX;
 			sy = ev.clientY;
-			pwm = 1500;
+			rudder_pwm = 1500;
 
 			button.down = true;
 			button.src = FORWARD_PUSHED_ICON;
@@ -48,7 +49,7 @@ var create_plugin = (function() {
 			button.down = false;
 			button.src = FORWARD_ICON;
 
-			plugin.event_handler_act("SET_RUDDER_PWM " + 1500);
+			rudder_pwm_candidate = 1500;
 		}
 		button.mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {
@@ -62,7 +63,7 @@ var create_plugin = (function() {
 			var dx = -(ev.clientX - sx);
 			var dy = -(ev.clientY - sy);
 
-			var threshold = 5;
+			var threshold = 1;
 			var roll_diff = parseInt(dx / threshold) * threshold;
 			var pitch_diff = parseInt(dy / threshold) * threshold;
 			sx -= roll_diff;
@@ -71,8 +72,8 @@ var create_plugin = (function() {
 			if (roll_diff == 0) {
 				// do nothing
 			} else {
-				pwm += roll_diff * 10;
-				plugin.event_handler_act("SET_RUDDER_PWM " + pwm);
+				rudder_pwm += roll_diff * 10;
+				rudder_pwm_candidate = rudder_pwm;
 			}
 			if (pitch_diff == 0) {
 				// do nothing
@@ -89,6 +90,14 @@ var create_plugin = (function() {
 		button.addEventListener("touchstart", mousedownFunc);
 		button.addEventListener("mousedown", mousedownFunc);
 		button.addEventListener("dragstart", preventFunc);
+
+		setInterval(function() {
+			if (rudder_pwm_candidate) {
+				plugin.event_handler_act("SET_RUDDER_PWM " + rudder_pwm_candidate);
+				rudder_pwm = rudder_pwm_candidate;
+				rudder_pwm_candidate = null;
+			}
+		}, 100);
 
 		return button;
 	}
