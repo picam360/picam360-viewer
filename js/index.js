@@ -497,10 +497,10 @@ var app = (function() {
 						h264_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 					}
-					// if (h265_decoder) {
-					// h265_decoder.decode(packet.GetPayload(), packet
-					// .GetPayloadLength());
-					// }
+					 if (h265_decoder) {
+						h265_decoder.decode(packet.GetPayload(), packet
+							.GetPayloadLength());
+					}
 				} else if (packet.GetPayloadType() == PT_STATUS) {// status
 					var str = String.fromCharCode
 						.apply("", new Uint8Array(packet.GetPayload()));
