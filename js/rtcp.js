@@ -54,14 +54,19 @@ function Rtcp() {
 			m_conn = conn;
 		},
 		// @data : ArrayBuffer
-		sendpacket : function(pack) {
-			if(!m_conn){
+		sendpacket : function(conn, pack) {
+			if (!conn || conn.send || conn.emit) {
+			} else {
+				pack = conn;
+				conn = m_conn;
+			}
+			if (!conn) {
 				return;
 			}
-			if (m_conn.peerConnection) { // webrtc
-				m_conn.send(pack);
+			if (conn.peerConnection) { // webrtc
+				conn.send(pack);
 			} else {
-				m_conn.emit('data', pack);
+				conn.emit('data', pack);
 			}
 		},
 		// @data : ArrayBuffer

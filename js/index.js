@@ -497,7 +497,7 @@ var app = (function() {
 						h264_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 					}
-					 if (h265_decoder) {
+					if (h265_decoder) {
 						h265_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());
 					}
@@ -556,27 +556,82 @@ var app = (function() {
 				var value = cmd2upstream_list.shift();
 				var cmd = "<picam360:command id=\"" + app.rtcp_command_id
 					+ "\" value=\"" + value + "\" />"
-				rtcp.sendpacket(rtcp.buildpacket(cmd, 101));
+				rtcp.sendpacket(rtcp.buildpacket(cmd, PT_CMD));
 				app.rtcp_command_id++;
 			}, 10);// 100hz
+			var connection_callback = function(conn) {
+				var is_init = false;
+				var init_con = function() {
+					is_init = true;
+					self.plugin_host.set_info("waiting image...");
+					rtp.set_connection(conn);
+					rtcp.set_connection(conn);
+					callback();
+				}
+				var valid_timediff = 0;
+				var min_rtt = 0;
+				var ping_cnt = 0;
+				var cmd = "<picam360:command id=\"0\" value=\"ping "
+					+ new Date().getTime() + "\" />"
+				var pack = rtcp.buildpacket(cmd, PT_CMD);
+				rtcp.sendpacket(conn, pack);
+				conn
+					.on('data', function(data) {
+						if (!is_init) {
+							if (!Array.isArray(data)) {
+								packets = [data];
+							}
+							var pack = PacketHeader(data[0]);
+							if (pack.GetPayloadType() == PT_STATUS) {
+								var str = String.fromCharCode
+									.apply("", new Uint8Array(pack.GetPayload()));
+								var split = str.split('"');
+								var name = split[1];
+								var value = split[3].split(' ');
+								if (name == "pong") {
+									ping_cnt++;
+									var now = new Date().getTime();
+									var rtt = now - parseInt(value[0]);
+									var timediff = value[1] - (now - rtt / 2);
+									if (min_rtt == 0 || rtt < min_rtt) {
+										min_rtt = rtt;
+										valid_timediff = timediff;
+									}
+									console.log(name + ":" + value + ":rtt="
+										+ rtt);
+									if (ping_cnt < 10) {
+										var cmd = "<picam360:command id=\"0\" value=\"ping "
+											+ new Date().getTime() + "\" />"
+										var pack = rtcp
+											.buildpacket(cmd, PT_CMD);
+										rtcp.sendpacket(conn, pack);
+										return;
+									} else {
+										var cmd = "<picam360:command id=\"0\" value=\"set_timediff "
+											+ valid_timediff + "\" />";
+										var pack = rtcp
+											.buildpacket(cmd, PT_CMD);
+										rtcp.sendpacket(conn, pack);
+
+										console.log("min_rtt=" + min_rtt
+											+ ":valid_timediff:"
+											+ valid_timediff);
+									}
+								}
+							}
+							init_con();
+						}
+					});
+			};
 			if (query['p2p-uuid']) {
 				self.plugin_host.set_info("connecting via webrtc...");
-				self.start_p2p(query['p2p-uuid'], function(peer_conn) {
-					self.plugin_host.set_info("waiting image...");
-					rtp.set_connection(peer_conn);
-					rtcp.set_connection(peer_conn);
-					callback();
-				}, function() {
-					err_callback();
-				});
+				self
+					.start_p2p(query['p2p-uuid'], connection_callback, function() {
+						err_callback();
+					});
 			} else {
 				self.plugin_host.set_info("connecting via websocket...");
-				self.start_ws(function(socket) {
-					self.plugin_host.set_info("waiting image...");
-					rtp.set_connection(socket);
-					rtcp.set_connection(socket);
-					callback();
-				}, function() {
+				self.start_ws(connection_callback, function() {
 					err_callback();
 				});
 			}
