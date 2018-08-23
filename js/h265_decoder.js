@@ -14,6 +14,25 @@ function H265Decoder(callback) {
 	};
 	var decoder = null;
 
+	function GetQueryString() {
+		var result = {};
+		if (1 < window.location.search.length) {
+			var query = window.location.search.substring(1);
+			var parameters = query.split('&');
+
+			for (var i = 0; i < parameters.length; i++) {
+				var element = parameters[i].split('=');
+
+				var paramName = decodeURIComponent(element[0]);
+				var paramValue = decodeURIComponent(element[1]);
+
+				result[paramName] = paramValue;
+			}
+		}
+		return result;
+	}
+	var query = GetQueryString();
+
 	{
 		var script = document.createElement('script');
 		script.onload = function() {
@@ -21,7 +40,8 @@ function H265Decoder(callback) {
 			decoder
 				.set_image_callback(function(image) {
 					m_decoded_frame_num++;
-					//console.log("m_decoded_frame_num:" + m_decoded_frame_num);
+					// console.log("m_decoded_frame_num:" +
+					// m_decoded_frame_num);
 					if (m_decoded_frame_num > m_packet_frame_num) {
 						console.log("something wrong");
 					}
@@ -131,8 +151,8 @@ function H265Decoder(callback) {
 							info : str,
 							time : new Date().getTime()
 						};
-						//console.log("packet_frame_num:" + m_packet_frame_num
-						//	+ ":" + str);
+						// console.log("packet_frame_num:" + m_packet_frame_num
+						// + ":" + str);
 					}
 					m_active_frame.shift();
 				}
@@ -149,9 +169,11 @@ function H265Decoder(callback) {
 						_nal_len += m_active_frame[i].length;
 					}
 				}
-				//console.log("nal_type:" + nal_type);
+				if (query['h265-debug']) {
+					console.log("nal_len:" + nal_len + ":nal_type:" + nal_type);
+				}
 				if (nal_len != _nal_len) {
-					console.log("error : " + nal_len);
+					console.log("error : " + nal_len + "!=" + _nal_len);
 					m_active_frame = null;
 					return;
 				}
