@@ -44,6 +44,8 @@ function H265Decoder(callback) {
 					// m_decoded_frame_num);
 					if (m_decoded_frame_num > m_packet_frame_num) {
 						console.log("something wrong");
+						m_decoded_frame_num--; // fail safe
+						return;
 					}
 
 					if (m_frame_callback) {
