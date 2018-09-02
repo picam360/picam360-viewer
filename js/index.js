@@ -897,7 +897,6 @@ var app = (function() {
 				port : SIGNALING_PORT,
 				secure : SIGNALING_SECURE,
 				key : P2P_API_KEY,
-				reliable : (query.webrtc_udp == 'true'),
 				debug : debug
 			});
 			peer.on('error', function(err) {
@@ -909,6 +908,7 @@ var app = (function() {
 				}
 			});
 			peer_conn = peer.connect(p2p_uuid, {
+				reliable : (query.webrtc_udp == 'true') ? false : true,
 				constraints : {}
 			});
 			peer_conn.on('open', function() {
