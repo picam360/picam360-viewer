@@ -908,7 +908,7 @@ var app = (function() {
 				}
 			});
 			peer_conn = peer.connect(p2p_uuid, {
-				reliable : (query.webrtc_udp == 'true') ? false : true,
+				reliable : (query['webrtc-udp'] == 'true') ? false : true,
 				constraints : {}
 			});
 			peer_conn.on('open', function() {
