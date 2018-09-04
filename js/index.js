@@ -489,6 +489,12 @@ var app = (function() {
 			// set rtp callback
 			rtp.set_callback(function(packet) {
 				if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+					if (query['rtp-debug']) {
+						var latency = new Date().getTime() / 1000
+							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6);
+						console.log("seq:" + packet.GetSequenceNumber()
+							+ ":latency:" + latency);
+					}
 					if (mjpeg_decoder) {
 						mjpeg_decoder.decode(packet.GetPayload(), packet
 							.GetPayloadLength());

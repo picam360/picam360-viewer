@@ -4,12 +4,16 @@ function PacketHeader(pack) {
 	var payloadtype = view.getUint8(1, false) & 0x7F;
 	var sequencenumber = view.getUint16(2, false);
 	var timestamp = view.getUint32(4, false);
+	var ssrc = view.getUint32(8, false);
 	var self = {
 		GetSequenceNumber : function() {
 			return sequencenumber;
 		},
 		GetTimestamp : function() {
 			return timestamp;
+		},
+		GetSsrc : function() {
+			return ssrc;
 		},
 		GetPacketData : function() {
 			return new Uint8Array(pack, 0, packetlength);
