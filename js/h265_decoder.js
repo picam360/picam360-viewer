@@ -146,10 +146,7 @@ function H265Decoder(callback) {
 		},
 		// @data : Uint8Array
 		decode : function(data) {
-			if (worker) {
-				self._decode(data);
-			}
-			if (!decoder) {
+			if (!worker && !decoder) {
 				packet_pool.push(data);
 				return;
 			} else if (packet_pool.length != 0) {
