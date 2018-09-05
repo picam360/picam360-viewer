@@ -35,7 +35,7 @@ function H265Decoder(callback) {
 
 	var worker = null;
 	if (true) {
-		worker = new Worker("/js/libde265_worker.js");
+		worker = new Worker("js/libde265_worker.js");
 		worker
 			.addEventListener('message', function(e) {
 				var data = e.data;
