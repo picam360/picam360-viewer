@@ -33,7 +33,52 @@ function H265Decoder(callback) {
 	}
 	var query = GetQueryString();
 
-	{
+	var worker = null;
+	if (true) {
+		worker = new Worker("/js/libde265_worker.js");
+		worker
+			.addEventListener('message', function(e) {
+				var data = e.data;
+				if (data.consoleLog) {
+					console.log(data.consoleLog);
+					return;
+				};
+				m_decoded_frame_num++;
+				// console.log("m_decoded_frame_num:" +
+				// m_decoded_frame_num);
+				if (m_decoded_frame_num > m_packet_frame_num) {
+					console.log("something wrong");
+					m_decoded_frame_num--; // fail safe
+					return;
+				}
+
+				if (m_frame_callback) {
+					var info = m_frame_info[m_decoded_frame_num];
+					if (!info) {
+						console.log("no view quat info:" + m_decoded_frame_num
+							+ ":" + m_frame_info.length);
+					}
+					m_frame_callback("yuv", data.buf, data.width, data.height, info
+						? info.info
+						: null, info ? info.time : 0);
+				}
+				var frame_info = {};
+				for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
+					if (m_frame_info[i]) {
+						frame_info[i] = m_frame_info[i];
+					} else {
+						console.log("no view quat info:" + i);
+					}
+				}
+				m_frame_info = frame_info;
+				// if (m_decoded_frame_num != m_packet_frame_num) {
+				// console.log("packet & decode are not
+				// synchronized:"
+				// + m_decoded_frame_num + "-" +
+				// m_packet_frame_num);
+				// }
+			}, false);
+	} else {
 		var script = document.createElement('script');
 		script.onload = function() {
 			decoder = new libde265.Decoder(options);
@@ -101,6 +146,9 @@ function H265Decoder(callback) {
 		},
 		// @data : Uint8Array
 		decode : function(data) {
+			if (worker) {
+				self._decode(data);
+			}
 			if (!decoder) {
 				packet_pool.push(data);
 				return;
@@ -201,11 +249,18 @@ function H265Decoder(callback) {
 					}
 				}
 
-				decoder.push_data(annexb_sc);
-				decoder.push_data(nal_buffer);
-				decoder.flush();
-				decoder
-					.decode(function(err) {
+				if (worker) {
+					worker.postMessage({
+						buf : nal_buffer.buffer,
+						offset : 0,
+						length : nal_len,
+						info : null
+					}, [nal_buffer.buffer]); // Send data to our worker.
+				} else {
+					decoder.push_data(annexb_sc);
+					decoder.push_data(nal_buffer);
+					decoder.flush();
+					decoder.decode(function(err) {
 						switch (err) {
 							case libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA :
 								console.log("waiting");
@@ -219,6 +274,7 @@ function H265Decoder(callback) {
 								}
 						}
 					});
+				}
 
 				m_active_frame = null;
 			}
