@@ -491,7 +491,7 @@ var app = (function() {
 				if (packet.GetPayloadType() == PT_CAM_BASE) {// image
 					if (query['rtp-debug']) {
 						var latency = new Date().getTime() / 1000
-							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6);
+							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6) + self.valid_timediff/1000;
 						console.log("seq:" + packet.GetSequenceNumber()
 							+ ":latency:" + latency);
 					}
@@ -622,6 +622,7 @@ var app = (function() {
 										console.log("min_rtt=" + min_rtt
 											+ ":valid_timediff:"
 											+ valid_timediff);
+										self.valid_timediff = valid_timediff;
 									}
 								}
 							}
