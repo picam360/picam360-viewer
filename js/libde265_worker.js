@@ -1,3 +1,4 @@
+Worker = undefined;
 importScripts("../lib/libde265/libde265.js");
 
 var annexb_sc = new Uint8Array(4);
