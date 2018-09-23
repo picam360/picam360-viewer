@@ -130,6 +130,7 @@ function H265Decoder(callback) {
 	var is_init = false;
 	var info = {};
 	var packet_pool = [];
+	var arrived = [];
 
 	// annexb sc is 0001,avcc sc is nalu_len
 	var annexb_sc = new Uint8Array(4);
@@ -181,25 +182,47 @@ function H265Decoder(callback) {
 				var nal_len = 0;
 				var _nal_len = 0;
 				if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) {// sei
-					var str = String.fromCharCode.apply("", m_active_frame[0]
-						.subarray(4), 0);
-					var split = str.split(' ');
-					var mode = null;
-					for (var i = 0; i < split.length; i++) {
-						var separator = (/[=,\"]/);
-						var _split = split[i].split(separator);
-						if (_split[0] == "mode") {
-							mode = _split[2];
+					nal_type = (m_active_frame[1][4] & 0x7e) >> 1;
+					if (nal_type == 32) {
+						if (arrived[32]) {
+							m_active_frame = null;
+							return;
 						}
-					}
-					if (m_frame_start && mode) {
-						m_packet_frame_num++;
-						m_frame_info[m_packet_frame_num] = {
-							info : str,
-							time : new Date().getTime()
-						};
-						// console.log("packet_frame_num:" + m_packet_frame_num
-						// + ":" + str);
+						arrived[32] = true;
+					} else if (nal_type == 33) {
+						if (arrived[33]) {
+							m_active_frame = null;
+							return;
+						}
+						arrived[33] = true;
+					} else if (nal_type == 34) {
+						if (arrived[34]) {
+							m_active_frame = null;
+							return;
+						}
+						arrived[34] = true;
+					} else {
+						var str = String.fromCharCode
+							.apply("", m_active_frame[0].subarray(4), 0);
+						var split = str.split(' ');
+						var mode = null;
+						for (var i = 0; i < split.length; i++) {
+							var separator = (/[=,\"]/);
+							var _split = split[i].split(separator);
+							if (_split[0] == "mode") {
+								mode = _split[2];
+							}
+						}
+						if (m_frame_start && mode) {
+							m_packet_frame_num++;
+							m_frame_info[m_packet_frame_num] = {
+								info : str,
+								time : new Date().getTime()
+							};
+							// console.log("packet_frame_num:" +
+							// m_packet_frame_num
+							// + ":" + str);
+						}
 					}
 					m_active_frame.shift();
 				}
@@ -251,6 +274,7 @@ function H265Decoder(callback) {
 						buf : nal_buffer.buffer,
 						offset : 0,
 						length : nal_len,
+						type : nal_type,
 						info : null
 					}, [nal_buffer.buffer]); // Send data to our worker.
 				} else {
