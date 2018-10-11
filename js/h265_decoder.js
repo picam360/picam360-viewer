@@ -239,7 +239,7 @@ function H265Decoder(callback) {
 						_nal_len += m_active_frame[i].length;
 					}
 				}
-				if (query['h265-debug']) {
+				if (query['debug'] == 'stream') {
 					console.log("nal_len:" + nal_len + "," + _nal_len
 						+ ":nal_type:" + nal_type);
 				}

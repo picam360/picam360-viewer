@@ -13,6 +13,26 @@ function H264Decoder(callback) {
 		reuseMemory : true
 	};
 	var decoder = null;
+	
+	function GetQueryString() {
+		var result = {};
+		if (1 < window.location.search.length) {
+			var query = window.location.search.substring(1);
+			var parameters = query.split('&');
+
+			for (var i = 0; i < parameters.length; i++) {
+				var element = parameters[i].split('=');
+
+				var paramName = decodeURIComponent(element[0]);
+				var paramValue = decodeURIComponent(element[1]);
+
+				result[paramName] = paramValue;
+			}
+		}
+		return result;
+	}
+	var query = GetQueryString();
+	
 	var worker = null;
 	if (true) {
 		worker = new Worker(decoder_file);
@@ -68,6 +88,13 @@ function H264Decoder(callback) {
 	}
 	var is_init = false;
 	var info = {};
+	
+	// annexb sc is 0001,avcc sc is nalu_len
+	var annexb_sc = new Uint8Array(4);
+	annexb_sc[0] = 0;
+	annexb_sc[1] = 0;
+	annexb_sc[2] = 0;
+	annexb_sc[3] = 1;
 
 	var self = {
 		set_frame_callback : function(callback) {
@@ -128,7 +155,10 @@ function H264Decoder(callback) {
 						_nal_len += m_active_frame[i].length;
 					}
 				}
-				// console.log("nal_type:" + nal_type);
+				if (query['debug'] == 'stream') {
+					console.log("nal_len:" + nal_len + "," + _nal_len
+						+ ":nal_type:" + nal_type);
+				}
 				if (nal_len != _nal_len) {
 					console.log("error : " + nal_len);
 					m_active_frame = null;
