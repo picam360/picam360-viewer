@@ -90,7 +90,9 @@ var create_plugin = (function() {
 		}
 		button.addEventListener("touchstart", mousedownFunc);
 		button.addEventListener("mousedown", mousedownFunc);
-		button.addEventListener("dragstart", preventFunc);
+		button.addEventListener("dragstart", preventFunc, {
+			passive : false
+		});
 
 		setInterval(function() {
 			if (rudder_pwm_candidate) {
@@ -140,6 +142,18 @@ var create_plugin = (function() {
 		m_plugin_host.send_command(USVC_DOMAIN + "get_history");
 	}
 	function init(plugin) {
+		// addEventListener spec migration
+		var supportsPassive = false;
+		try {
+			var opts = Object.defineProperty({}, 'passive', {
+				get : function() {
+					supportsPassive = true;
+				}
+			});
+			window.addEventListener("test", null, opts);
+		} catch (e) {
+		}
+
 		m_foward_button = create_forward_button(plugin);
 		m_foward_button.style.position = 'absolute';
 		m_foward_button.style.display = "none";
@@ -168,8 +182,18 @@ var create_plugin = (function() {
 		}
 		document.addEventListener("touchend", mouseupFunc);
 		document.addEventListener("mouseup", mouseupFunc);
-		document.addEventListener("touchmove", mousemoveFunc, true);
-		document.addEventListener("mousemove", mousemoveFunc, true);
+		document.addEventListener("touchmove", mousemoveFunc, supportsPassive
+			? {
+				passive : false,
+				capture : true
+			}
+			: true);
+		document.addEventListener("mousemove", mousemoveFunc, supportsPassive
+			? {
+				passive : false,
+				capture : true
+			}
+			: true);
 
 		document.body.appendChild(m_foward_button);
 		document.body.appendChild(m_autonomous_button);

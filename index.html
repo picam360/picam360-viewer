@@ -260,13 +260,25 @@
 	<script>
 		ons.bootstrap();
 		ons.ready(function() {
-
+			//addEventListener spec migration
+			var supportsPassive = false;
+			try {
+				var opts = Object.defineProperty({}, 'passive', {
+					get : function() {
+						supportsPassive = true;
+					}
+				});
+				window.addEventListener("test", null, opts);
+			} catch (e) {
+			}
 			document.addEventListener("touchmove", function(event) {
 				if (!menu.isMenuOpened()
 					&& app.navi.getCurrentPage().name != "about.html") {
 					event.preventDefault();
 				}
-			});
+			}, supportsPassive ? {
+				passive : false
+			} : false);
 
 			app.main();
 		});
