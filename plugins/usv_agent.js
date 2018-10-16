@@ -30,6 +30,8 @@ var create_plugin = (function() {
 		var sx = 0, sy = 0;
 		var rudder_pwm = 1500;
 		var rudder_pwm_candidate = null;
+		var skrew_pwm = 1500;
+		var skrew_pwm_candidate = null;
 		var mousedownFunc = function(ev) {
 			plugin.event_handler_act("MOVE");
 
@@ -40,6 +42,7 @@ var create_plugin = (function() {
 			sx = ev.clientX;
 			sy = ev.clientY;
 			rudder_pwm = 1500;
+			skrew_pwm = 1500;
 
 			button.down = true;
 			button.src = FORWARD_PUSHED_ICON;
@@ -51,6 +54,7 @@ var create_plugin = (function() {
 			button.src = FORWARD_ICON;
 
 			rudder_pwm_candidate = 1500;
+			skrew_pwm_candidate = 1500;
 		}
 		button.mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {
@@ -79,7 +83,8 @@ var create_plugin = (function() {
 			if (pitch_diff == 0) {
 				// do nothing
 			} else {
-				plugin.event_handler_act("INCREMENT_THRUST " + pitch_diff * 10);
+				skrew_pwm += pitch_diff * 10;
+				skrew_pwm_candidate = skrew_pwm;
 			}
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -100,6 +105,12 @@ var create_plugin = (function() {
 					+ rudder_pwm_candidate);
 				rudder_pwm = rudder_pwm_candidate;
 				rudder_pwm_candidate = null;
+			}
+			if (skrew_pwm_candidate) {
+				plugin.event_handler_act("SET_SKREW_PWM "
+					+ skrew_pwm_candidate);
+				skrew_pwm = skrew_pwm_candidate;
+				skrew_pwm_candidate = null;
 			}
 		}, 200);
 
@@ -524,13 +535,12 @@ var create_plugin = (function() {
 					case "GO2NEXT_MENU" :
 						m_plugin_host.send_command(SYSTEM_DOMAIN
 							+ "go2next_menu");
-					case "INCREMENT_THRUST" :
-						var cmd = USVC_DOMAIN + "increment_thrust "
-							+ (params[1] ? params[1] : step);
-						m_plugin_host.send_command(cmd);
-						break;
 					case "SET_RUDDER_PWM" :
 						var cmd = USVC_DOMAIN + "set_rudder_pwm " + params[1];
+						m_plugin_host.send_command(cmd);
+						break;
+					case "SET_SKREW_PWM" :
+						var cmd = USVC_DOMAIN + "set_skrew_pwm " + params[1];
 						m_plugin_host.send_command(cmd);
 						break;
 					case "CHANGE_AUTONOMOUS" :
