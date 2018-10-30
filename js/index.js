@@ -24,6 +24,7 @@ var PT_STATUS = 100;
 var PT_CMD = 101;
 var PT_FILE = 102;
 var PT_CAM_BASE = 110;
+var PT_AUDIO_BASE = 120;
 var P2P_API_KEY = "v8df88o1y4zbmx6r";
 var PUBLIC_VIEWER = "http://picam360.github.io/picam360-viewer/";
 var SIGNALING_HOST = "peer.picam360.com";
@@ -487,11 +488,37 @@ var app = (function() {
 			rtp = Rtp();
 			rtcp = Rtcp();
 			// set rtp callback
+			var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+			var audioStack = [];
+			var nextTime = 0;
 			rtp.set_callback(function(packet) {
-				if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+				if (packet.GetPayloadType() == PT_AUDIO_BASE) {// audio
+					audioContext.decodeAudioData(packet.GetPayload().buffer, function(
+						buffer) {
+						audioStack.push(buffer);
+						if (audioStack.length) {
+							scheduleBuffers();
+						}
+					}, function(err) {
+						console.log("err(decodeAudioData): " + err);
+					});
+					function scheduleBuffers() {
+						while (audioStack.length) {
+							var buffer = audioStack.shift();
+							var source = audioContext.createBufferSource();
+							source.buffer = buffer;
+							source.connect(context.destination);
+							if (nextTime == 0)
+								nextTime = context.currentTime + 0.01;
+							source.start(nextTime);
+							nextTime += source.buffer.duration;
+						};
+					}
+				} else if (packet.GetPayloadType() == PT_CAM_BASE) {// image
 					if (query['rtp-debug']) {
 						var latency = new Date().getTime() / 1000
-							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6) + self.valid_timediff/1000;
+							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
+							+ self.valid_timediff / 1000;
 						console.log("seq:" + packet.GetSequenceNumber()
 							+ ":latency:" + latency);
 					}
