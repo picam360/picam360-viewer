@@ -170,6 +170,11 @@
 		src="img/start_record_icon.png"
 	/>REC</ons-button> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item"> <ons-row
 		align="center"
+	> <ons-col>Audio</ons-col> <ons-col align="right"> <ons-switch
+		var="swAudioPlay"
+		onchange="app.plugin_host.set_audio(swAudioPlay.isChecked());"
+	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item class="menu-item"> <ons-row
+		align="center"
 	> <ons-col>Stereo</ons-col> <ons-col align="right"> <ons-switch
 		var="swStereoView"
 		onchange="app.plugin_host.set_stereo(swStereoView.isChecked());"

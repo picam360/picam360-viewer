@@ -47,10 +47,6 @@ function OMVR() {
 
 	var m_yuv_canvas = null;
 
-	var m_audio_contxt = new (window.AudioContext || window.webkitAudioContext);
-	var m_scheduled_time = 0;
-	var m_sync = false;
-
 	// shader
 	var m_shaders = {};
 
@@ -73,6 +69,45 @@ function OMVR() {
 		0, 0, 0, 1//
 		];
 	};
+
+	// audio
+	var m_audio_buffer_size = 4096;
+	var m_audio_contxt = new (window.AudioContext || window.webkitAudioContext);
+	var m_audio_play = false;
+	var m_audio_buffer = [];
+	var m_audio_buffer_cur = 0;
+	var m_sample_rate = 48000;
+	var m_sample_resample = Math.round(m_sample_rate
+		/ (m_sample_rate - m_audio_contxt.sampleRate));
+	var m_sample_count = 0;
+	var m_audio_script_proc = m_audio_contxt
+		.createScriptProcessor(m_audio_buffer_size, 1, 1);
+	m_audio_script_proc.onaudioprocess = function(audioProcessingEvent) {
+		var inputBuffer = audioProcessingEvent.inputBuffer;
+		var outputBuffer = audioProcessingEvent.outputBuffer;
+
+		var inputData = inputBuffer.getChannelData(0);
+		var outputData = outputBuffer.getChannelData(0);
+
+		for (var i = 0; i < outputBuffer.length; i++) {
+			var v;
+			if (!m_audio_play || m_audio_buffer.length == 0) {
+				v = 0;
+			} else {
+				v = m_audio_buffer[0][0][m_audio_buffer_cur];
+				m_audio_buffer_cur++;
+				if (m_sample_count % m_sample_resample == 0) {
+					m_audio_buffer_cur++;
+				}
+				if (m_audio_buffer_cur >= m_audio_buffer[0][0].length) {
+					m_audio_buffer.shift();
+					m_audio_buffer_cur = 0;
+				}
+			}
+			outputData[i] = v;
+			m_sample_count++;
+		}
+	}
 
 	function onWindowResize() {
 		m_canvas.width = window.innerWidth;
@@ -907,41 +942,37 @@ function OMVR() {
 			}
 		},
 
-		playAudioStream : function(left, right) {
-			var audio_buf = m_audio_contxt.createBuffer(2, left.length, 48000), audio_src = m_audio_contxt
-				.createBufferSource(), current_time = m_audio_contxt.currentTime;
-
-			audio_buf.getChannelData(0).set(left);
-			audio_buf.getChannelData(1).set(right);
-
-			audio_src.buffer = audio_buf;
-			audio_src.connect(m_audio_contxt.destination);
-
-			function playChunk(audio_src, scheduled_time) {
-				if (audio_src.start) {
-					audio_src.start(scheduled_time);
-				} else {
-					audio_src.noteOn(scheduled_time);
-				}
-			}
-
-			if (m_sync) {
-				if (m_scheduled_time - current_time > 0.1) {
-					return;
-				} else {
-					m_sync = false;
-				}
-			}
-			if (m_scheduled_time - current_time > 1.0) {
-				m_sync = true;
+		pushAudioStream : function(left, right) {
+			if (!m_audio_play){
 				return;
 			}
-			if (current_time < m_scheduled_time) {
-				playChunk(audio_src, m_scheduled_time);
-				m_scheduled_time += audio_buf.duration;
+			var cutoff;
+			var count = 0;
+			for (cutoff = m_audio_buffer.length - 1; cutoff > 0; cutoff--) {
+				count += m_audio_buffer[cutoff][0].length;
+				if (count > m_sample_rate) { // 1sec
+					break;
+				}
+			}
+			if (cutoff > 0) {
+				m_audio_buffer = m_audio_buffer.slice(cutoff);
+			}
+			m_audio_buffer.push([left, right]);
+		},
+		setAudioEnabled : function(bln) {
+			if (bln == m_audio_play) {
+				return;
+			}
+			m_audio_play = bln;
+			if (m_audio_play) {
+				m_audio_source = m_audio_contxt.createBufferSource();
+				m_audio_source.connect(m_audio_script_proc);
+				m_audio_script_proc.connect(m_audio_contxt.destination);
+				m_audio_source.start();
 			} else {
-				playChunk(audio_src, current_time);
-				m_scheduled_time = current_time + audio_buf.duration;
+				m_audio_source.stop();
+				m_audio_source.disconnect(m_audio_script_proc);
+				m_audio_script_proc.disconnect(m_audio_contxt.destination);
 			}
 		},
 

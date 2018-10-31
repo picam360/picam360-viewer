@@ -57,7 +57,7 @@ var app = (function() {
 	var h264_decoder;
 	var h265_decoder;
 	var opus_decoder;
-	var opus_enable = false;
+	var audio_first_packet_s = 0;
 	// motion processer unit
 	var mpu;
 
@@ -224,6 +224,12 @@ var app = (function() {
 				self.send_event("PLUGIN_HOST", value
 					? "STEREO_ENABLED"
 					: "STEREO_DISABLED");
+			},
+			set_audio : function(value) {
+				omvr.setAudioEnabled(value);
+				self.send_event("PLUGIN_HOST", value
+					? "AUDIO_ENABLED"
+					: "AUDIO_DISABLED");
 			},
 			set_view_offset : function(value) {
 				if (view_offset_lock) {
@@ -490,78 +496,88 @@ var app = (function() {
 			rtp = Rtp();
 			rtcp = Rtcp();
 			// set rtp callback
-			rtp.set_callback(function(packet) {
-				if (packet.GetPayloadType() == PT_AUDIO_BASE) {// audio
-					if (opus_decoder) {
-						opus_decoder.decode(packet.GetPayload());
-					}
-				} else if (packet.GetPayloadType() == PT_CAM_BASE) {// image
-					if (query['rtp-debug']) {
-						var latency = new Date().getTime() / 1000
-							- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
-							+ self.valid_timediff / 1000;
-						console.log("seq:" + packet.GetSequenceNumber()
-							+ ":latency:" + latency);
-					}
-					if (mjpeg_decoder) {
-						mjpeg_decoder.decode(packet.GetPayload(), packet
-							.GetPayloadLength());
-					}
-					if (h264_decoder) {
-						h264_decoder.decode(packet.GetPayload(), packet
-							.GetPayloadLength());
-					}
-					if (h265_decoder) {
-						h265_decoder.decode(packet.GetPayload(), packet
-							.GetPayloadLength());
-					}
-				} else if (packet.GetPayloadType() == PT_STATUS) {// status
-					var str = String.fromCharCode
-						.apply("", new Uint8Array(packet.GetPayload()));
-					var split = str.split('"');
-					var name = UPSTREAM_DOMAIN + split[1];
-					var value = decodeURIComponent(split[3]);
-					if (watches[name]) {
-						watches[name](value);
-					}
-				} else if (packet.GetPayloadType() == PT_FILE) {// file
-					var array = packet.GetPayload();
-					var view = new DataView(array.buffer, array.byteOffset);
-					var header_size = view.getUint16(0, false);
-					var header = array.slice(2, 2 + header_size);
-					var header_str = String.fromCharCode.apply("", header);
-					var data = array.slice(2 + header_size);
-					var key = "dummy";
-					var seq = 0;
-					var eof = false;
-					var split = header_str.split(" ");
-					for (var i = 0; i < split.length; i++) {
-						var separator = (/[=,\"]/);
-						var _split = split[i].split(separator);
-						if (_split[0] == "key") {
-							key = _split[2];
-						} else if (_split[0] == "seq") {
-							seq = parseInt(_split[2]);
-						} else if (_split[0] == "eof") {
-							eof = _split[2] == "true";
-						}
-					}
-					for (var i = 0; i < filerequest_list.length; i++) {
-						if (filerequest_list[i].key == key) {
-							if (seq == 0) {
-								filerequest_list[i].chunk_array = [];
-							}
-							filerequest_list[i].chunk_array.push(data);
-							if (eof) {
-								filerequest_list[i]
-									.callback(filerequest_list[i].chunk_array);
-								filerequest_list.splice(i, 1);
-								break;
+			rtp
+				.set_callback(function(packet) {
+					if (packet.GetPayloadType() == PT_AUDIO_BASE) {// audio
+						if (opus_decoder) {
+							opus_decoder.decode(packet.GetPayload());
+							if (audio_first_packet_s == 0) {
+								var latency = new Date().getTime()
+									/ 1000
+									- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
+									+ self.valid_timediff / 1000;
+								console.log("audio_first_packet:latency:" + latency);
+								audio_first_packet_s = new Date().getTime() / 1000;
 							}
 						}
+					} else if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+						if (query['rtp-debug']) {
+							var latency = new Date().getTime()
+								/ 1000
+								- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
+								+ self.valid_timediff / 1000;
+							console.log("seq:" + packet.GetSequenceNumber()
+								+ ":latency:" + latency);
+						}
+						if (mjpeg_decoder) {
+							mjpeg_decoder.decode(packet.GetPayload(), packet
+								.GetPayloadLength());
+						}
+						if (h264_decoder) {
+							h264_decoder.decode(packet.GetPayload(), packet
+								.GetPayloadLength());
+						}
+						if (h265_decoder) {
+							h265_decoder.decode(packet.GetPayload(), packet
+								.GetPayloadLength());
+						}
+					} else if (packet.GetPayloadType() == PT_STATUS) {// status
+						var str = String.fromCharCode
+							.apply("", new Uint8Array(packet.GetPayload()));
+						var split = str.split('"');
+						var name = UPSTREAM_DOMAIN + split[1];
+						var value = decodeURIComponent(split[3]);
+						if (watches[name]) {
+							watches[name](value);
+						}
+					} else if (packet.GetPayloadType() == PT_FILE) {// file
+						var array = packet.GetPayload();
+						var view = new DataView(array.buffer, array.byteOffset);
+						var header_size = view.getUint16(0, false);
+						var header = array.slice(2, 2 + header_size);
+						var header_str = String.fromCharCode.apply("", header);
+						var data = array.slice(2 + header_size);
+						var key = "dummy";
+						var seq = 0;
+						var eof = false;
+						var split = header_str.split(" ");
+						for (var i = 0; i < split.length; i++) {
+							var separator = (/[=,\"]/);
+							var _split = split[i].split(separator);
+							if (_split[0] == "key") {
+								key = _split[2];
+							} else if (_split[0] == "seq") {
+								seq = parseInt(_split[2]);
+							} else if (_split[0] == "eof") {
+								eof = _split[2] == "true";
+							}
+						}
+						for (var i = 0; i < filerequest_list.length; i++) {
+							if (filerequest_list[i].key == key) {
+								if (seq == 0) {
+									filerequest_list[i].chunk_array = [];
+								}
+								filerequest_list[i].chunk_array.push(data);
+								if (eof) {
+									filerequest_list[i]
+										.callback(filerequest_list[i].chunk_array);
+									filerequest_list.splice(i, 1);
+									break;
+								}
+							}
+						}
 					}
-				}
-			});
+				});
 			// command to upstream
 			setInterval(function() {
 				if (!cmd2upstream_list.length) {
@@ -695,7 +711,13 @@ var app = (function() {
 		},
 
 		handle_audio_frame : function(left, right) {
-			omvr.playAudioStream(left, right);
+			if (audio_first_packet_s != -1) {
+				var latency = new Date().getTime() / 1000
+					- audio_first_packet_s;
+				console.log("audio_first_decode:latency:" + latency);
+				audio_first_packet_s = -1;
+			}
+			omvr.pushAudioStream(left, right);
 		},
 
 		init_webgl : function() {
