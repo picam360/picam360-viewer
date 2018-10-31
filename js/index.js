@@ -56,6 +56,8 @@ var app = (function() {
 	var mjpeg_decoder;
 	var h264_decoder;
 	var h265_decoder;
+	var opus_decoder;
+	var opus_enable = false;
 	// motion processer unit
 	var mpu;
 
@@ -488,31 +490,10 @@ var app = (function() {
 			rtp = Rtp();
 			rtcp = Rtcp();
 			// set rtp callback
-			var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-			var audioStack = [];
-			var nextTime = 0;
 			rtp.set_callback(function(packet) {
 				if (packet.GetPayloadType() == PT_AUDIO_BASE) {// audio
-					audioContext.decodeAudioData(packet.GetPayload().buffer, function(
-						buffer) {
-						audioStack.push(buffer);
-						if (audioStack.length) {
-							scheduleBuffers();
-						}
-					}, function(err) {
-						console.log("err(decodeAudioData): " + err);
-					});
-					function scheduleBuffers() {
-						while (audioStack.length) {
-							var buffer = audioStack.shift();
-							var source = audioContext.createBufferSource();
-							source.buffer = buffer;
-							source.connect(context.destination);
-							if (nextTime == 0)
-								nextTime = context.currentTime + 0.01;
-							source.start(nextTime);
-							nextTime += source.buffer.duration;
-						};
+					if (opus_decoder) {
+						opus_decoder.decode(packet.GetPayload());
 					}
 				} else if (packet.GetPayloadType() == PT_CAM_BASE) {// image
 					if (query['rtp-debug']) {
@@ -713,6 +694,10 @@ var app = (function() {
 			omvr.handle_frame(type, data, width, height, info, time);
 		},
 
+		handle_audio_frame : function(left, right) {
+			omvr.playAudioStream(left, right);
+		},
+
 		init_webgl : function() {
 			// webgl handling
 			omvr = OMVR();
@@ -755,6 +740,9 @@ var app = (function() {
 					h264_decoder.set_frame_callback(self.handle_frame);
 					mjpeg_decoder.set_frame_callback(self.handle_frame);
 					h265_decoder.set_frame_callback(self.handle_frame);
+
+					opus_decoder = OpusDecoder();
+					opus_decoder.set_frame_callback(self.handle_audio_frame);
 
 					// motion processer unit
 					mpu = MPU(self.plugin_host);

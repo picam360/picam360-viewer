@@ -47,6 +47,10 @@ function OMVR() {
 
 	var m_yuv_canvas = null;
 
+	var m_audio_contxt = new (window.AudioContext || window.webkitAudioContext);
+	var m_scheduled_time = 0;
+	var m_sync = false;
+
 	// shader
 	var m_shaders = {};
 
@@ -507,7 +511,7 @@ function OMVR() {
 					url.revokeObjectURL(img.src);
 				}
 				img.src = url.createObjectURL(blob);
-				img.onload = function(ev){
+				img.onload = function(ev) {
 					m_texture_width = img.width;
 					m_texture_height = img.height;
 
@@ -562,7 +566,7 @@ function OMVR() {
 					url.revokeObjectURL(img.src);
 				}
 				img.src = url.createObjectURL(data);
-				img.onload = function(ev){
+				img.onload = function(ev) {
 					m_texture_width = img.width;
 					m_texture_height = img.height;
 
@@ -900,6 +904,44 @@ function OMVR() {
 				m_effect.render(m_scene, m_camera);
 			} else {
 				m_renderer.render(m_scene, m_camera);
+			}
+		},
+
+		playAudioStream : function(left, right) {
+			var audio_buf = m_audio_contxt.createBuffer(2, left.length, 48000), audio_src = m_audio_contxt
+				.createBufferSource(), current_time = m_audio_contxt.currentTime;
+
+			audio_buf.getChannelData(0).set(left);
+			audio_buf.getChannelData(1).set(right);
+
+			audio_src.buffer = audio_buf;
+			audio_src.connect(m_audio_contxt.destination);
+
+			function playChunk(audio_src, scheduled_time) {
+				if (audio_src.start) {
+					audio_src.start(scheduled_time);
+				} else {
+					audio_src.noteOn(scheduled_time);
+				}
+			}
+
+			if (m_sync) {
+				if (m_scheduled_time - current_time > 0.1) {
+					return;
+				} else {
+					m_sync = false;
+				}
+			}
+			if (m_scheduled_time - current_time > 1.0) {
+				m_sync = true;
+				return;
+			}
+			if (current_time < m_scheduled_time) {
+				playChunk(audio_src, m_scheduled_time);
+				m_scheduled_time += audio_buf.duration;
+			} else {
+				playChunk(audio_src, current_time);
+				m_scheduled_time = current_time + audio_buf.duration;
 			}
 		},
 
