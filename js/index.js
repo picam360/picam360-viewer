@@ -373,7 +373,13 @@ var app = (function() {
 			console.log('Received Event: ' + id);
 		},
 
+		init_common_options_done : false,
 		init_common_options : function(callback) {
+			if (this.init_common_options_done) {
+				return;
+			} else {
+				this.init_common_options_done = true;
+			}
 			loadFile("common_config.json", function(chunk_array) {
 				var txt = String.fromCharCode.apply("", chunk_array[0]);
 				if (txt) {
@@ -416,8 +422,13 @@ var app = (function() {
 				}
 			});
 		},
-
+		init_options_done : false,
 		init_options : function(callback) {
+			if (this.init_options_done) {
+				return;
+			} else {
+				this.init_options_done = true;
+			}
 			// @data : uint8array
 			self.plugin_host
 				.getFile("config.json", function(chunk_array) {
@@ -506,7 +517,8 @@ var app = (function() {
 									/ 1000
 									- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
 									+ self.valid_timediff / 1000;
-								console.log("audio_first_packet:latency:" + latency);
+								console.log("audio_first_packet:latency:"
+									+ latency);
 								audio_first_packet_s = new Date().getTime() / 1000;
 							}
 						}
