@@ -294,11 +294,12 @@ var create_plugin = (function() {
 					featureGpsPoint.setGeometry(gps_point_obj);
 					featureGpsPoint.setStyle(new ol.style.Style({
 						image : new ol.style.Icon({
+							opacity : m_status.gps_lost ? 0.5 : 1.0,
 							src : VEHICLE_ICON,
 							anchor : [0.5, 0.5],
 							rotateWithView : false,
-							rotation : m_status.heading ? Math.PI
-								* m_status.heading / 180 : 0
+							rotation : m_status.north ? Math.PI
+								* -m_status.north / 180 : 0
 						})
 					}));
 				}
@@ -371,12 +372,14 @@ var create_plugin = (function() {
 					var points = [];
 					var keys = Object.keys(history);
 					for (var i = 0; i < keys.length; i++) {
-						points[i] = ol.proj.fromLonLat([history[keys[i]].lon,
-							history[keys[i]].lat]);
+						if (history[keys[i]].lon && history[keys[i]].lat) {
+							points.push(ol.proj.fromLonLat([
+								history[keys[i]].lon, history[keys[i]].lat]));
+						}
 					}
 					if (m_status.lon && m_status.lat) {
-						points[keys.length] = ol.proj.fromLonLat([m_status.lon,
-							m_status.lat]);
+						points.push(ol.proj.fromLonLat([m_status.lon,
+							m_status.lat]));
 					}
 					featureHistory.setGeometry(new ol.geom.LineString(points));
 				});
@@ -548,8 +551,8 @@ var create_plugin = (function() {
 						m_plugin_host.send_command(cmd);
 						break;
 					case "CHANGE_AUTONOMOUS" :
-						var cmd = USVC_DOMAIN + "set_autonomous "
-							+ (m_status.mode_flag.autonomous ? "0" : "1");
+						var cmd = USVC_DOMAIN + "set_automode "
+							+ (m_status.auto_mode ? "0" : "1");
 						m_plugin_host.send_command(cmd);
 						break;
 				}
