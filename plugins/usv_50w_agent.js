@@ -298,8 +298,8 @@ var create_plugin = (function() {
 							src : VEHICLE_ICON,
 							anchor : [0.5, 0.5],
 							rotateWithView : false,
-							rotation : m_status.north ? Math.PI
-								* -m_status.north / 180 : 0
+							rotation : m_status.heading ? Math.PI
+								* m_status.heading / 180 : 0
 						})
 					}));
 				}
