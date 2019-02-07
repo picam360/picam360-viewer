@@ -402,11 +402,11 @@ var create_plugin = (function() {
 				for (var i = 0; i < ary.length - 1; i++) {
 					var lonlat = ol.proj
 						.transform(ary[i], 'EPSG:3857', 'EPSG:4326');
-					new_waypoints[i] = {
-						lat : lonlat[1],
-						lon : lonlat[0],
+					new_waypoints.push({
+						lat : toFixedFloat(lonlat[1], 6),
+						lon : toFixedFloat(lonlat[0], 6),
 						tol : 30
-					};
+					});
 				}
 				m_waypoints = new_waypoints;
 				var cmd = USVC_DOMAIN + "set_waypoints "
@@ -434,16 +434,48 @@ var create_plugin = (function() {
 					refresh_waypoints(m_waypoints);
 				}
 			});
+			var selectInteraction = new ol.interaction.Select({
+				features : new ol.Collection([featureWaypoints]),
+				style : null,
+				hitTolerance : 20
+			});
+			selectInteraction.getFeatures().on('add', function(e) {
+				if (m_wp_mode == "DEL") {
+					var getmetry = featureWaypoints.getGeometry();
+					var pos = e.element.getGeometry().getCoordinates();
+					var ary = featureWaypoints.getGeometry().getCoordinates();
+					var new_waypoints = [];
+					for (var i = 0; i < ary.length - 1; i++) {
+						if (pos[0] == ary[i][0] && pos[1] == ary[i][1]) {
+							continue;
+						}
+						var lonlat = ol.proj
+							.transform(ary[i], 'EPSG:3857', 'EPSG:4326');
+						new_waypoints.push({
+							lat : toFixedFloat(lonlat[1], 6),
+							lon : toFixedFloat(lonlat[0], 6),
+							tol : 30
+						});
+					}
+					m_waypoints = new_waypoints;
+					var cmd = USVC_DOMAIN + "set_waypoints "
+						+ encodeURIComponent(JSON.stringify(m_waypoints));
+					m_plugin_host.send_command(cmd);
+					refresh_waypoints(m_waypoints);
+				}
+				e.target.remove(e.element);
+			});
+			map.addInteraction(selectInteraction);
 
 			function refresh_waypoints(waypoints) {
 				var points = [];
 				for (var i = 0; i < waypoints.length; i++) {
-					points[i] = ol.proj.fromLonLat([waypoints[i].lon,
-						waypoints[i].lat]);
+					points.push(ol.proj.fromLonLat([waypoints[i].lon,
+						waypoints[i].lat]));
 				}
 				if (waypoints.length >= 2) {
-					points[m_waypoints.length] = ol.proj.fromLonLat([
-						waypoints[0].lon, waypoints[0].lat]);
+					points.push(ol.proj.fromLonLat([waypoints[0].lon,
+						waypoints[0].lat]));
 				}
 				featureWaypoints.setGeometry(new ol.geom.LineString(points));
 			}
