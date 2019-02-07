@@ -94,7 +94,7 @@
 		menu-page="menu.html"
 		main-page="main.html"
 		side="left"
-		var="menu"
+		var="app.menu"
 		type="push"
 		max-slide-distance="260px"
 		swipeable="true"
@@ -104,7 +104,7 @@
 		modifier="menu-page"
 	> <ons-toolbar>
 	<div class="right">
-		<ons-toolbar-button ng-click="menu.closeMenu()">
+		<ons-toolbar-button ng-click="app.menu.closeMenu()">
 		<ons-icon
 			icon="fa-times"
 			size="28px"
@@ -181,6 +181,7 @@
 	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item
 		class="menu-item"
 		id="uiCall"
+		style="display : none"
 	> <ons-row align="center"> <ons-col>CALL</ons-col> <ons-col
 		align="right"
 	> <ons-switch
@@ -188,7 +189,7 @@
 		onchange="app.plugin_host.call(swCall.isChecked());"
 	></ons-switch> </ons-col> </ons-row></ons-list-item> <ons-list-item
 		class="menu-item"
-		ng-click="app.navi.pushPage('about.html');menu.closeMenu();"
+		ng-click="app.navi.pushPage('about.html');app.menu.closeMenu();"
 	> <ons-icon
 		icon="fa-info-circle"
 		fixed-width="true"
@@ -281,7 +282,7 @@
 			} catch (e) {
 			}
 			document.addEventListener("touchmove", function(event) {
-				if (!menu.isMenuOpened()
+				if (!app.menu.isMenuOpened()
 					&& app.navi.getCurrentPage().name != "about.html") {
 					event.preventDefault();
 				}

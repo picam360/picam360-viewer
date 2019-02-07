@@ -1,0 +1,45 @@
+<ons-template id="wp_menu.html"> <ons-page
+	modifier="menu-page"
+> <ons-toolbar>
+<div class="right">
+	<ons-toolbar-button ng-click="app.menu.closeMenu()"> <ons-icon
+		icon="fa-times"
+		size="28px"
+		fixed-width="false"
+	></ons-icon> </ons-toolbar-button>
+</div>
+</ons-toolbar> <ons-list id="wp_menu_list"> <ons-list-item class="menu-item">
+	<div
+		class="button-bar"
+		style="width: 240px;"
+	>
+		<div class="button-bar__item">
+			<input
+				type="radio"
+				name="radioInfoType"
+				id="wp_sel_button"
+				checked="checked"
+				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_sel_mode();"
+			>
+			<button class="button-bar__button">Sel</button>
+		</div>
+		<div class="button-bar__item">
+			<input
+				type="radio"
+				name="radioInfoType"
+				id="wp_add_button"
+				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_add_mode();"
+			>
+			<button class="button-bar__button">Add</button>
+		</div>
+		<div class="button-bar__item">
+			<input
+				type="radio"
+				name="radioInfoType"
+				id="wp_del_button"
+				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_del_mode();"
+			>
+			<button class="button-bar__button">Del</button>
+		</div>
+	</div>
+</ons-list-item> </ons-list></ons-page> </ons-template>

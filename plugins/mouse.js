@@ -43,7 +43,7 @@ var create_plugin = (function() {
 			sx = ev.clientX;
 			sy = ev.clientY;
 			swipeable = (sx < 100);
-			menu.setSwipeable(swipeable);
+			app.menu.setSwipeable(swipeable);
 		};
 		var mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {

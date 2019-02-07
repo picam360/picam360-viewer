@@ -10,7 +10,9 @@ var create_plugin = (function() {
 	var m_history = [];
 	var m_get_waypoints_callback = null;
 	var m_get_history_callback = null;
+	var m_wp_mode = "SEL";
 
+	var PLUGIN_NAME = "usv_agent";
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
 	var USVC_DOMAIN = UPSTREAM_DOMAIN + "usvc.";
 	var MOVE_TIMEOUT = 60 * 1000;// 1min
@@ -25,6 +27,48 @@ var create_plugin = (function() {
 	// map
 	var ALLOW_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAATCAMAAACTKxybAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAHJQTFRF//////8A//8A/6pV/79A/8wz/9Ur/9Eu/8Q7/8wz/9It/8k2/9Eu/8o1/9Av/8o1/84x/8wz/8wz/8wz/8wz/8wz/8s0/8wz/8s0/8wz/8wz/8wz/8wz/8s0/8wz/8wz/8wz/8wz/8wz/8wz/8wz/8wzo2lg3QAAACV0Uk5TAAECAwQFBgsNDxETFhgbHUNGm6Ckqa2usrW+w8fLztLV1tnc9jtYQ+sAAABdSURBVAjXZc9HDsAwCARAp/fee+X/X8wesIQVbiMELEqVU6B0VS8tocZARGvE8Edoi1leD+0Jy+2gI2U5LXRmLLuB7pxl1dBT6N4Fzf+OnJHb5B2ZwMhmpDb+kZ9+tBQLxwwvvoMAAAAASUVORK5CYII=";
 	var VEHICLE_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAKEPAAChDwGlzVczAAAAB3RJTUUH4ggRBTEHEX876AAAAk5JREFUWMPFVztLHFEU/u44u4oKKyIWIvgDArFKWsFtRBsbu0hgcVKl0GJ/gX/B2t5GC1u7VAmsmiYPUmywCcFgdnEVZ+fxpZidnck6j3Oz4+bAgeHeO+f9nXMvICIqgFWAZwCZw2e9swrFEHcEStPYGkbxc4A2QD9DQQugm7Hv92Qs6yp/JfGQ5Kdmk54wGjWp8rcSgUrxnj1SSpySeiGeA+TxMX+HBuzu8rNGXaRFgs+kQsbG6HOAcmplkJNqgrZUwNIS3w0aMDPDjoYBdhLUxB4k0e0tv2sY4IcQVb2G4UvxUanAabVQAgDXBU0T/YZTLsN1HJgacDMMAKs6AD05wWX4vbKCH3t7kfEHB/A08b4KYXslQE5MRCH3vGjd96OiNM3MxpTQtjVaq2Xxa6hof59X4XqjwatwfWGBX3RkquBDRA4Z5J4EDQN/DZu4FKUxhgzpwfl59FU8PARKtrZwvrGBGwCw7Wi/UtGqBVmomk1eU0hHR/xWaAqmpuB2OlrwwvQ0cHdXUAq2tyPoxandxkXaP7Oz+FBICkoluklhLpd53jvjra/zhkycDwJI5hxYXOTPuNDDQ14YxuM7QKlENhr8FT87N8d7iQGZjajb5WXMaydP4OQkfTKI2ukp30saUTVrapF019bYloWzP665ucmPZD9NaVzVHkYFk2EAigDeAOAIFROABaj43Z02gPKIDOgCanywD7wcYQRepEWmNsQjRMqv89JTf0LldWmN1P6D54+MWBY8zSSXTzt45v07YqwhDNgpCrZP9jz/A+a1/TBqpiBgAAAAAElFTkSuQmCC";
+
+	function toFixedFloat(value, c) {
+		return parseFloat(value ? value.toFixed(c) : 0);
+	}
+
+	function decodeUtf8(data) {
+		var result = "";
+		var i = 0;
+		var c = 0;
+		var c1 = 0;
+		var c2 = 0;
+		// If we have a BOM skip it
+		if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb
+			&& data[2] === 0xbf) {
+			i = 3;
+		}
+		while (i < data.length) {
+			c = data[i];
+
+			if (c < 128) {
+				result += String.fromCharCode(c);
+				i++;
+			} else if (c > 191 && c < 224) {
+				if (i + 1 >= data.length) {
+					throw "UTF-8 Decode failed. Two byte character was truncated.";
+				}
+				c2 = data[i + 1];
+				result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			} else {
+				if (i + 2 >= data.length) {
+					throw "UTF-8 Decode failed. Multi byte character was truncated.";
+				}
+				c2 = data[i + 1];
+				c3 = data[i + 2];
+				result += String.fromCharCode(((c & 15) << 12)
+					| ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+		}
+		return result;
+	}
 
 	function create_forward_button(plugin) {
 		var button = document.createElement("img");
@@ -246,7 +290,16 @@ var create_plugin = (function() {
 		var map_plugin = m_plugin_host.get_plugin("map");
 		map_plugin.set_post_map_loaded(function(map) {
 			m_map_mode = true;
+
+			// menu
+			app.menu.setMenuPage("wp_menu.html", {
+				callback : function() {
+					app.menu.openMenu();
+				}
+			});
+			// button
 			refresh_button();
+			// layers
 			if (m_status.lon && m_status.lat) {
 				map.getView().setCenter(ol.proj.fromLonLat([m_status.lon,
 					m_status.lat]));
@@ -361,21 +414,44 @@ var create_plugin = (function() {
 				m_plugin_host.send_command(cmd);
 			});
 			map.addInteraction(dragInteraction);
+			map.on('click', function(evt) {
+				var coordinate = evt.coordinate;
+				var stringifyFunc = ol.coordinate.createStringXY(9);
+				var outstr = stringifyFunc(ol.proj
+					.transform(coordinate, "EPSG:3857", "EPSG:4326"));
+				console.log(outstr);
+				if (m_wp_mode == "ADD") {
+					var lonlat = ol.proj
+						.transform(coordinate, "EPSG:3857", "EPSG:4326");
+					m_waypoints.push({
+						lat : toFixedFloat(lonlat[1], 6),
+						lon : toFixedFloat(lonlat[0], 6),
+						tol : 30
+					});
+					var cmd = USVC_DOMAIN + "set_waypoints "
+						+ encodeURIComponent(JSON.stringify(m_waypoints));
+					m_plugin_host.send_command(cmd);
+					refresh_waypoints(m_waypoints);
+				}
+			});
+
+			function refresh_waypoints(waypoints) {
+				var points = [];
+				for (var i = 0; i < waypoints.length; i++) {
+					points[i] = ol.proj.fromLonLat([waypoints[i].lon,
+						waypoints[i].lat]);
+				}
+				if (waypoints.length >= 2) {
+					points[m_waypoints.length] = ol.proj.fromLonLat([
+						waypoints[0].lon, waypoints[0].lat]);
+				}
+				featureWaypoints.setGeometry(new ol.geom.LineString(points));
+			}
 
 			// request additional infomation
 			var request_waypoints = function() {
 				get_waypoints(function(waypoints) {
-					var points = [];
-					for (var i = 0; i < waypoints.length; i++) {
-						points[i] = ol.proj.fromLonLat([waypoints[i].lon,
-							waypoints[i].lat]);
-					}
-					if (waypoints.length >= 2) {
-						points[m_waypoints.length] = ol.proj.fromLonLat([
-							waypoints[0].lon, waypoints[0].lat]);
-					}
-					featureWaypoints
-						.setGeometry(new ol.geom.LineString(points));
+					refresh_waypoints(waypoints);
 				});
 
 				setTimeout(request_waypoints, 60 * 1000);
@@ -405,9 +481,20 @@ var create_plugin = (function() {
 		});// set_post_map_loaded
 		map_plugin.set_post_map_unloaded(function() {
 			m_map_mode = false;
+			// menu
+			m_plugin_host.restore_app_menu();
+			// button
 			refresh_button();
 		});// set_post_map_unloaded
-	}
+		m_plugin_host
+			.getFile("plugins/usv/wp_menu.html", function(chunk_array) {
+				var txt = decodeUtf8(chunk_array[0])
+					.replace(/%PLUGIN_NAME%/g, PLUGIN_NAME);
+				var node = $.parseHTML(txt);
+				$('body').append(node);
+				ons.compile(node[0]);
+			});
+	}// init
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
 		var step = 5;
@@ -417,12 +504,14 @@ var create_plugin = (function() {
 		var menu_visible = false;
 		var stereo_enabled = false;
 		var plugin = {
-			name : "usv_agent",
+			name : PLUGIN_NAME,
 			init_options : function(options) {
 				if (!m_is_init) {
 					m_is_init = true;
 					init(plugin);
 				}
+			},
+			command_handler : function(cmd) {
 			},
 			event_handler : function(sender, event) {
 				if (sender == "PLUGIN_HOST") {
@@ -575,7 +664,19 @@ var create_plugin = (function() {
 						m_plugin_host.send_command(cmd);
 						break;
 				}
-			}
+			},
+			wp_add_mode : function() {
+				console.log("wp_add_mode");
+				m_wp_mode = "ADD"
+			},
+			wp_del_mode : function() {
+				console.log("wp_del_mode");
+				m_wp_mode = "DEL"
+			},
+			wp_sel_mode : function() {
+				console.log("wp_sel_mode");
+				m_wp_mode = "SEL"
+			},
 		};
 		return plugin;
 	}

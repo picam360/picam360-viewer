@@ -3,6 +3,7 @@ var create_plugin = (function() {
 	var m_is_init = false;
 	var m_post_map_loaded = null;
 	var m_post_map_unloaded = null;
+	var m_menu_txt = null;
 
 	function decodeUtf8(data) {
 		var result = "";
@@ -52,12 +53,12 @@ var create_plugin = (function() {
 				zoom : 8
 			})
 		});
-		if(m_post_map_loaded){
+		if (m_post_map_loaded) {
 			m_post_map_loaded(map);
 		}
 	}
 	function map_unload() {
-		if(m_post_map_unloaded){
+		if (m_post_map_unloaded) {
 			m_post_map_unloaded();
 		}
 	}
@@ -87,10 +88,8 @@ var create_plugin = (function() {
 		});
 		m_plugin_host.getFile("plugins/map/map_list_item.html", function(
 			chunk_array) {
-			var txt = decodeUtf8(chunk_array[0]);
-			var node = $.parseHTML(txt);
-			$("#menu_list").append(node);
-			ons.compile(node[0]);
+			m_menu_txt = decodeUtf8(chunk_array[0]);
+			m_plugin_host.restore_app_menu();
 		});
 	}
 	return function(plugin_host) {
@@ -106,11 +105,16 @@ var create_plugin = (function() {
 			event_handler : function(sender, event) {
 
 			},
-			set_post_map_loaded : function(callback){
+			set_post_map_loaded : function(callback) {
 				m_post_map_loaded = callback;
 			},
-			set_post_map_unloaded : function(callback){
+			set_post_map_unloaded : function(callback) {
 				m_post_map_unloaded = callback;
+			},
+			on_restore_app_menu : function(callback) {
+				var node = $.parseHTML(m_menu_txt);
+				$("#menu_list").append(node[0]);
+				ons.compile(node[0]);
 			},
 		};
 		return plugin;

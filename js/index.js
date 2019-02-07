@@ -69,6 +69,7 @@ var app = (function() {
 	var is_recording = false;
 	var view_offset = new THREE.Quaternion();
 	var peer = null;
+	var p2p_num_of_members = 0;
 	var peer_conn = null;
 	var peer_call = null;
 	var p2p_uuid_call = "";
@@ -313,6 +314,31 @@ var app = (function() {
 				} else {
 					loadFile(path, callback);
 				}
+			},
+			refresh_app_menu : function() {
+				if (peer && p2p_num_of_members >= 2) {
+					document.getElementById("uiCall").style.display = "block";
+				} else {
+					document.getElementById("uiCall").style.display = "none";
+				}
+				for (var i = 0; i < plugins.length; i++) {
+					if (plugins[i].on_refresh_app_menu) {
+						plugins[i].on_refresh_app_menu(app.menu);
+					}
+				}
+			},
+			restore_app_menu : function() {
+				app.menu
+					.setMenuPage("menu.html", {
+						callback : function() {
+							for (var i = 0; i < plugins.length; i++) {
+								if (plugins[i].on_restore_app_menu) {
+									plugins[i].on_restore_app_menu(app.menu);
+								}
+							}
+							self.refresh_app_menu();
+						}
+					});
 			},
 		};
 		return self;
@@ -802,10 +828,9 @@ var app = (function() {
 				});
 			self.plugin_host.add_watch("upstream.p2p_num_of_members", function(
 				value) {
-				if (peer && value >= 2) {
-					document.getElementById("uiCall").style.display = "block";
-				} else {
-					document.getElementById("uiCall").style.display = "none";
+				if (value != p2p_num_of_members) {
+					p2p_num_of_members = value;
+					self.plugin_host.restore_app_menu();
 				}
 			});
 			self.plugin_host.add_watch("upstream.info", function(value) {
@@ -863,8 +888,6 @@ var app = (function() {
 
 			navigator.getUserMedia = navigator.getUserMedia
 				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-
-			document.getElementById("uiCall").style.display = "none";
 
 			function parseBoolean(str) {
 				return str == "yes" || str == "on" || str == "true";
@@ -979,7 +1002,6 @@ var app = (function() {
 		},
 		stop_p2p : function() {
 			peer = null;
-			document.getElementById("uiCall").style.display = "none";
 		},
 		start_call : function() {
 			p2p_uuid_call = uuid();
