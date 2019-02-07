@@ -294,7 +294,7 @@ var create_plugin = (function() {
 					featureGpsPoint.setGeometry(gps_point_obj);
 					featureGpsPoint.setStyle(new ol.style.Style({
 						image : new ol.style.Icon({
-							opacity : m_status.gps_lost ? 0.5 : 1.0,
+							opacity : m_status.gps ? 1.0 : 0.5,
 							src : VEHICLE_ICON,
 							anchor : [0.5, 0.5],
 							rotateWithView : false,
