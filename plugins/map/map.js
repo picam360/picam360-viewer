@@ -2,6 +2,7 @@ var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
 	var m_post_map_loaded = null;
+	var m_post_map_unloaded = null;
 
 	function decodeUtf8(data) {
 		var result = "";
@@ -55,6 +56,11 @@ var create_plugin = (function() {
 			m_post_map_loaded(map);
 		}
 	}
+	function map_unload() {
+		if(m_post_map_unloaded){
+			m_post_map_unloaded();
+		}
+	}
 	function init(plugin) {
 		m_plugin_host.getFile("plugins/map/map.html", function(chunk_array) {
 			var txt = decodeUtf8(chunk_array[0]);
@@ -66,6 +72,12 @@ var create_plugin = (function() {
 			app.navi.on('postpush', function(event) {
 				if (event.enterPage.name == "map.html") {
 					map_load();
+				}
+			});
+
+			app.navi.on('postpop', function(event) {
+				if (event.leavePage.name == "map.html") {
+					map_unload();
 				}
 			});
 
@@ -96,7 +108,10 @@ var create_plugin = (function() {
 			},
 			set_post_map_loaded : function(callback){
 				m_post_map_loaded = callback;
-			}
+			},
+			set_post_map_unloaded : function(callback){
+				m_post_map_unloaded = callback;
+			},
 		};
 		return plugin;
 	}
