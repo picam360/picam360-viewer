@@ -43,16 +43,26 @@ var create_plugin = (function() {
 		return result;
 	}
 	function map_load() {
+		m_container.style.display = "block";
+		m_overlay = new ol.Overlay({
+			element : m_container,
+			autoPan : true,
+			autoPanAnimation : {
+				duration : 250
+			}
+		});
 		var map = new ol.Map({
 			target : 'map',
 			layers : [new ol.layer.Tile({
 				source : new ol.source.OSM()
 			})],
+			overlays : [m_overlay],
 			view : new ol.View({
 				center : ol.proj.fromLonLat([136.1228505, 35.2937157]),
 				zoom : 8
 			})
 		});
+
 		if (m_post_map_loaded) {
 			m_post_map_loaded(map);
 		}
@@ -91,6 +101,21 @@ var create_plugin = (function() {
 			m_menu_txt = decodeUtf8(chunk_array[0]);
 			m_plugin_host.restore_app_menu();
 		});
+		m_plugin_host.getFile("plugins/map/popup.html", function(chunk_array) {
+			var txt = decodeUtf8(chunk_array[0]);
+			var node = $.parseHTML(txt);
+			$('body').append(node);
+			m_container = document.getElementById('popup');
+			m_content = document.getElementById('popup-content');
+			m_closer = document.getElementById('popup-closer');
+			m_closer.onclick = function() {
+				if (m_overlay) {
+					m_overlay.setPosition(undefined);
+				}
+				m_closer.blur();
+				return false;
+			};
+		});
 	}
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
@@ -115,6 +140,12 @@ var create_plugin = (function() {
 				var node = $.parseHTML(m_menu_txt);
 				$("#menu_list").append(node[0]);
 				ons.compile(node[0]);
+			},
+			popup : function(coordinate, msg) {
+				m_content.innerHTML = msg;
+				if (m_overlay) {
+					m_overlay.setPosition(coordinate);
+				}
 			},
 		};
 		return plugin;

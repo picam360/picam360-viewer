@@ -288,229 +288,275 @@ var create_plugin = (function() {
 		});
 
 		var map_plugin = m_plugin_host.get_plugin("map");
-		map_plugin.set_post_map_loaded(function(map) {
-			m_map_mode = true;
+		map_plugin
+			.set_post_map_loaded(function(map) {
+				m_map_mode = true;
 
-			// menu
-			app.menu.setMenuPage("wp_menu.html", {
-				callback : function() {
-					app.menu.openMenu();
-				}
-			});
-			// button
-			refresh_button();
-			// layers
-			if (m_status.lon && m_status.lat) {
-				map.getView().setCenter(ol.proj.fromLonLat([m_status.lon,
-					m_status.lat]));
-				map.getView().setZoom(15);
-			}
-			// waypoints
-			var featureWaypoints = new ol.Feature();
-			// history
-			var featureHistory = new ol.Feature();
-			// gps_point
-			var featureGpsPoint = new ol.Feature();
-			// target
-			var featureTarget = new ol.Feature();
-
-			var styleFunction = function(feature) {
-				var geometry = feature.getGeometry();
-				var styles = [
-				// linestring
-				new ol.style.Style({
-					stroke : new ol.style.Stroke({
-						color : '#ffcc33',
-						width : 2
-					})
-				})];
-
-				geometry.forEachSegment(function(start, end) {
-					var dx = end[0] - start[0];
-					var dy = end[1] - start[1];
-					var rotation = Math.atan2(dy, dx);
-					// arrows
-					styles.push(new ol.style.Style({
-						geometry : new ol.geom.Point(end),
-						image : new ol.style.Icon({
-							src : ALLOW_ICON,
-							anchor : [0.75, 0.5],
-							rotateWithView : false,
-							rotation : -rotation
-						})
-					}));
+				// menu
+				app.menu.setMenuPage("wp_menu.html", {
+					callback : function() {
+					}
 				});
-
-				return styles;
-			};
-			map.addLayer(new ol.layer.Vector({
-				source : new ol.source.Vector({
-					features : [featureWaypoints]
-				}),
-				style : styleFunction
-			}));
-			map.addLayer(new ol.layer.Vector({
-				source : new ol.source.Vector({
-					features : [featureHistory, featureGpsPoint, featureTarget]
-				})
-			}));
-
-			setInterval(function() {
+				// button
+				refresh_button();
+				// layers
 				if (m_status.lon && m_status.lat) {
-					var gps_point_obj = new ol.geom.Point(ol.proj.fromLonLat([
-						m_status.lon, m_status.lat]));
-					featureGpsPoint.setGeometry(gps_point_obj);
-					featureGpsPoint.setStyle(new ol.style.Style({
-						image : new ol.style.Icon({
-							opacity : m_status.gps ? 1.0 : 0.5,
-							src : VEHICLE_ICON,
-							anchor : [0.5, 0.5],
-							rotateWithView : false,
-							rotation : m_status.heading ? Math.PI
-								* m_status.heading / 180 : 0
-						})
-					}));
+					map.getView().setCenter(ol.proj.fromLonLat([m_status.lon,
+						m_status.lat]));
+					map.getView().setZoom(15);
 				}
-				if (m_status.lon && m_status.lat
-					&& m_waypoints[m_status.next_waypoint_idx]) {
-					var gps_point = ol.proj.fromLonLat([m_status.lon,
-						m_status.lat]);
-					var target_point = ol.proj.fromLonLat([
-						m_waypoints[m_status.next_waypoint_idx].lon,
-						m_waypoints[m_status.next_waypoint_idx].lat]);
-					featureTarget.setGeometry(new ol.geom.LineString([
-						gps_point, target_point]));
-					featureTarget.setStyle(new ol.style.Style({
-						stroke : new ol.style.Stroke({
-							width : 5,
-							color : '#ffcc33',
-							lineDash : [10, 10]
-						})
-					}));
-				}
-			}, 1000);
+				// waypoints
+				var featureWaypoints = new ol.Feature();
+				// history
+				var featureHistory = new ol.Feature();
+				// gps_point
+				var featureGpsPoint = new ol.Feature();
+				// target
+				var featureTarget = new ol.Feature();
 
-			// event handle
-			var dragInteraction = new ol.interaction.Modify({
-				features : new ol.Collection([featureWaypoints]),
-				style : null,
-				pixelTolerance : 20
-			});
-			dragInteraction.on('modifyend', function() {
-				var ary = featureWaypoints.getGeometry().getCoordinates();
-				var new_waypoints = [];
-				for (var i = 0; i < ary.length - 1; i++) {
-					var lonlat = ol.proj
-						.transform(ary[i], 'EPSG:3857', 'EPSG:4326');
-					new_waypoints.push({
-						lat : toFixedFloat(lonlat[1], 6),
-						lon : toFixedFloat(lonlat[0], 6),
-						tol : 30
+				var styleFunction = function(feature) {
+					var geometry = feature.getGeometry();
+					var styles = [
+					// linestring
+					new ol.style.Style({
+						stroke : new ol.style.Stroke({
+							color : '#ffcc33',
+							width : 2
+						})
+					})];
+
+					geometry.forEachSegment(function(start, end) {
+						var dx = end[0] - start[0];
+						var dy = end[1] - start[1];
+						var rotation = Math.atan2(dy, dx);
+						// arrows
+						styles.push(new ol.style.Style({
+							geometry : new ol.geom.Point(end),
+							image : new ol.style.Icon({
+								src : ALLOW_ICON,
+								anchor : [0.75, 0.5],
+								rotateWithView : false,
+								rotation : -rotation
+							})
+						}));
 					});
-				}
-				m_waypoints = new_waypoints;
-				var cmd = USVC_DOMAIN + "set_waypoints "
-					+ encodeURIComponent(JSON.stringify(new_waypoints));
-				m_plugin_host.send_command(cmd);
-			});
-			map.addInteraction(dragInteraction);
-			map.on('click', function(evt) {
-				var coordinate = evt.coordinate;
-				var stringifyFunc = ol.coordinate.createStringXY(9);
-				var outstr = stringifyFunc(ol.proj
-					.transform(coordinate, "EPSG:3857", "EPSG:4326"));
-				console.log(outstr);
-				if (m_wp_mode == "ADD") {
-					var lonlat = ol.proj
-						.transform(coordinate, "EPSG:3857", "EPSG:4326");
-					m_waypoints.push({
-						lat : toFixedFloat(lonlat[1], 6),
-						lon : toFixedFloat(lonlat[0], 6),
-						tol : 30
-					});
-					var cmd = USVC_DOMAIN + "set_waypoints "
-						+ encodeURIComponent(JSON.stringify(m_waypoints));
-					m_plugin_host.send_command(cmd);
-					refresh_waypoints(m_waypoints);
-				}
-			});
-			var selectInteraction = new ol.interaction.Select({
-				features : new ol.Collection([featureWaypoints]),
-				style : null,
-				hitTolerance : 20
-			});
-			selectInteraction.getFeatures().on('add', function(e) {
-				if (m_wp_mode == "DEL") {
-					var getmetry = featureWaypoints.getGeometry();
-					var pos = e.element.getGeometry().getCoordinates();
-					var ary = featureWaypoints.getGeometry().getCoordinates();
-					var new_waypoints = [];
-					for (var i = 0; i < ary.length - 1; i++) {
-						if (pos[0] == ary[i][0] && pos[1] == ary[i][1]) {
-							continue;
-						}
+
+					return styles;
+				};
+				var layerWaypoints = new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : [featureWaypoints]
+					}),
+					style : styleFunction
+				});
+				map.addLayer(layerWaypoints);
+				var layerHistory = new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : [featureHistory]
+					})
+				});
+				map.addLayer(layerHistory);
+
+				map.addLayer(new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : [featureTarget]
+					})
+				}));
+
+				var layerHistoryPoints = new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : []
+					})
+				});
+				map.addLayer(layerHistoryPoints);
+
+				var layerWaypointsPoints = new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : []
+					})
+				});
+				map.addLayer(layerWaypointsPoints);
+
+				map.addLayer(new ol.layer.Vector({
+					source : new ol.source.Vector({
+						features : [featureGpsPoint]
+					})
+				}));
+
+				setInterval(function() {
+					if (m_status.lon && m_status.lat) {
+						var gps_point_obj = new ol.geom.Point(ol.proj
+							.fromLonLat([m_status.lon, m_status.lat]));
+						featureGpsPoint.setGeometry(gps_point_obj);
+						featureGpsPoint.setStyle(new ol.style.Style({
+							image : new ol.style.Icon({
+								opacity : m_status.gps ? 1.0 : 0.5,
+								src : VEHICLE_ICON,
+								anchor : [0.5, 0.5],
+								rotateWithView : false,
+								rotation : m_status.heading ? Math.PI
+									* m_status.heading / 180 : 0
+							})
+						}));
+					}
+					if (m_status.lon && m_status.lat
+						&& m_waypoints[m_status.next_waypoint_idx]) {
+						var gps_point = ol.proj.fromLonLat([m_status.lon,
+							m_status.lat]);
+						var target_point = ol.proj.fromLonLat([
+							m_waypoints[m_status.next_waypoint_idx].lon,
+							m_waypoints[m_status.next_waypoint_idx].lat]);
+						featureTarget.setGeometry(new ol.geom.LineString([
+							gps_point, target_point]));
+						featureTarget.setStyle(new ol.style.Style({
+							stroke : new ol.style.Stroke({
+								width : 5,
+								color : '#ffcc33',
+								lineDash : [10, 10]
+							})
+						}));
+					}
+				}, 1000);
+
+				// event handle
+				// var dragInteraction = new ol.interaction.Modify({
+				// features : new ol.Collection([featureWaypoints]),
+				// style : null,
+				// pixelTolerance : 20
+				// });
+				// dragInteraction.on('modifyend', function() {
+				// var ary = featureWaypoints.getGeometry().getCoordinates();
+				// var new_waypoints = [];
+				// for (var i = 0; i < ary.length - 1; i++) {
+				// var lonlat = ol.proj
+				// .transform(ary[i], 'EPSG:3857', 'EPSG:4326');
+				// new_waypoints.push({
+				// lat : toFixedFloat(lonlat[1], 6),
+				// lon : toFixedFloat(lonlat[0], 6),
+				// tol : 30
+				// });
+				// }
+				// m_waypoints = new_waypoints;
+				// var cmd = USVC_DOMAIN + "set_waypoints "
+				// + encodeURIComponent(JSON.stringify(new_waypoints));
+				// m_plugin_host.send_command(cmd);
+				// });
+				// map.addInteraction(dragInteraction);
+				map.on('click', function(evt) {
+					var coordinate = evt.coordinate;
+					var stringifyFunc = ol.coordinate.createStringXY(9);
+					var outstr = stringifyFunc(ol.proj
+						.transform(coordinate, "EPSG:3857", "EPSG:4326"));
+					console.log(outstr);
+					if (m_wp_mode == "ADD") {
 						var lonlat = ol.proj
-							.transform(ary[i], 'EPSG:3857', 'EPSG:4326');
-						new_waypoints.push({
+							.transform(coordinate, "EPSG:3857", "EPSG:4326");
+						m_waypoints.push({
 							lat : toFixedFloat(lonlat[1], 6),
 							lon : toFixedFloat(lonlat[0], 6),
 							tol : 30
 						});
+						var cmd = USVC_DOMAIN + "set_waypoints "
+							+ encodeURIComponent(JSON.stringify(m_waypoints));
+						m_plugin_host.send_command(cmd);
+						refresh_waypoints(m_waypoints);
 					}
-					m_waypoints = new_waypoints;
-					var cmd = USVC_DOMAIN + "set_waypoints "
-						+ encodeURIComponent(JSON.stringify(m_waypoints));
-					m_plugin_host.send_command(cmd);
-					refresh_waypoints(m_waypoints);
-				}
-				e.target.remove(e.element);
-			});
-			map.addInteraction(selectInteraction);
-
-			function refresh_waypoints(waypoints) {
-				var points = [];
-				for (var i = 0; i < waypoints.length; i++) {
-					points.push(ol.proj.fromLonLat([waypoints[i].lon,
-						waypoints[i].lat]));
-				}
-				if (waypoints.length >= 2) {
-					points.push(ol.proj.fromLonLat([waypoints[0].lon,
-						waypoints[0].lat]));
-				}
-				featureWaypoints.setGeometry(new ol.geom.LineString(points));
-			}
-
-			// request additional infomation
-			var request_waypoints = function() {
-				get_waypoints(function(waypoints) {
-					refresh_waypoints(waypoints);
 				});
-
-				setTimeout(request_waypoints, 60 * 1000);
-			}
-			request_waypoints();
-
-			var request_history = function() {
-				get_history(function(history) {
-					var points = [];
-					var keys = Object.keys(history);
-					for (var i = 0; i < keys.length; i++) {
-						if (history[keys[i]].lon && history[keys[i]].lat) {
-							points.push(ol.proj.fromLonLat([
-								history[keys[i]].lon, history[keys[i]].lat]));
+				var selectInteraction = new ol.interaction.Select({
+					hitTolerance : 20
+				});
+				selectInteraction.getFeatures().on('add', function(e) {
+					var layer = selectInteraction.getLayer(e.element);
+					if (layer == layerWaypointsPoints) {
+						if (m_wp_mode == "DEL") {
+							var idx = e.element.get('idx');
+							m_waypoints.splice(idx, 1);
+							var cmd = USVC_DOMAIN
+								+ "set_waypoints "
+								+ encodeURIComponent(JSON
+									.stringify(m_waypoints));
+							m_plugin_host.send_command(cmd);
+							refresh_waypoints(m_waypoints);
 						}
+					} else if (layer == layerHistoryPoints) {
+						var pos = e.element.getGeometry().getCoordinates();
+						var idx = e.element.get('idx');
+						var timestamp = Object.keys(m_history)[idx];
+						var node = m_history[timestamp];
+						var timestr = new Date(parseInt(timestamp) * 1000)
+							.toLocaleString();
+						var msg = timestr + " " + node.bat + "V " + node.lat
+							+ " " + node.lon;
+						map_plugin.popup(pos, msg);
 					}
-					if (m_status.lon && m_status.lat) {
-						points.push(ol.proj.fromLonLat([m_status.lon,
-							m_status.lat]));
-					}
-					featureHistory.setGeometry(new ol.geom.LineString(points));
+					e.target.remove(e.element);
 				});
+				map.addInteraction(selectInteraction);
 
-				setTimeout(request_history, 60 * 1000);
-			}
-			request_history();
-		});// set_post_map_loaded
+				function refresh_waypoints(waypoints) {
+					var features = [];
+					var points = [];
+					for (var i = 0; i < waypoints.length; i++) {
+						points.push(ol.proj.fromLonLat([waypoints[i].lon,
+							waypoints[i].lat]));
+						var feature = new ol.Feature(new ol.geom.Point(ol.proj
+							.fromLonLat([waypoints[i].lon, waypoints[i].lat])));
+						feature.set('idx', i);
+						features.push(feature);
+					}
+					if (waypoints.length >= 2) {
+						points.push(ol.proj.fromLonLat([waypoints[0].lon,
+							waypoints[0].lat]));
+					}
+					featureWaypoints
+						.setGeometry(new ol.geom.LineString(points));
+					layerWaypointsPoints.setSource(new ol.source.Vector({
+						features : features
+					}));
+				}
+
+				// request additional infomation
+				var request_waypoints = function() {
+					get_waypoints(function(waypoints) {
+						refresh_waypoints(waypoints);
+					});
+
+					setTimeout(request_waypoints, 60 * 1000);
+				}
+				request_waypoints();
+
+				var request_history = function() {
+					get_history(function(history) {
+						var features = [];
+						var points = [];
+						var keys = Object.keys(history);
+						for (var i = 0; i < keys.length; i++) {
+							if (history[keys[i]].lon && history[keys[i]].lat) {
+								points.push(ol.proj
+									.fromLonLat([history[keys[i]].lon,
+										history[keys[i]].lat]));
+								var feature = new ol.Feature(new ol.geom.Point(ol.proj
+									.fromLonLat([history[keys[i]].lon,
+										history[keys[i]].lat])));
+								feature.set('idx', i);
+								features.push(feature);
+							}
+						}
+						if (m_status.lon && m_status.lat) {
+							points.push(ol.proj.fromLonLat([m_status.lon,
+								m_status.lat]));
+						}
+						featureHistory
+							.setGeometry(new ol.geom.LineString(points));
+						layerHistoryPoints.setSource(new ol.source.Vector({
+							features : features
+						}));
+					});
+
+					setTimeout(request_history, 60 * 1000);
+				}
+				request_history();
+			});// set_post_map_loaded
 		map_plugin.set_post_map_unloaded(function() {
 			m_map_mode = false;
 			// menu
@@ -697,17 +743,21 @@ var create_plugin = (function() {
 						break;
 				}
 			},
+			wp_sel_mode : function() {
+				console.log("wp_sel_mode");
+				m_wp_mode = "SEL";
+			},
+			wp_mov_mode : function() {
+				console.log("wp_mov_mode");
+				m_wp_mode = "MOV";
+			},
 			wp_add_mode : function() {
 				console.log("wp_add_mode");
-				m_wp_mode = "ADD"
+				m_wp_mode = "ADD";
 			},
 			wp_del_mode : function() {
 				console.log("wp_del_mode");
-				m_wp_mode = "DEL"
-			},
-			wp_sel_mode : function() {
-				console.log("wp_sel_mode");
-				m_wp_mode = "SEL"
+				m_wp_mode = "DEL";
 			},
 		};
 		return plugin;
