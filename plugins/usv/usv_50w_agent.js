@@ -485,8 +485,8 @@ var create_plugin = (function() {
 						var node = m_history[timestamp];
 						var timestr = new Date(parseInt(timestamp) * 1000)
 							.toLocaleString();
-						var msg = timestr + " " + node.bat + "V " + node.lat
-							+ " " + node.lon;
+						var msg = timestr + "<br/>" + node.lat + "," + node.lon
+							+ "<br/>" + node.bat + "V";
 						map_plugin.popup(pos, msg);
 					}
 					e.target.remove(e.element);

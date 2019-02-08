@@ -62,6 +62,30 @@ var create_plugin = (function() {
 				zoom : 8
 			})
 		});
+		var dragPan;
+		var mousedownFunc = function(ev) {
+			if (ev.type == "touchstart") {
+				ev.clientX = ev.pageX;
+				ev.clientY = ev.pageY;
+			}
+			sx = ev.clientX;
+			sy = ev.clientY;
+			if (sx < 100) {
+				map.getInteractions().forEach(function(interaction) {
+					if (interaction instanceof ol.interaction.DragPan) {
+						dragPan = interaction;
+					}
+				}, this);
+				if (dragPan) {
+					map.removeInteraction(dragPan);
+				}
+			} else if (dragPan) {
+				map.addInteraction(dragPan);
+				dragPan = null;
+			}
+		};
+		document.addEventListener("touchstart", mousedownFunc);
+		document.addEventListener("mousedown", mousedownFunc);
 
 		if (m_post_map_loaded) {
 			m_post_map_loaded(map);
