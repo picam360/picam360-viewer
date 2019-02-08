@@ -78,8 +78,8 @@ var create_plugin = (function() {
 		var sx = 0, sy = 0;
 		var rudder_pwm = 1500;
 		var rudder_pwm_candidate = null;
-		var skrew_pwm = 1500;
-		var skrew_pwm_candidate = null;
+		var thruster_pwm = 1500;
+		var thruster_pwm_candidate = null;
 		var mousedownFunc = function(ev) {
 			plugin.event_handler_act("MOVE");
 
@@ -90,7 +90,7 @@ var create_plugin = (function() {
 			sx = ev.clientX;
 			sy = ev.clientY;
 			rudder_pwm = 1500;
-			skrew_pwm = 1500;
+			thruster_pwm = 1500;
 
 			button.down = true;
 			button.src = FORWARD_PUSHED_ICON;
@@ -102,7 +102,7 @@ var create_plugin = (function() {
 			button.src = FORWARD_ICON;
 
 			rudder_pwm_candidate = 1500;
-			skrew_pwm_candidate = 1500;
+			thruster_pwm_candidate = 1500;
 		}
 		button.mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {
@@ -131,8 +131,8 @@ var create_plugin = (function() {
 			if (pitch_diff == 0) {
 				// do nothing
 			} else {
-				skrew_pwm += pitch_diff * 10;
-				skrew_pwm_candidate = skrew_pwm;
+				thruster_pwm += pitch_diff * 10;
+				thruster_pwm_candidate = thruster_pwm;
 			}
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -154,11 +154,11 @@ var create_plugin = (function() {
 				rudder_pwm = rudder_pwm_candidate;
 				rudder_pwm_candidate = null;
 			}
-			if (skrew_pwm_candidate) {
+			if (thruster_pwm_candidate) {
 				plugin
-					.event_handler_act("SET_SKREW_PWM " + skrew_pwm_candidate);
-				skrew_pwm = skrew_pwm_candidate;
-				skrew_pwm_candidate = null;
+					.event_handler_act("SET_THRUSTER_PWM " + thruster_pwm_candidate);
+				thruster_pwm = thruster_pwm_candidate;
+				thruster_pwm_candidate = null;
 			}
 		}, 200);
 
@@ -732,8 +732,8 @@ var create_plugin = (function() {
 						var cmd = USVC_DOMAIN + "set_rudder_pwm " + params[1];
 						m_plugin_host.send_command(cmd);
 						break;
-					case "SET_SKREW_PWM" :
-						var cmd = USVC_DOMAIN + "set_skrew_pwm " + params[1];
+					case "SET_THRUSTER_PWM" :
+						var cmd = USVC_DOMAIN + "set_thruster_pwm " + params[1];
 						m_plugin_host.send_command(cmd);
 						break;
 					case "CHANGE_AUTONOMOUS" :
