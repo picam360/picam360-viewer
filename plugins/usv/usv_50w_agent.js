@@ -315,40 +315,39 @@ var create_plugin = (function() {
 				// target
 				var featureTarget = new ol.Feature();
 
-				var styleFunction = function(feature) {
-					var geometry = feature.getGeometry();
-					var styles = [
-					// linestring
-					new ol.style.Style({
-						stroke : new ol.style.Stroke({
-							color : '#ffcc33',
-							width : 2
-						})
-					})];
-
-					geometry.forEachSegment(function(start, end) {
-						var dx = end[0] - start[0];
-						var dy = end[1] - start[1];
-						var rotation = Math.atan2(dy, dx);
-						// arrows
-						styles.push(new ol.style.Style({
-							geometry : new ol.geom.Point(end),
-							image : new ol.style.Icon({
-								src : ALLOW_ICON,
-								anchor : [0.75, 0.5],
-								rotateWithView : false,
-								rotation : -rotation
-							})
-						}));
-					});
-
-					return styles;
-				};
 				var layerWaypoints = new ol.layer.Vector({
 					source : new ol.source.Vector({
 						features : [featureWaypoints]
 					}),
-					style : styleFunction
+					style : function(feature) {
+						var geometry = feature.getGeometry();
+						var styles = [
+						// linestring
+						new ol.style.Style({
+							stroke : new ol.style.Stroke({
+								color : '#ffcc33',
+								width : 2
+							})
+						})];
+
+						geometry.forEachSegment(function(start, end) {
+							var dx = end[0] - start[0];
+							var dy = end[1] - start[1];
+							var rotation = Math.atan2(dy, dx);
+							// arrows
+							styles.push(new ol.style.Style({
+								geometry : new ol.geom.Point(end),
+								image : new ol.style.Icon({
+									src : ALLOW_ICON,
+									anchor : [0.75, 0.5],
+									rotateWithView : false,
+									rotation : -rotation
+								})
+							}));
+						});
+
+						return styles;
+					}
 				});
 				map.addLayer(layerWaypoints);
 				var layerHistory = new ol.layer.Vector({
@@ -383,6 +382,45 @@ var create_plugin = (function() {
 						features : [featureGpsPoint]
 					})
 				}));
+
+				map
+					.getView()
+					.on('change:resolution', function(evt) {
+						// according to
+						// http://openlayers.org/en/v3.6.0/apidoc/ol.View.html
+						// I think this is not true for any scenario
+						// 40075016.68557849 / 256 / Math.pow(2, 28) =
+						// 0.0005831682455839253
+
+						var resolution = evt.target.get(evt.key), resolution_constant = 40075016.68557849, tile_pixel = 256;
+
+						var result_resol_const_tile_px = resolution_constant
+							/ tile_pixel / resolution;
+
+						var currentZoom = Math.log(result_resol_const_tile_px)
+							/ Math.log(2);
+						console.info(currentZoom, resolution);
+
+						// now find your features and apply radius
+
+						layerWaypointsPoints.getSource()
+							.forEachFeature(function(feature) {
+								var idx = feature.get('idx');
+								var tol = m_waypoints[idx].tol || 30;
+								var tol_pix = map.getPixelFromCoordinate([tol,
+									0])[0]
+									- map.getPixelFromCoordinate([0, 0])[0];
+								feature.setStyle(new ol.style.Style({
+									image : new ol.style.Circle({
+										radius : tol_pix,
+										stroke : new ol.style.Stroke({
+											color : [0, 255, 0],
+											width : 2
+										})
+									})
+								}));
+							});
+					});
 
 				setInterval(function() {
 					if (m_status.lon && m_status.lat) {
