@@ -11,6 +11,7 @@ var create_plugin = (function() {
 	var m_get_waypoints_callback = null;
 	var m_get_history_callback = null;
 	var m_wp_mode = "SEL";
+	var set_wp_mode = null;
 
 	var PLUGIN_NAME = "usv_agent";
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
@@ -155,8 +156,8 @@ var create_plugin = (function() {
 				rudder_pwm_candidate = null;
 			}
 			if (thruster_pwm_candidate) {
-				plugin
-					.event_handler_act("SET_THRUSTER_PWM " + thruster_pwm_candidate);
+				plugin.event_handler_act("SET_THRUSTER_PWM "
+					+ thruster_pwm_candidate);
 				thruster_pwm = thruster_pwm_candidate;
 				thruster_pwm_candidate = null;
 			}
@@ -419,36 +420,80 @@ var create_plugin = (function() {
 				}, 1000);
 
 				// event handle
-				// var dragInteraction = new ol.interaction.Modify({
-				// features : new ol.Collection([featureWaypoints]),
-				// style : null,
-				// pixelTolerance : 20
-				// });
-				// dragInteraction.on('modifyend', function() {
-				// var ary = featureWaypoints.getGeometry().getCoordinates();
-				// var new_waypoints = [];
-				// for (var i = 0; i < ary.length - 1; i++) {
-				// var lonlat = ol.proj
-				// .transform(ary[i], 'EPSG:3857', 'EPSG:4326');
-				// new_waypoints.push({
-				// lat : toFixedFloat(lonlat[1], 6),
-				// lon : toFixedFloat(lonlat[0], 6),
-				// tol : 30
-				// });
-				// }
-				// m_waypoints = new_waypoints;
-				// var cmd = USVC_DOMAIN + "set_waypoints "
-				// + encodeURIComponent(JSON.stringify(new_waypoints));
-				// m_plugin_host.send_command(cmd);
-				// });
-				// map.addInteraction(dragInteraction);
+				var dragInteraction = new ol.interaction.Modify({
+					features : new ol.Collection([featureWaypoints]),
+					style : null,
+					pixelTolerance : 20
+				});
+				dragInteraction.on('modifyend', function() {
+					var ary = featureWaypoints.getGeometry().getCoordinates();
+					for (var i = 0; i < ary.length - 1; i++) {
+						var lonlat = ol.proj
+							.transform(ary[i], 'EPSG:3857', 'EPSG:4326');
+						var pos = {
+							lat : toFixedFloat(lonlat[1], 6),
+							lon : toFixedFloat(lonlat[0], 6)
+						}
+						if (m_waypoints[i].lon == pos.lon
+							&& m_waypoints[i].lat == pos.lat) {
+						} else {
+							if (m_waypoints.length == ary.length - 1) {// modified
+								m_waypoints[i].lon = pos.lon;
+								m_waypoints[i].lat = pos.lat;
+							} else {// split
+								m_waypoints.splice(i, 0, {
+									lat : pos.lat,
+									lon : pos.lon,
+									tol : 30
+								});
+							}
+							break;
+						}
+					}
+					var cmd = USVC_DOMAIN + "set_waypoints "
+						+ encodeURIComponent(JSON.stringify(m_waypoints));
+					m_plugin_host.send_command(cmd);
+					refresh_waypoints(m_waypoints);
+				});
 				map.on('click', function(evt) {
 					var coordinate = evt.coordinate;
 					var stringifyFunc = ol.coordinate.createStringXY(9);
 					var outstr = stringifyFunc(ol.proj
 						.transform(coordinate, "EPSG:3857", "EPSG:4326"));
 					console.log(outstr);
-					if (m_wp_mode == "ADD") {
+					var waypoint_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerWaypointsPoints;
+						}
+					});
+					var history_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerHistoryPoints;
+						}
+					});
+					if (waypoint_features) {
+						if (m_wp_mode == "DEL") {
+							var idx = waypoint_features[0].get('idx');
+							m_waypoints.splice(idx, 1);
+							var cmd = USVC_DOMAIN
+								+ "set_waypoints "
+								+ encodeURIComponent(JSON
+									.stringify(m_waypoints));
+							m_plugin_host.send_command(cmd);
+							refresh_waypoints(m_waypoints);
+						}
+					} else if (history_features) {
+						var pos = history_features[0].getGeometry()
+							.getCoordinates();
+						var idx = history_features[0].get('idx');
+						var timestamp = Object.keys(m_history)[idx];
+						var node = m_history[timestamp];
+						var timestr = new Date(parseInt(timestamp) * 1000)
+							.toLocaleString();
+						var msg = timestr + "<br/>" + node.lat + "," + node.lon
+							+ "<br/>" + node.bat + "V";
+						map_plugin.popup(pos, msg);
+					} else if (m_wp_mode == "ADD") {
 						var lonlat = ol.proj
 							.transform(coordinate, "EPSG:3857", "EPSG:4326");
 						m_waypoints.push({
@@ -462,36 +507,22 @@ var create_plugin = (function() {
 						refresh_waypoints(m_waypoints);
 					}
 				});
-				var selectInteraction = new ol.interaction.Select({
-					hitTolerance : 20
-				});
-				selectInteraction.getFeatures().on('add', function(e) {
-					var layer = selectInteraction.getLayer(e.element);
-					if (layer == layerWaypointsPoints) {
-						if (m_wp_mode == "DEL") {
-							var idx = e.element.get('idx');
-							m_waypoints.splice(idx, 1);
-							var cmd = USVC_DOMAIN
-								+ "set_waypoints "
-								+ encodeURIComponent(JSON
-									.stringify(m_waypoints));
-							m_plugin_host.send_command(cmd);
-							refresh_waypoints(m_waypoints);
-						}
-					} else if (layer == layerHistoryPoints) {
-						var pos = e.element.getGeometry().getCoordinates();
-						var idx = e.element.get('idx');
-						var timestamp = Object.keys(m_history)[idx];
-						var node = m_history[timestamp];
-						var timestr = new Date(parseInt(timestamp) * 1000)
-							.toLocaleString();
-						var msg = timestr + "<br/>" + node.lat + "," + node.lon
-							+ "<br/>" + node.bat + "V";
-						map_plugin.popup(pos, msg);
+
+				set_wp_mode = function(mode) {
+					m_wp_mode = mode;
+					console.log("set_wp_mode:" + m_wp_mode);
+					switch (m_wp_mode) {
+						case "ADD" :
+							map.addInteraction(dragInteraction);
+							break;
+						case "DEL" :
+							map.removeInteraction(dragInteraction);
+							break;
+						case "SEL" :
+							map.removeInteraction(dragInteraction);
+							break;
 					}
-					e.target.remove(e.element);
-				});
-				map.addInteraction(selectInteraction);
+				};
 
 				function refresh_waypoints(waypoints) {
 					var features = [];
@@ -744,20 +775,13 @@ var create_plugin = (function() {
 				}
 			},
 			wp_sel_mode : function() {
-				console.log("wp_sel_mode");
-				m_wp_mode = "SEL";
-			},
-			wp_mov_mode : function() {
-				console.log("wp_mov_mode");
-				m_wp_mode = "MOV";
+				set_wp_mode("SEL");
 			},
 			wp_add_mode : function() {
-				console.log("wp_add_mode");
-				m_wp_mode = "ADD";
+				set_wp_mode("ADD");
 			},
 			wp_del_mode : function() {
-				console.log("wp_del_mode");
-				m_wp_mode = "DEL";
+				set_wp_mode("DEL");
 			},
 		};
 		return plugin;
