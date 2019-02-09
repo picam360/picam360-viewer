@@ -62,30 +62,21 @@ var create_plugin = (function() {
 				zoom : 8
 			})
 		});
-		var dragPan;
+		var menu_swiping = false;
 		var mousedownFunc = function(ev) {
 			if (ev.type == "touchstart") {
 				ev.clientX = ev.pageX;
 				ev.clientY = ev.pageY;
 			}
-			sx = ev.clientX;
-			sy = ev.clientY;
-			if (sx < 100) {
-				map.getInteractions().forEach(function(interaction) {
-					if (interaction instanceof ol.interaction.DragPan) {
-						dragPan = interaction;
-					}
-				}, this);
-				if (dragPan) {
-					map.removeInteraction(dragPan);
-				}
-			} else if (dragPan) {
-				map.addInteraction(dragPan);
-				dragPan = null;
-			}
+			menu_swiping = (ev.clientX < 100);
 		};
 		document.addEventListener("touchstart", mousedownFunc);
 		document.addEventListener("mousedown", mousedownFunc);
+		map.addEventListener("pointerdrag", function(ev) {
+			if (menu_swiping) {
+				ev.preventDefault();
+			}
+		});
 
 		if (m_post_map_loaded) {
 			m_post_map_loaded(map);
@@ -97,49 +88,53 @@ var create_plugin = (function() {
 		}
 	}
 	function init(plugin) {
-		m_plugin_host.getFile("plugins/map/map.html", function(chunk_array) {
-			var txt = decodeUtf8(chunk_array[0]);
-			var node = $.parseHTML(txt);
-			$('body').append(node);
-			var map_page = document.getElementById("map_page");
-			ons.compile(node[0]);
 
-			app.navi.on('postpush', function(event) {
-				if (event.enterPage.name == "map.html") {
-					map_load();
-				}
+		var script = document.createElement('script');
+		script.src = "https://openlayers.org/en/v5.1.3/build/ol.js";
+		script.onload = function() {
+			m_plugin_host
+				.getFile("plugins/map/map.html", function(chunk_array) {
+					var txt = decodeUtf8(chunk_array[0]);
+					var node = $.parseHTML(txt);
+					$('body').append(node);
+					var map_page = document.getElementById("map_page");
+					ons.compile(node[0]);
+
+					app.navi.on('postpush', function(event) {
+						if (event.enterPage.name == "map.html") {
+							map_load();
+						}
+					});
+
+					app.navi.on('postpop', function(event) {
+						if (event.leavePage.name == "map.html") {
+							map_unload();
+						}
+					});
+				});
+			m_plugin_host.getFile("plugins/map/map_list_item.html", function(
+				chunk_array) {
+				m_menu_txt = decodeUtf8(chunk_array[0]);
+				m_plugin_host.restore_app_menu();
 			});
-
-			app.navi.on('postpop', function(event) {
-				if (event.leavePage.name == "map.html") {
-					map_unload();
-				}
+			m_plugin_host.getFile("plugins/map/popup.html", function(
+				chunk_array) {
+				var txt = decodeUtf8(chunk_array[0]);
+				var node = $.parseHTML(txt);
+				$('body').append(node);
+				m_container = document.getElementById('popup');
+				m_content = document.getElementById('popup-content');
+				m_closer = document.getElementById('popup-closer');
+				m_closer.onclick = function() {
+					if (m_overlay) {
+						m_overlay.setPosition(undefined);
+					}
+					m_closer.blur();
+					return false;
+				};
 			});
-
-			var script = document.createElement('script');
-			script.src = "https://openlayers.org/en/v5.1.3/build/ol.js";
-			document.head.appendChild(script);
-		});
-		m_plugin_host.getFile("plugins/map/map_list_item.html", function(
-			chunk_array) {
-			m_menu_txt = decodeUtf8(chunk_array[0]);
-			m_plugin_host.restore_app_menu();
-		});
-		m_plugin_host.getFile("plugins/map/popup.html", function(chunk_array) {
-			var txt = decodeUtf8(chunk_array[0]);
-			var node = $.parseHTML(txt);
-			$('body').append(node);
-			m_container = document.getElementById('popup');
-			m_content = document.getElementById('popup-content');
-			m_closer = document.getElementById('popup-closer');
-			m_closer.onclick = function() {
-				if (m_overlay) {
-					m_overlay.setPosition(undefined);
-				}
-				m_closer.blur();
-				return false;
-			};
-		});
+		};
+		document.head.appendChild(script);
 	}
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
