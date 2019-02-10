@@ -471,6 +471,135 @@ var create_plugin = (function() {
 					m_plugin_host.send_command(cmd);
 					refresh_waypoints(m_waypoints);
 				});
+				function edit_waypoint(wp, callback) {
+					app.navi
+						.pushPage('edit_waypoint.html', {
+							onTransitionEnd : function() {
+								var act_types = ["none", "wait", "sampling",
+									"snap"];
+								function get_parts(type, name) {
+									return $('#edit_waypoint_form ' + type
+										+ '[name="' + name + '"]');
+								}
+								get_parts("input", "lat").val(wp.lat);
+								get_parts("input", "lon").val(wp.lon);
+								get_parts("input", "tol").val(wp.tol);
+								for (var i = 0; i < act_types.length; i++) {
+									get_parts("select", "fnc")
+										.append($('<option>').val(act_types[i])
+											.text(act_types[i]));
+								}
+								function on_fnc_select_change() {
+									var prm = (wp.act && wp.act.prm) || {};
+									var fnc = get_parts("select", "fnc").val();
+									var fnc_form = $('#edit_waypoint_fnc_prm_form');
+									switch (fnc) {
+										case "wait" :
+											fnc_form.empty();
+											fnc_form
+												.append('value:<input type="text" name="val" value="'
+													+ (prm.val || 0) + '"/>');
+											break;
+										case "sampling" :
+											fnc_form.empty();
+											fnc_form
+												.append('channel:<input type="number" name="ch" value="'
+													+ (prm.ch || 0)
+													+ '" /><br />');
+											fnc_form
+												.append('count:<input type="number" name="cnt" value="'
+													+ (prm.cnt || 10)
+													+ '" /><br />');
+											fnc_form
+												.append('topic:<input type="text" name="tpc" value="'
+													+ (prm.tpc || "")
+													+ '" /><br />');
+											break;
+										case "snap" :
+											fnc_form.empty();
+											fnc_form
+												.append('topic:<input type="text" name="tpc" value="'
+													+ (prm.tpc || "")
+													+ '" /><br />');
+											break;
+										case "none" :
+										default :
+											fnc_form.empty();
+											break;
+									}
+								}
+								get_parts("select", "fnc")
+									.change(on_fnc_select_change);
+								get_parts("select", "fnc")
+									.val((wp.act && wp.act.fnc) || "none");
+								on_fnc_select_change();
+								get_parts("input", "aply")
+									.on('click', function() {
+										wp.lat = parseFloat(get_parts("input", "lat")
+											.val());
+										wp.lon = parseFloat(get_parts("input", "lon")
+											.val());
+										wp.tol = parseFloat(get_parts("input", "tol")
+											.val());
+										var fnc = get_parts("select", "fnc")
+											.val();
+										if (fnc == "none") {
+											delete wp.act;
+										} else {
+											wp.act = {
+												fnc : fnc
+											};
+										}
+										function get_fnc_prm_parts(type, name) {
+											return $('#edit_waypoint_fnc_prm_form '
+												+ type
+												+ '[name="'
+												+ name
+												+ '"]');
+										}
+										switch (fnc) {
+											case "wait" :
+												var prm = {};
+												prm.val = get_fnc_prm_parts("input", "val")
+													.val();
+												wp.act = {
+													fnc : fnc,
+													prm : prm,
+												};
+												break;
+											case "sampling" :
+												var prm = {};
+												prm.ch = parseFloat(get_fnc_prm_parts("input", "ch")
+													.val());
+												prm.cnt = parseFloat(get_fnc_prm_parts("input", "cnt")
+													.val());
+												prm.tpc = get_fnc_prm_parts("input", "tpc")
+													.val();
+												wp.act = {
+													fnc : fnc,
+													prm : prm,
+												};
+												break;
+											case "snap" :
+												var prm = {};
+												prm.tpc = get_fnc_prm_parts("input", "tpc")
+													.val();
+												wp.act = {
+													fnc : fnc,
+													prm : prm,
+												};
+												break;
+											case "none" :
+											default :
+												delete wp.act;
+												break;
+										}
+										callback();
+										app.navi.popPage();
+									});
+							}
+						});
+				}
 				map.on('click', function(evt) {
 					var coordinate = evt.coordinate;
 					var stringifyFunc = ol.coordinate.createStringXY(9);
@@ -497,6 +626,16 @@ var create_plugin = (function() {
 									.stringify(m_waypoints));
 							m_plugin_host.send_command(cmd);
 							refresh_waypoints(m_waypoints);
+						} else if (m_wp_mode == "SEL") {
+							var idx = waypoint_features[0].get('idx');
+							edit_waypoint(m_waypoints[idx], function() {
+								var cmd = USVC_DOMAIN
+									+ "set_waypoints "
+									+ encodeURIComponent(JSON
+										.stringify(m_waypoints));
+								m_plugin_host.send_command(cmd);
+								refresh_waypoints(m_waypoints);
+							});
 						}
 					} else if (history_features) {
 						var pos = history_features[0].getGeometry()
@@ -619,6 +758,13 @@ var create_plugin = (function() {
 				$('body').append(node);
 				ons.compile(node[0]);
 			});
+		m_plugin_host.getFile("plugins/usv/edit_waypoint.html", function(
+			chunk_array) {
+			var txt = decodeUtf8(chunk_array[0]);
+			var node = $.parseHTML(txt);
+			$('body').append(node);
+			ons.compile(node[0]);
+		});
 	}// init
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
