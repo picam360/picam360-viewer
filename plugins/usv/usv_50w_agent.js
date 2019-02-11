@@ -471,8 +471,8 @@ var create_plugin = (function() {
 					m_plugin_host.send_command(cmd);
 					refresh_waypoints(m_waypoints);
 				});
-				function edit_waypoint(_wp, callback) {
-					var wp = Object.assign({}, _wp);
+				function edit_waypoint(wp, ext, callback) {
+					var _wp = Object.assign({}, wp);
 					app.navi
 						.pushPage('edit_waypoint.html', {
 							onTransitionEnd : function() {
@@ -482,9 +482,15 @@ var create_plugin = (function() {
 									return $('#edit_waypoint_form ' + type
 										+ '[name="' + name + '"]');
 								}
-								get_parts("input", "lat").val(wp.lat);
-								get_parts("input", "lon").val(wp.lon);
-								get_parts("input", "tol").val(wp.tol);
+								if (ext.next_waypoint) {
+									get_parts("input", "next_waypoint")
+										.prop("checked", true);
+									get_parts("input", "next_waypoint")
+										.prop('disabled', true);
+								}
+								get_parts("input", "lat").val(_wp.lat);
+								get_parts("input", "lon").val(_wp.lon);
+								get_parts("input", "tol").val(_wp.tol);
 								for (var i = 0; i < act_types.length; i++) {
 									get_parts("select", "fnc")
 										.append($('<option>').val(act_types[i])
@@ -500,7 +506,7 @@ var create_plugin = (function() {
 									}
 								}
 								function on_fnc_select_change() {
-									var prm = (wp.act && wp.act.prm) || {};
+									var prm = (_wp.act && _wp.act.prm) || {};
 									var fnc = get_parts("select", "fnc").val()
 										.split(":");
 									var fnc_form = $('#edit_waypoint_fnc_prm_form');
@@ -534,9 +540,9 @@ var create_plugin = (function() {
 													+ '" /><br />');
 											break;
 										case "preset" :
-											wp.act = options.act_presets[fnc[1]];
+											_wp.act = options.act_presets[fnc[1]];
 											get_parts("select", "fnc")
-												.val((wp.act && wp.act.fnc)
+												.val((_wp.act && _wp.act.fnc)
 													|| "none");
 											on_fnc_select_change();
 											break;
@@ -549,22 +555,26 @@ var create_plugin = (function() {
 								get_parts("select", "fnc")
 									.change(on_fnc_select_change);
 								get_parts("select", "fnc")
-									.val((wp.act && wp.act.fnc) || "none");
+									.val((_wp.act && _wp.act.fnc) || "none");
 								on_fnc_select_change();
 								get_parts("input", "aply")
 									.on('click', function() {
-										wp.lat = parseFloat(get_parts("input", "lat")
+										var _ext = {
+											next_waypoint : get_parts("input", "next_waypoint")
+												.prop("checked")
+										};
+										_wp.lat = parseFloat(get_parts("input", "lat")
 											.val());
-										wp.lon = parseFloat(get_parts("input", "lon")
+										_wp.lon = parseFloat(get_parts("input", "lon")
 											.val());
-										wp.tol = parseFloat(get_parts("input", "tol")
+										_wp.tol = parseFloat(get_parts("input", "tol")
 											.val());
 										var fnc = get_parts("select", "fnc")
 											.val();
 										if (fnc == "none") {
-											delete wp.act;
+											delete _wp.act;
 										} else {
-											wp.act = {
+											_wp.act = {
 												fnc : fnc
 											};
 										}
@@ -580,7 +590,7 @@ var create_plugin = (function() {
 												var prm = {};
 												prm.val = get_fnc_prm_parts("input", "val")
 													.val();
-												wp.act = {
+												_wp.act = {
 													fnc : fnc,
 													prm : prm,
 												};
@@ -593,7 +603,7 @@ var create_plugin = (function() {
 													.val());
 												prm.tpc = get_fnc_prm_parts("input", "tpc")
 													.val();
-												wp.act = {
+												_wp.act = {
 													fnc : fnc,
 													prm : prm,
 												};
@@ -602,85 +612,100 @@ var create_plugin = (function() {
 												var prm = {};
 												prm.tpc = get_fnc_prm_parts("input", "tpc")
 													.val();
-												wp.act = {
+												_wp.act = {
 													fnc : fnc,
 													prm : prm,
 												};
 												break;
 											case "none" :
 											default :
-												delete wp.act;
+												delete _wp.act;
 												break;
 										}
-										callback(wp);
+										callback(_wp, _ext);
 										app.navi.popPage();
 									});
 							}
 						});
 				}
-				map.on('click', function(evt) {
-					var coordinate = evt.coordinate;
-					var stringifyFunc = ol.coordinate.createStringXY(9);
-					var outstr = stringifyFunc(ol.proj
-						.transform(coordinate, "EPSG:3857", "EPSG:4326"));
-					console.log(outstr);
-					var waypoint_features = map.getFeaturesAtPixel(evt.pixel, {
-						layerFilter : function(layer) {
-							return layer == layerWaypointsPoints;
-						}
-					});
-					var history_features = map.getFeaturesAtPixel(evt.pixel, {
-						layerFilter : function(layer) {
-							return layer == layerHistoryPoints;
-						}
-					});
-					if (waypoint_features) {
-						if (m_wp_mode == "DEL") {
-							var idx = waypoint_features[0].get('idx');
-							m_waypoints.splice(idx, 1);
-							var cmd = USVC_DOMAIN
-								+ "set_waypoints "
-								+ encodeURIComponent(JSON
-									.stringify(m_waypoints));
-							m_plugin_host.send_command(cmd);
-							refresh_waypoints(m_waypoints);
-						} else if (m_wp_mode == "SEL") {
-							var idx = waypoint_features[0].get('idx');
-							edit_waypoint(m_waypoints[idx], function(wp) {
-								m_waypoints[idx] = wp;
+				map
+					.on('click', function(evt) {
+						var coordinate = evt.coordinate;
+						var stringifyFunc = ol.coordinate.createStringXY(9);
+						var outstr = stringifyFunc(ol.proj
+							.transform(coordinate, "EPSG:3857", "EPSG:4326"));
+						console.log(outstr);
+						var waypoint_features = map
+							.getFeaturesAtPixel(evt.pixel, {
+								layerFilter : function(layer) {
+									return layer == layerWaypointsPoints;
+								}
+							});
+						var history_features = map
+							.getFeaturesAtPixel(evt.pixel, {
+								layerFilter : function(layer) {
+									return layer == layerHistoryPoints;
+								}
+							});
+						if (waypoint_features) {
+							if (m_wp_mode == "DEL") {
+								var idx = waypoint_features[0].get('idx');
+								m_waypoints.splice(idx, 1);
 								var cmd = USVC_DOMAIN
 									+ "set_waypoints "
 									+ encodeURIComponent(JSON
 										.stringify(m_waypoints));
 								m_plugin_host.send_command(cmd);
 								refresh_waypoints(m_waypoints);
+							} else if (m_wp_mode == "SEL") {
+								var idx = waypoint_features[0].get('idx');
+								var ext = {
+									next_waypoint : m_status.next_waypoint_idx == idx
+								};
+								edit_waypoint(m_waypoints[idx], ext, function(
+									wp, _ext) {
+									m_waypoints[idx] = wp;
+									var cmd = USVC_DOMAIN
+										+ "set_waypoints "
+										+ encodeURIComponent(JSON
+											.stringify(m_waypoints));
+									m_plugin_host.send_command(cmd);
+									refresh_waypoints(m_waypoints);
+									if (!ext.next_waypoint
+										&& _ext.next_waypoint) {
+										var cmd = USVC_DOMAIN
+											+ "set_next_waypoint_idx " + idx;
+										m_plugin_host.send_command(cmd);
+									}
+								});
+							}
+						} else if (history_features) {
+							var pos = history_features[0].getGeometry()
+								.getCoordinates();
+							var idx = history_features[0].get('idx');
+							var timestamp = Object.keys(m_history)[idx];
+							var node = m_history[timestamp];
+							var timestr = new Date(parseInt(timestamp) * 1000)
+								.toLocaleString();
+							var msg = timestr + "<br/>" + node.lat + ","
+								+ node.lon + "<br/>" + node.bat + "V";
+							map_plugin.popup(pos, msg);
+						} else if (m_wp_mode == "ADD") {
+							var lonlat = ol.proj
+								.transform(coordinate, "EPSG:3857", "EPSG:4326");
+							m_waypoints.push({
+								lat : toFixedFloat(lonlat[1], 6),
+								lon : toFixedFloat(lonlat[0], 6),
+								tol : 30
 							});
+							var cmd = USVC_DOMAIN
+								+ "set_waypoints "
+								+ encodeURIComponent(JSON
+									.stringify(m_waypoints));
+							m_plugin_host.send_command(cmd);
+							refresh_waypoints(m_waypoints);
 						}
-					} else if (history_features) {
-						var pos = history_features[0].getGeometry()
-							.getCoordinates();
-						var idx = history_features[0].get('idx');
-						var timestamp = Object.keys(m_history)[idx];
-						var node = m_history[timestamp];
-						var timestr = new Date(parseInt(timestamp) * 1000)
-							.toLocaleString();
-						var msg = timestr + "<br/>" + node.lat + "," + node.lon
-							+ "<br/>" + node.bat + "V";
-						map_plugin.popup(pos, msg);
-					} else if (m_wp_mode == "ADD") {
-						var lonlat = ol.proj
-							.transform(coordinate, "EPSG:3857", "EPSG:4326");
-						m_waypoints.push({
-							lat : toFixedFloat(lonlat[1], 6),
-							lon : toFixedFloat(lonlat[0], 6),
-							tol : 30
-						});
-						var cmd = USVC_DOMAIN + "set_waypoints "
-							+ encodeURIComponent(JSON.stringify(m_waypoints));
-						m_plugin_host.send_command(cmd);
-						refresh_waypoints(m_waypoints);
-					}
-				});
+					});
 
 				set_wp_mode = function(mode) {
 					m_wp_mode = mode;
