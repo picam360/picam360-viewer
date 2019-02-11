@@ -557,7 +557,7 @@ var create_plugin = (function() {
 								get_parts("select", "fnc")
 									.val((_wp.act && _wp.act.fnc) || "none");
 								on_fnc_select_change();
-								get_parts("input", "aply")
+								get_parts("input", "apply")
 									.on('click', function() {
 										var _ext = {
 											next_waypoint : get_parts("input", "next_waypoint")
