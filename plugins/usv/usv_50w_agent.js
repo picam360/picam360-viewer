@@ -472,7 +472,7 @@ var create_plugin = (function() {
 					refresh_waypoints(m_waypoints);
 				});
 				function edit_waypoint(_wp, callback) {
-					var wp = Object.assign({}, wp);
+					var wp = Object.assign({}, _wp);
 					app.navi
 						.pushPage('edit_waypoint.html', {
 							onTransitionEnd : function() {
@@ -534,7 +534,7 @@ var create_plugin = (function() {
 													+ '" /><br />');
 											break;
 										case "preset" :
-											wp.act = options.act_presets[fnc[2]];
+											wp.act = options.act_presets[fnc[1]];
 											get_parts("select", "fnc")
 												.val((wp.act && wp.act.fnc)
 													|| "none");
