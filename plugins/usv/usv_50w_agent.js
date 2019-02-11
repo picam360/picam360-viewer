@@ -201,7 +201,7 @@ var create_plugin = (function() {
 		}
 		m_plugin_host.send_command(USVC_DOMAIN + "get_history");
 	}
-	function init(plugin) {
+	function init(plugin, options) {
 		// addEventListener spec migration
 		var supportsPassive = false;
 		try {
@@ -471,7 +471,8 @@ var create_plugin = (function() {
 					m_plugin_host.send_command(cmd);
 					refresh_waypoints(m_waypoints);
 				});
-				function edit_waypoint(wp, callback) {
+				function edit_waypoint(_wp, callback) {
+					var wp = Object.assign({}, wp);
 					app.navi
 						.pushPage('edit_waypoint.html', {
 							onTransitionEnd : function() {
@@ -489,11 +490,21 @@ var create_plugin = (function() {
 										.append($('<option>').val(act_types[i])
 											.text(act_types[i]));
 								}
+								if (options.act_presets) {
+									var keys = Object.keys(options.act_presets);
+									for (var i = 0; i < keys.length; i++) {
+										get_parts("select", "fnc")
+											.append($('<option>').val("preset:"
+												+ keys[i]).text("preset:"
+												+ keys[i]));
+									}
+								}
 								function on_fnc_select_change() {
 									var prm = (wp.act && wp.act.prm) || {};
-									var fnc = get_parts("select", "fnc").val();
+									var fnc = get_parts("select", "fnc").val()
+										.split(":");
 									var fnc_form = $('#edit_waypoint_fnc_prm_form');
-									switch (fnc) {
+									switch (fnc[0]) {
 										case "wait" :
 											fnc_form.empty();
 											fnc_form
@@ -521,6 +532,13 @@ var create_plugin = (function() {
 												.append('topic:<input type="text" name="tpc" value="'
 													+ (prm.tpc || "")
 													+ '" /><br />');
+											break;
+										case "preset" :
+											wp.act = options.act_presets[fnc[2]];
+											get_parts("select", "fnc")
+												.val((wp.act && wp.act.fnc)
+													|| "none");
+											on_fnc_select_change();
 											break;
 										case "none" :
 										default :
@@ -594,7 +612,7 @@ var create_plugin = (function() {
 												delete wp.act;
 												break;
 										}
-										callback();
+										callback(wp);
 										app.navi.popPage();
 									});
 							}
@@ -628,7 +646,8 @@ var create_plugin = (function() {
 							refresh_waypoints(m_waypoints);
 						} else if (m_wp_mode == "SEL") {
 							var idx = waypoint_features[0].get('idx');
-							edit_waypoint(m_waypoints[idx], function() {
+							edit_waypoint(m_waypoints[idx], function(wp) {
+								m_waypoints[idx] = wp;
 								var cmd = USVC_DOMAIN
 									+ "set_waypoints "
 									+ encodeURIComponent(JSON
@@ -779,7 +798,7 @@ var create_plugin = (function() {
 			init_options : function(options) {
 				if (!m_is_init) {
 					m_is_init = true;
-					init(plugin);
+					init(plugin, options);
 				}
 			},
 			command_handler : function(cmd) {

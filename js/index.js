@@ -328,17 +328,16 @@ var app = (function() {
 				}
 			},
 			restore_app_menu : function() {
-				app.menu
-					.setMenuPage("menu.html", {
-						callback : function() {
-							for (var i = 0; i < plugins.length; i++) {
-								if (plugins[i].on_restore_app_menu) {
-									plugins[i].on_restore_app_menu(app.menu);
-								}
+				app.menu.setMenuPage("menu.html", {
+					callback : function() {
+						for (var i = 0; i < plugins.length; i++) {
+							if (plugins[i].on_restore_app_menu) {
+								plugins[i].on_restore_app_menu(app.menu);
 							}
-							self.refresh_app_menu();
 						}
-					});
+						self.refresh_app_menu();
+					}
+				});
 			},
 		};
 		return self;
@@ -427,7 +426,9 @@ var app = (function() {
 							} else {
 								for (var i = 0; i < plugins.length; i++) {
 									if (plugins[i].init_options) {
-										plugins[i].init_options(options);
+										plugins[i]
+											.init_options(options[plugins[i].name]
+												|| {});
 									}
 								}
 								if (callback) {
@@ -499,7 +500,8 @@ var app = (function() {
 											for (var i = 0; i < plugins.length; i++) {
 												if (plugins[i].init_options) {
 													plugins[i]
-														.init_options(_options);
+														.init_options(_options[plugins[i].name]
+															|| {});
 												}
 											}
 											if (callback) {
