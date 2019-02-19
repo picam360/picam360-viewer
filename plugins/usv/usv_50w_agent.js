@@ -435,6 +435,18 @@ var create_plugin = (function() {
 					}
 				}, 1000);
 
+				function new_node(pos) {
+					var node = {
+						lat : pos.lat,
+						lon : pos.lon,
+						tol : options.act_presets["default_tol"] || 30
+					};
+					if (options.act_presets["default"]) {
+						node.act = options.act_presets["default"];
+					}
+					return node;
+				}
+
 				// event handle
 				var dragInteraction = new ol.interaction.Modify({
 					features : new ol.Collection([featureWaypoints]),
@@ -456,12 +468,8 @@ var create_plugin = (function() {
 							if (m_waypoints.length == ary.length - 1) {// modified
 								m_waypoints[i].lon = pos.lon;
 								m_waypoints[i].lat = pos.lat;
-							} else {// split
-								m_waypoints.splice(i, 0, {
-									lat : pos.lat,
-									lon : pos.lon,
-									tol : 30
-								});
+							} else {// split, add
+								m_waypoints.splice(i, 0, new_node(pos));
 							}
 							break;
 						}
@@ -719,11 +727,10 @@ var create_plugin = (function() {
 					} else if (m_wp_mode == "EDIT") {// add
 						var lonlat = ol.proj
 							.transform(coordinate, "EPSG:3857", "EPSG:4326");
-						m_waypoints.push({
+						m_waypoints.push(new_node({
 							lat : toFixedFloat(lonlat[1], 6),
-							lon : toFixedFloat(lonlat[0], 6),
-							tol : 30
-						});
+							lon : toFixedFloat(lonlat[0], 6)
+						}));
 						var cmd = USVC_DOMAIN + "set_waypoints "
 							+ encodeURIComponent(JSON.stringify(m_waypoints));
 						m_plugin_host.send_command(cmd);
