@@ -379,11 +379,28 @@ var create_plugin = (function() {
 						var tol = m_waypoints[idx].tol || 30;
 						var radius = map.getPixelFromCoordinate([tol, 0])[0]
 							- map.getPixelFromCoordinate([0, 0])[0];
+						var color = [0, 255, 0];
+						if (m_waypoints[idx].act) {
+							switch (m_waypoints[idx].act.fnc) {
+								case "wait" :
+									color = [255, 0, 0];
+									break;
+								case "sampling" :
+									color = [255, 255, 0];
+									break;
+								case "snap" :
+									color = [0, 0, 255];
+									break;
+								default : // err
+									color = [0, 0, 0];
+									break;
+							}
+						}
 						var styles = [new ol.style.Style({
 							image : new ol.style.Circle({
 								radius : radius,
 								stroke : new ol.style.Stroke({
-									color : [0, 255, 0],
+									color : color,
 									width : 2
 								})
 							})
