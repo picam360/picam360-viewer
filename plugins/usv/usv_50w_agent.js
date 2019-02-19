@@ -462,7 +462,8 @@ var create_plugin = (function() {
 							lat : toFixedFloat(lonlat[1], 6),
 							lon : toFixedFloat(lonlat[0], 6)
 						}
-						if (m_waypoints[i].lon == pos.lon
+						if (i < m_waypoints.length // last
+							&& m_waypoints[i].lon == pos.lon
 							&& m_waypoints[i].lat == pos.lat) {
 						} else {
 							if (m_waypoints.length == ary.length - 1) {// modified
