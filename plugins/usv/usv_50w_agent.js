@@ -456,7 +456,7 @@ var create_plugin = (function() {
 						if (keys.length > 0) {
 							var gps_point = ol.proj.fromLonLat([m_status.lon,
 								m_status.lat]);
-							var timestamp = keys[0];
+							var timestamp = keys[keys.length - 1];
 							var target_point = ol.proj.fromLonLat([
 								m_history[timestamp].lon,
 								m_history[timestamp].lat]);
