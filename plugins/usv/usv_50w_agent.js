@@ -310,6 +310,8 @@ var create_plugin = (function() {
 				var featureWaypoints = new ol.Feature();
 				// history
 				var featureHistory = new ol.Feature();
+				// history current
+				var featureHistoryCurrent = new ol.Feature();
 				// gps_point
 				var featureGpsPoint = new ol.Feature();
 				// target
@@ -359,7 +361,7 @@ var create_plugin = (function() {
 
 				map.addLayer(new ol.layer.Vector({
 					source : new ol.source.Vector({
-						features : [featureTarget]
+						features : [featureTarget, featureHistoryCurrent]
 					})
 				}));
 
@@ -433,22 +435,35 @@ var create_plugin = (function() {
 							})
 						}));
 					}
-					if (m_status.lon && m_status.lat
-						&& m_waypoints[m_status.next_waypoint_idx]) {
-						var gps_point = ol.proj.fromLonLat([m_status.lon,
-							m_status.lat]);
-						var target_point = ol.proj.fromLonLat([
-							m_waypoints[m_status.next_waypoint_idx].lon,
-							m_waypoints[m_status.next_waypoint_idx].lat]);
-						featureTarget.setGeometry(new ol.geom.LineString([
-							gps_point, target_point]));
-						featureTarget.setStyle(new ol.style.Style({
-							stroke : new ol.style.Stroke({
-								width : 5,
-								color : '#ffcc33',
-								lineDash : [10, 10]
-							})
-						}));
+					if (m_status.lon && m_status.lat) {
+						if (m_waypoints[m_status.next_waypoint_idx]) {
+							var gps_point = ol.proj.fromLonLat([m_status.lon,
+								m_status.lat]);
+							var target_point = ol.proj.fromLonLat([
+								m_waypoints[m_status.next_waypoint_idx].lon,
+								m_waypoints[m_status.next_waypoint_idx].lat]);
+							featureTarget.setGeometry(new ol.geom.LineString([
+								gps_point, target_point]));
+							featureTarget.setStyle(new ol.style.Style({
+								stroke : new ol.style.Stroke({
+									width : 5,
+									color : '#ffcc33',
+									lineDash : [10, 10]
+								})
+							}));
+						}
+						var keys = m_history ? Object.keys(m_history) : [];
+						if (keys.length > 0) {
+							var gps_point = ol.proj.fromLonLat([m_status.lon,
+								m_status.lat]);
+							var timestamp = keys[0];
+							var target_point = ol.proj.fromLonLat([
+								m_history[timestamp].lon,
+								m_history[timestamp].lat]);
+							featureHistoryCurrent
+								.setGeometry(new ol.geom.LineString([gps_point,
+									target_point]));
+						}
 					}
 				}, 1000);
 
@@ -842,10 +857,6 @@ var create_plugin = (function() {
 								feature.set('idx', i);
 								features.push(feature);
 							}
-						}
-						if (m_status.lon && m_status.lat) {
-							points.push(ol.proj.fromLonLat([m_status.lon,
-								m_status.lat]));
 						}
 						featureHistory
 							.setGeometry(new ol.geom.LineString(points));
