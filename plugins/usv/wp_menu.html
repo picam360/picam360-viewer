@@ -17,29 +17,20 @@
 			<input
 				type="radio"
 				name="radioInfoType"
-				id="wp_sel_button"
+				id="wp_check_button"
 				checked="checked"
-				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_sel_mode();"
+				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_check_mode();"
 			>
-			<button class="button-bar__button">Sel</button>
+			<button class="button-bar__button">Check</button>
 		</div>
 		<div class="button-bar__item">
 			<input
 				type="radio"
 				name="radioInfoType"
-				id="wp_add_button"
-				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_add_mode();"
+				id="wp_edit_button"
+				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_edit_mode();"
 			>
-			<button class="button-bar__button">Add</button>
-		</div>
-		<div class="button-bar__item">
-			<input
-				type="radio"
-				name="radioInfoType"
-				id="wp_del_button"
-				onclick="app.plugin_host.get_plugin('%PLUGIN_NAME%').wp_del_mode();"
-			>
-			<button class="button-bar__button">Del</button>
+			<button class="button-bar__button">Edit</button>
 		</div>
 	</div>
 </ons-list-item> </ons-list></ons-page> </ons-template>

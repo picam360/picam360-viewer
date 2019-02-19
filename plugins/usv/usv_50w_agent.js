@@ -10,7 +10,7 @@ var create_plugin = (function() {
 	var m_history = [];
 	var m_get_waypoints_callback = null;
 	var m_get_history_callback = null;
-	var m_wp_mode = "SEL";
+	var m_wp_mode = "CHECK";
 	var set_wp_mode = null;
 
 	var PLUGIN_NAME = "usv_agent";
@@ -628,58 +628,52 @@ var create_plugin = (function() {
 							}
 						});
 				}
-				map
-					.on('click', function(evt) {
-						var coordinate = evt.coordinate;
-						var stringifyFunc = ol.coordinate.createStringXY(9);
-						var outstr = stringifyFunc(ol.proj
-							.transform(coordinate, "EPSG:3857", "EPSG:4326"));
-						console.log(outstr);
-						var waypoint_features = map
-							.getFeaturesAtPixel(evt.pixel, {
-								layerFilter : function(layer) {
-									return layer == layerWaypointsPoints;
-								}
-							});
-						var history_features = map
-							.getFeaturesAtPixel(evt.pixel, {
-								layerFilter : function(layer) {
-									return layer == layerHistoryPoints;
-								}
-							});
-						if (waypoint_features) {
-							if (m_wp_mode == "DEL") {
-								var idx = waypoint_features[0].get('idx');
-								m_waypoints.splice(idx, 1);
+				function click(evt) {
+					var coordinate = evt.coordinate;
+					var stringifyFunc = ol.coordinate.createStringXY(9);
+					var outstr = stringifyFunc(ol.proj
+						.transform(coordinate, "EPSG:3857", "EPSG:4326"));
+					console.log(outstr);
+					var waypoint_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerWaypointsPoints;
+						}
+					});
+					var history_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerHistoryPoints;
+						}
+					});
+					if (waypoint_features) {
+						var idx = waypoint_features[0].get('idx');
+						var ext = {
+							next_waypoint : m_status.next_waypoint_idx == idx
+						};
+						if (m_wp_mode == "EDIT") { // edit
+							edit_waypoint(m_waypoints[idx], ext, function(wp,
+								_ext) {
+								m_waypoints[idx] = wp;
 								var cmd = USVC_DOMAIN
 									+ "set_waypoints "
 									+ encodeURIComponent(JSON
 										.stringify(m_waypoints));
 								m_plugin_host.send_command(cmd);
 								refresh_waypoints(m_waypoints);
-							} else if (m_wp_mode == "SEL") {
-								var idx = waypoint_features[0].get('idx');
-								var ext = {
-									next_waypoint : m_status.next_waypoint_idx == idx
-								};
-								edit_waypoint(m_waypoints[idx], ext, function(
-									wp, _ext) {
-									m_waypoints[idx] = wp;
+								if (!ext.next_waypoint && _ext.next_waypoint) {
 									var cmd = USVC_DOMAIN
-										+ "set_waypoints "
-										+ encodeURIComponent(JSON
-											.stringify(m_waypoints));
+										+ "set_next_waypoint_idx " + idx;
 									m_plugin_host.send_command(cmd);
-									refresh_waypoints(m_waypoints);
-									if (!ext.next_waypoint
-										&& _ext.next_waypoint) {
-										var cmd = USVC_DOMAIN
-											+ "set_next_waypoint_idx " + idx;
-										m_plugin_host.send_command(cmd);
-									}
-								});
-							}
-						} else if (history_features) {
+								}
+							});
+						} else if (m_wp_mode == "CHECK") {
+							var pos = waypoint_features[0].getGeometry()
+								.getCoordinates();
+							var node = m_waypoints[idx];
+							var msg = node.lat + "," + node.lon + "<br/>";
+							map_plugin.popup(pos, msg);
+						}
+					} else if (history_features) {
+						if (m_wp_mode == "CHECK") {
 							var pos = history_features[0].getGeometry()
 								.getCoordinates();
 							var idx = history_features[0].get('idx');
@@ -690,14 +684,29 @@ var create_plugin = (function() {
 							var msg = timestr + "<br/>" + node.lat + ","
 								+ node.lon + "<br/>" + node.bat + "V";
 							map_plugin.popup(pos, msg);
-						} else if (m_wp_mode == "ADD") {
-							var lonlat = ol.proj
-								.transform(coordinate, "EPSG:3857", "EPSG:4326");
-							m_waypoints.push({
-								lat : toFixedFloat(lonlat[1], 6),
-								lon : toFixedFloat(lonlat[0], 6),
-								tol : 30
-							});
+						}
+					}
+				}
+				function dblclick(evt) {
+					var coordinate = evt.coordinate;
+					var stringifyFunc = ol.coordinate.createStringXY(9);
+					var outstr = stringifyFunc(ol.proj
+						.transform(coordinate, "EPSG:3857", "EPSG:4326"));
+					console.log(outstr);
+					var waypoint_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerWaypointsPoints;
+						}
+					});
+					var history_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerHistoryPoints;
+						}
+					});
+					if (waypoint_features) {
+						if (m_wp_mode == "EDIT") {// remove
+							var idx = waypoint_features[0].get('idx');
+							m_waypoints.splice(idx, 1);
 							var cmd = USVC_DOMAIN
 								+ "set_waypoints "
 								+ encodeURIComponent(JSON
@@ -705,19 +714,56 @@ var create_plugin = (function() {
 							m_plugin_host.send_command(cmd);
 							refresh_waypoints(m_waypoints);
 						}
-					});
+					} else if (history_features) {
+						// do nothing
+					} else if (m_wp_mode == "EDIT") {// add
+						var lonlat = ol.proj
+							.transform(coordinate, "EPSG:3857", "EPSG:4326");
+						m_waypoints.push({
+							lat : toFixedFloat(lonlat[1], 6),
+							lon : toFixedFloat(lonlat[0], 6),
+							tol : 30
+						});
+						var cmd = USVC_DOMAIN + "set_waypoints "
+							+ encodeURIComponent(JSON.stringify(m_waypoints));
+						m_plugin_host.send_command(cmd);
+						refresh_waypoints(m_waypoints);
+					}
+				}
+				var is_click = false;
+				var is_dblclick = false;
+				map.on('click', function(evt) {
+					if (!is_dblclick) {
+						is_click = true;
+						setTimeout(function() {
+							if (is_click) {
+								is_click = false;
+								click(evt);
+								console.log("click");
+							}
+						}, 500);
+					}
+				});
+				map.on('dblclick', function(evt) {
+					is_dblclick = true;
+					is_click = false;
+					setTimeout(function() {
+						is_dblclick = false;
+						dblclick(evt);
+						console.log("dblclick");
+					}, 500);
+					evt.preventDefault();
+					evt.stopPropagation();
+				});
 
 				set_wp_mode = function(mode) {
 					m_wp_mode = mode;
 					console.log("set_wp_mode:" + m_wp_mode);
 					switch (m_wp_mode) {
-						case "ADD" :
+						case "EDIT" :
 							map.addInteraction(dragInteraction);
 							break;
-						case "DEL" :
-							map.removeInteraction(dragInteraction);
-							break;
-						case "SEL" :
+						case "CHECK" :
 							map.removeInteraction(dragInteraction);
 							break;
 					}
@@ -980,14 +1026,11 @@ var create_plugin = (function() {
 						break;
 				}
 			},
-			wp_sel_mode : function() {
-				set_wp_mode("SEL");
+			wp_check_mode : function() {
+				set_wp_mode("CHECK");
 			},
-			wp_add_mode : function() {
-				set_wp_mode("ADD");
-			},
-			wp_del_mode : function() {
-				set_wp_mode("DEL");
+			wp_edit_mode : function() {
+				set_wp_mode("EDIT");
 			},
 		};
 		return plugin;
