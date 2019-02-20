@@ -288,6 +288,13 @@ var create_plugin = (function() {
 			refresh_button();
 		});
 
+		function get_bat_per(bat) {
+			var bat_min_v = options["bat_min_v"] || 9.6;
+			var bat_max_v = options["bat_max_v"] || 12.6;
+			var bat_per = (bat - bat_min_v) / (bat_max_v - bat_min_v);
+			return Math.max(0, Math.min(bat_per * 100, 100));
+		}
+
 		var map_plugin = m_plugin_host.get_plugin("map");
 		map_plugin
 			.set_post_map_loaded(function(map) {
@@ -372,15 +379,12 @@ var create_plugin = (function() {
 					style : function(feature) {
 						var timestamp = feature.get('timestamp');
 						var node = m_history[timestamp];
-						var bat_min_v = options["bat_min_v"] || 9.6;
-						var bat_max_v = options["bat_max_v"] || 12.6;
-						var bat_per = (node.bat - bat_min_v)
-							/ (bat_max_v - bat_min_v);
 						var styles = [new ol.style.Style({
 							image : new ol.style.Circle({
 								radius : 5,
 								stroke : new ol.style.Stroke({
-									color : [255 * bat_per, 0, 0],
+									color : [255 * get_bat_per(node.bat) / 100,
+										0, 0],
 									width : 2
 								})
 							})
@@ -432,27 +436,42 @@ var create_plugin = (function() {
 				});
 				map.addLayer(layerWaypointsPoints);
 
-				map.addLayer(new ol.layer.Vector({
+				var layerGpsPoint = new ol.layer.Vector({
 					source : new ol.source.Vector({
 						features : [featureGpsPoint]
 					})
-				}));
+				});
+				map.addLayer(layerGpsPoint);
 
 				setInterval(function() {
 					if (m_status.lon && m_status.lat) {
 						var gps_point_obj = new ol.geom.Point(ol.proj
 							.fromLonLat([m_status.lon, m_status.lat]));
 						featureGpsPoint.setGeometry(gps_point_obj);
-						featureGpsPoint.setStyle(new ol.style.Style({
-							image : new ol.style.Icon({
-								opacity : m_status.gps ? 1.0 : 0.5,
-								src : VEHICLE_ICON,
-								anchor : [0.5, 0.5],
-								rotateWithView : false,
-								rotation : m_status.heading ? Math.PI
-									* m_status.heading / 180 : 0
-							})
-						}));
+						featureGpsPoint
+							.setStyle([
+								new ol.style.Style({
+									image : new ol.style.Icon({
+										opacity : m_status.gps ? 1.0 : 0.5,
+										src : VEHICLE_ICON,
+										anchor : [0.5, 0.5],
+										rotateWithView : false,
+										rotation : m_status.heading ? Math.PI
+											* m_status.heading / 180
+											+ map.getView().getRotation() : 0
+									})
+								}),
+								new ol.style.Style({
+									image : new ol.style.Circle({
+										radius : 15,
+										stroke : new ol.style.Stroke({
+											color : [
+												255 * get_bat_per(m_status.bat) / 100,
+												0, 0],
+											width : 2
+										})
+									})
+								})]);
 					}
 					if (m_status.lon && m_status.lat) {
 						if (m_waypoints[m_status.next_waypoint_idx]) {
@@ -710,7 +729,21 @@ var create_plugin = (function() {
 							return layer == layerHistoryPoints;
 						}
 					});
-					if (waypoint_features) {
+					var gpspoint_features = map.getFeaturesAtPixel(evt.pixel, {
+						layerFilter : function(layer) {
+							return layer == layerGpsPoint;
+						}
+					});
+					if (gpspoint_features) {
+						if (m_wp_mode == "CHECK") {
+							var pos = gpspoint_features[0].getGeometry()
+								.getCoordinates();
+							var timestr = new Date().toLocaleString();
+							var msg = timestr + "<br/>" + m_status.lat + ","
+								+ m_status.lon + "<br/>" + m_status.bat + "V";
+							map_plugin.popup(pos, msg);
+						}
+					} else if (waypoint_features) {
 						var idx = waypoint_features[0].get('idx');
 						var ext = {
 							next_waypoint : m_status.next_waypoint_idx == idx
