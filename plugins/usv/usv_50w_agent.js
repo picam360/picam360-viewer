@@ -10,7 +10,7 @@ var create_plugin = (function() {
 	var m_history = [];
 	var m_get_waypoints_callback = null;
 	var m_get_history_callback = null;
-	var m_wp_mode = "CHECK";
+	var m_wp_mode;
 	var set_wp_mode = null;
 
 	var PLUGIN_NAME = "usv_agent";
@@ -854,6 +854,7 @@ var create_plugin = (function() {
 					evt.stopPropagation();
 				});
 
+				// set mode
 				set_wp_mode = function(mode) {
 					m_wp_mode = mode;
 					console.log("set_wp_mode:" + m_wp_mode);
@@ -866,6 +867,7 @@ var create_plugin = (function() {
 							break;
 					}
 				};
+				m_wp_mode = "CHECK";
 
 				function refresh_waypoints(waypoints) {
 					var features = [];
