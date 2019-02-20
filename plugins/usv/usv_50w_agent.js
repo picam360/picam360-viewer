@@ -277,6 +277,7 @@ var create_plugin = (function() {
 
 		m_plugin_host.add_watch(USVC_DOMAIN + "status", function(ret) {
 			m_status = JSON.parse(ret);
+			m_status.timestamp = parseInt(Date.now() / 1000);
 			if (m_status.waypoints && m_get_waypoints_callback) {
 				m_waypoints = m_status.waypoints;
 				m_get_waypoints_callback(m_waypoints);
@@ -738,10 +739,22 @@ var create_plugin = (function() {
 						if (m_wp_mode == "CHECK") {
 							var pos = gpspoint_features[0].getGeometry()
 								.getCoordinates();
-							var timestr = new Date().toLocaleString();
-							var msg = timestr + "<br/>" + m_status.lat + ","
-								+ m_status.lon + "<br/>" + m_status.bat + "V";
-							map_plugin.popup(pos, msg);
+							var timer;
+							var popup_update = function() {
+								var timestr = new Date(parseInt(m_status.timestamp) * 1000)
+									.toLocaleString();
+								var msg = timestr + "<br/>" + m_status.lat
+									+ "," + m_status.lon + "<br/>" + "bat:"
+									+ m_status.bat + "V" + "<br/>" + "thr:"
+									+ m_status.thruster_pwm + "us" + "<br/>"
+									+ "rud:" + m_status.rudder_pwm + "us";
+								map_plugin.set_popup_msg(msg);
+								timer = setTimeout(popup_update, 500);
+							};
+							map_plugin.popup(pos, "", function() {
+								clearTimeout(timer);
+							});
+							popup_update();
 						}
 					} else if (waypoint_features) {
 						var idx = waypoint_features[0].get('idx');

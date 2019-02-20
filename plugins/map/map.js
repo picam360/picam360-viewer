@@ -4,6 +4,7 @@ var create_plugin = (function() {
 	var m_post_map_loaded = null;
 	var m_post_map_unloaded = null;
 	var m_menu_txt = null;
+	var m_popup_callback = null;
 
 	function decodeUtf8(data) {
 		var result = "";
@@ -108,6 +109,10 @@ var create_plugin = (function() {
 
 					app.navi.on('postpop', function(event) {
 						if (event.leavePage.name == "map.html") {
+							if (m_popup_callback) {
+								m_popup_callback();
+								m_popup_callback = null;
+							}
 							map_unload();
 						}
 					});
@@ -128,6 +133,10 @@ var create_plugin = (function() {
 				m_closer.onclick = function() {
 					if (m_overlay) {
 						m_overlay.setPosition(undefined);
+					}
+					if (m_popup_callback) {
+						m_popup_callback();
+						m_popup_callback = null;
 					}
 					m_closer.blur();
 					return false;
@@ -160,11 +169,19 @@ var create_plugin = (function() {
 				$("#menu_list").append(node[0]);
 				ons.compile(node[0]);
 			},
-			popup : function(coordinate, msg) {
+			popup : function(coordinate, msg, callback) {
 				m_content.innerHTML = msg;
+				if (m_popup_callback) {
+					m_popup_callback();
+					m_popup_callback = null;
+				}
+				m_popup_callback = callback;
 				if (m_overlay) {
 					m_overlay.setPosition(coordinate);
 				}
+			},
+			set_popup_msg : function(msg) {
+				m_content.innerHTML = msg;
 			},
 		};
 		return plugin;
