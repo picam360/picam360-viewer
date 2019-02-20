@@ -368,7 +368,26 @@ var create_plugin = (function() {
 				var layerHistoryPoints = new ol.layer.Vector({
 					source : new ol.source.Vector({
 						features : []
-					})
+					}),
+					style : function(feature) {
+						var timestamp = feature.get('timestamp');
+						var node = m_history[timestamp];
+						var bat_min_v = options["bat_min_v"] || 9.6;
+						var bat_max_v = options["bat_max_v"] || 12.6;
+						var bat_per = (node.bat - bat_min_v)
+							/ (bat_max_v - bat_min_v);
+						var styles = [new ol.style.Style({
+							image : new ol.style.Circle({
+								radius : 5,
+								stroke : new ol.style.Stroke({
+									color : [255 * bat_per, 0, 0],
+									width : 2
+								})
+							})
+						})];
+
+						return styles;
+					}
 				});
 				map.addLayer(layerHistoryPoints);
 
@@ -452,17 +471,23 @@ var create_plugin = (function() {
 								})
 							}));
 						}
-						var keys = m_history ? Object.keys(m_history) : [];
-						if (keys.length > 0) {
-							var gps_point = ol.proj.fromLonLat([m_status.lon,
-								m_status.lat]);
-							var timestamp = keys[keys.length - 1];
-							var target_point = ol.proj.fromLonLat([
-								m_history[timestamp].lon,
-								m_history[timestamp].lat]);
-							featureHistoryCurrent
-								.setGeometry(new ol.geom.LineString([gps_point,
-									target_point]));
+						var keys = Object.keys(m_history);
+						keys.sort(function(a, b) {
+							return parseInt(b) - parseInt(a);
+						});
+						for (var i = 0; i < keys.length; i++) {
+							if (m_history[keys[i]].lon
+								&& m_history[keys[i]].lat) {
+								var pos = ol.proj.fromLonLat([
+									m_history[keys[i]].lon,
+									m_history[keys[i]].lat]);
+								var gps_point = ol.proj.fromLonLat([
+									m_status.lon, m_status.lat]);
+								featureHistoryCurrent
+									.setGeometry(new ol.geom.LineString([
+										gps_point, pos]));
+								break;
+							}
 						}
 					}
 				}, 1000);
@@ -717,8 +742,8 @@ var create_plugin = (function() {
 						if (m_wp_mode == "CHECK") {
 							var pos = history_features[0].getGeometry()
 								.getCoordinates();
-							var idx = history_features[0].get('idx');
-							var timestamp = Object.keys(m_history)[idx];
+							var timestamp = history_features[0]
+								.get('timestamp');
 							var node = m_history[timestamp];
 							var timestr = new Date(parseInt(timestamp) * 1000)
 								.toLocaleString();
@@ -846,6 +871,9 @@ var create_plugin = (function() {
 						var features = [];
 						var points = [];
 						var keys = Object.keys(history);
+						keys.sort(function(a, b) {
+							return parseInt(b) - parseInt(a);
+						});
 						for (var i = 0; i < keys.length; i++) {
 							if (history[keys[i]].lon && history[keys[i]].lat) {
 								points.push(ol.proj
@@ -854,7 +882,7 @@ var create_plugin = (function() {
 								var feature = new ol.Feature(new ol.geom.Point(ol.proj
 									.fromLonLat([history[keys[i]].lon,
 										history[keys[i]].lat])));
-								feature.set('idx', i);
+								feature.set('timestamp', keys[i]);
 								features.push(feature);
 							}
 						}
