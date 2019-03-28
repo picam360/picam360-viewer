@@ -984,7 +984,9 @@ var app = (function() {
 					'iceServers' : [{
 						url : 'stun:stun.l.google.com:19302'
 					}, {
-						url : 'turn:turn.picam360.com:3478'
+						url : 'turn:turn.picam360.com:3478',
+						username : "picam360",
+						credential : "picam360"
 					}]
 				},
 			});
