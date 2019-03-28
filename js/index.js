@@ -981,7 +981,7 @@ var app = (function() {
 				debug : debug,
 
 				config : {
-					'iceServers' : [
+					'iceServers' : [{
 						urls : 'turn:turn.picam360.com:3478',
 						username : "picam360",
 						credential : "picam360"
