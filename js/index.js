@@ -982,9 +982,9 @@ var app = (function() {
 
 				config : {
 					'iceServers' : [{
-						url : 'stun:stun.l.google.com:19302'
+						urls : 'stun:stun.l.google.com:19302'
 					}, {
-						url : 'turn:turn.picam360.com:3478',
+						urls : 'turn:turn.picam360.com:3478',
 						username : "picam360",
 						credential : "picam360"
 					}]
