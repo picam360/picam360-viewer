@@ -978,7 +978,16 @@ var app = (function() {
 				port : SIGNALING_PORT,
 				secure : SIGNALING_SECURE,
 				key : P2P_API_KEY,
-				debug : debug
+				debug : debug,
+
+				config : {
+					'iceServers' : [{
+						url : 'stun:stun.l.google.com:19302'
+					}, {
+						url : 'turn:picam360@turn.picam360.com:3478',
+						credential : 'picam360'
+					}]
+				},
 			});
 			peer.on('error', function(err) {
 				if (err.type == "peer-unavailable") {
