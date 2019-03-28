@@ -983,9 +983,6 @@ var app = (function() {
 				config : {
 					'iceServers' : [{
 						url : 'stun:stun.l.google.com:19302'
-					}, {
-						url : 'turn:picam360@turn.picam360.com:3478',
-						credential : 'picam360'
 					}]
 				},
 			});
