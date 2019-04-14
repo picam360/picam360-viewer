@@ -973,9 +973,15 @@ var app = (function() {
 				});
 		},
 		start_p2p : function(p2p_uuid, callback, err_callback) {
-			var config = null;
+			var options = {
+				host : SIGNALING_HOST,
+				port : SIGNALING_PORT,
+				secure : SIGNALING_SECURE,
+				key : P2P_API_KEY,
+				debug : debug,
+			};
 			if (query['turn_server']) {
-				config = {
+				options['config'] = {
 					'iceServers' : [{
 						urls : 'turn:turn.picam360.com:3478',
 						username : "picam360",
@@ -983,15 +989,7 @@ var app = (function() {
 					}]
 				};
 			}
-			peer = new Peer({
-				host : SIGNALING_HOST,
-				port : SIGNALING_PORT,
-				secure : SIGNALING_SECURE,
-				key : P2P_API_KEY,
-				debug : debug,
-
-				config : config,
-			});
+			peer = new Peer(options);
 			peer.on('error', function(err) {
 				if (err.type == "peer-unavailable") {
 					self.plugin_host.set_info("error : Could not connect "
