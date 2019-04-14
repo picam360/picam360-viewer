@@ -973,6 +973,16 @@ var app = (function() {
 				});
 		},
 		start_p2p : function(p2p_uuid, callback, err_callback) {
+			var config = null;
+			if (query['turn_server']) {
+				config = {
+					'iceServers' : [{
+						urls : 'turn:turn.picam360.com:3478',
+						username : "picam360",
+						credential : "picam360"
+					}]
+				};
+			}
 			peer = new Peer({
 				host : SIGNALING_HOST,
 				port : SIGNALING_PORT,
@@ -980,13 +990,7 @@ var app = (function() {
 				key : P2P_API_KEY,
 				debug : debug,
 
-				config : {
-					'iceServers' : [{
-						urls : 'turn:turn.picam360.com:3478',
-						username : "picam360",
-						credential : "picam360"
-					}]
-				},
+				config : config,
 			});
 			peer.on('error', function(err) {
 				if (err.type == "peer-unavailable") {
