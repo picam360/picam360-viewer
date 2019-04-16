@@ -15,7 +15,7 @@ var create_plugin = (function() {
 
 	var PLUGIN_NAME = "usv_agent";
 	var SYSTEM_DOMAIN = UPSTREAM_DOMAIN + UPSTREAM_DOMAIN;
-	var USVC_DOMAIN = UPSTREAM_DOMAIN + "usvc.";
+	var SERVICE_DOMAIN = UPSTREAM_DOMAIN + "usvc.";
 	var MOVE_TIMEOUT = 60 * 1000;// 1min
 
 	// vehicle control
@@ -71,18 +71,29 @@ var create_plugin = (function() {
 		return result;
 	}
 
-	function create_forward_button(plugin) {
+	function create_button(src_normal, src_pushed, callback) {
 		var button = document.createElement("img");
-		button.src = FORWARD_ICON;
+		button.src = src_normal;
+		button.src_normal = src_normal;
+		button.src_pushed = src_pushed;
 		button.down = false;
+		button.set_src = function(src_normal, src_pushed) {
+			button.src_normal = src_normal;
+			button.src_pushed = src_pushed;
+			button.src = (button.down ? src_pushed : src);
+		}
 
 		var sx = 0, sy = 0;
-		var rudder_pwm = 1500;
-		var rudder_pwm_candidate = null;
-		var thruster_pwm = 1500;
-		var thruster_pwm_candidate = null;
+		var x_axis = 0;// -1:1
+		var x_axis_candidate = null;
+		var y_axis = 0;// -1:1
+		var y_axis_candidate = null;
 		var mousedownFunc = function(ev) {
-			plugin.event_handler_act("MOVE");
+			if (callback) {
+				callback({
+					type : "down"
+				});
+			}
 
 			if (ev.type == "touchstart") {
 				ev.clientX = ev.pageX;
@@ -90,20 +101,26 @@ var create_plugin = (function() {
 			}
 			sx = ev.clientX;
 			sy = ev.clientY;
-			rudder_pwm = 1500;
-			thruster_pwm = 1500;
+			x_axis = 0;
+			y_axis = 0;
 
 			button.down = true;
-			button.src = FORWARD_PUSHED_ICON;
+			if (button.src_pushed) {
+				button.src = button.src_pushed;
+			}
 		}
 		button.mouseupFunc = function() {
-			plugin.event_handler_act("STOP");
+			if (callback) {
+				callback({
+					type : "up"
+				});
+			}
 
 			button.down = false;
-			button.src = FORWARD_ICON;
+			button.src = button.src_normal;
 
-			rudder_pwm_candidate = 1500;
-			thruster_pwm_candidate = 1500;
+			x_axis_candidate = 0;
+			y_axis_candidate = 0;
 		}
 		button.mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {
@@ -114,26 +131,33 @@ var create_plugin = (function() {
 			if (!button.down || ev.button != 0) {
 				return;
 			}
-			var dx = -(ev.clientX - sx);
-			var dy = -(ev.clientY - sy);
+			var dx = (ev.clientX - sx);
+			var dy = (ev.clientY - sy);
 
 			var threshold = 1;
-			var roll_diff = parseInt(dx / threshold) * threshold;
-			var pitch_diff = parseInt(dy / threshold) * threshold;
-			sx -= roll_diff;
-			sy -= pitch_diff;
+			dx = parseInt(dx / threshold) * threshold;
+			dy = parseInt(dy / threshold) * threshold;
+			sx += dx;
+			sy += dy;
 
-			if (roll_diff == 0) {
+			var limit = window.parent.screen.width / 20;
+			if (dx == 0) {
 				// do nothing
 			} else {
-				rudder_pwm += roll_diff * 10;
-				rudder_pwm_candidate = rudder_pwm;
+				x_axis += dx / limit;
+				x_axis = Math.max(-1, Math.min(x_axis, 1));
+				if (x_axis_candidate != x_axis) {
+					x_axis_candidate = x_axis;
+				}
 			}
-			if (pitch_diff == 0) {
+			if (dy == 0) {
 				// do nothing
 			} else {
-				thruster_pwm += pitch_diff * 10;
-				thruster_pwm_candidate = thruster_pwm;
+				y_axis -= dy / limit;// minus means system coodinate to
+				y_axis = Math.max(-1, Math.min(y_axis, 1));
+				if (y_axis_candidate != y_axis) {
+					y_axis_candidate = y_axis;
+				}
 			}
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -149,84 +173,67 @@ var create_plugin = (function() {
 		});
 
 		setInterval(function() {
-			if (rudder_pwm_candidate) {
-				plugin.event_handler_act("SET_RUDDER_PWM "
-					+ rudder_pwm_candidate);
-				rudder_pwm = rudder_pwm_candidate;
-				rudder_pwm_candidate = null;
+			var updated = false;
+			var ev = {
+				type : "axis",
+				x : x_axis,
+				y : y_axis
+			};
+			if (x_axis_candidate) {
+				x_axis = x_axis_candidate;
+				x_axis_candidate = null;
+				ev.x = x_axis;
+				updated = true;
 			}
-			if (thruster_pwm_candidate) {
-				plugin.event_handler_act("SET_THRUSTER_PWM "
-					+ thruster_pwm_candidate);
-				thruster_pwm = thruster_pwm_candidate;
-				thruster_pwm_candidate = null;
+			if (y_axis_candidate) {
+				y_axis = y_axis_candidate;
+				y_axis_candidate = null;
+				ev.y = y_axis;
+				updated = true;
+			}
+			if (updated && callback) {
+				callback(ev);
 			}
 		}, 200);
 
-		return button;
-	}
-	function create_autonomous_button(plugin) {
-		var button = document.createElement("img");
-		button.src = MANUAL_ICON;
-		button.down = false;
-		var mousedownFunc = function(ev) {
-			plugin.event_handler_act("CHANGE_AUTONOMOUS");
-
-			button.down = true;
-		}
-		button.mouseupFunc = function() {
-			button.down = false;
-		}
-		var preventFunc = function(ev) {
-			ev.preventDefault();
-			ev.stopPropagation();
-		}
-		button.addEventListener("touchstart", mousedownFunc);
-		button.addEventListener("mousedown", mousedownFunc);
-		button.addEventListener("dragstart", preventFunc);
+		button.style.position = 'absolute';
+		button.style.display = "none";
+		button.width = 50;
+		button.height = 50;
 
 		return button;
 	}
+
 	function get_waypoints(callback) {
 		m_get_waypoints_callback = function(v) {
 			callback(v);
 			m_get_waypoints_callback = null;
 		}
-		m_plugin_host.send_command(USVC_DOMAIN + "get_waypoints");
+		m_plugin_host.send_command(SERVICE_DOMAIN + "get_waypoints");
 	}
 	function get_history(callback) {
 		m_get_history_callback = function(v) {
 			callback(v);
 			m_get_history_callback = null;
 		}
-		m_plugin_host.send_command(USVC_DOMAIN + "get_history");
+		m_plugin_host.send_command(SERVICE_DOMAIN + "get_history");
 	}
 	function init(plugin, options) {
-		// addEventListener spec migration
-		var supportsPassive = false;
-		try {
-			var opts = Object.defineProperty({}, 'passive', {
-				get : function() {
-					supportsPassive = true;
-				}
-			});
-			window.addEventListener("test", null, opts);
-		} catch (e) {
-		}
 
-		m_foward_button = create_forward_button(plugin);
-		m_foward_button.style.position = 'absolute';
-		m_foward_button.style.display = "none";
-		m_foward_button.width = 50;
-		m_foward_button.height = 50;
+		m_foward_button = create_button(FORWARD_ICON, FORWARD_PUSHED_ICON, function(
+			e) {
+			if (e.type == "axis") {
+				plugin.event_handler_act("SET_THRUSTER " + e.x + " " + e.y);
+			}
+		});
 		m_foward_button
 			.setAttribute("style", "position:absolute; bottom:33%; right:10%;");
 
-		m_autonomous_button = create_autonomous_button(plugin);
-		m_autonomous_button.style.position = 'absolute';
-		m_autonomous_button.style.display = "none";
-		m_autonomous_button.width = 50;
-		m_autonomous_button.height = 50;
+		m_autonomous_button = create_button(MANUAL_ICON, NULL, function(e) {
+			if (e.type == "down") {
+				plugin.event_handler_act("CHANGE_AUTONOMOUS");
+			}
+		});
 		m_autonomous_button
 			.setAttribute("style", "position:absolute; bottom:66%; right:10%;");
 
@@ -239,6 +246,18 @@ var create_plugin = (function() {
 			if (m_foward_button.down) {
 				m_foward_button.mousemoveFunc(ev);
 			}
+		}
+
+		// addEventListener spec migration
+		var supportsPassive = false;
+		try {
+			var opts = Object.defineProperty({}, 'passive', {
+				get : function() {
+					supportsPassive = true;
+				}
+			});
+			window.addEventListener("test", null, opts);
+		} catch (e) {
 		}
 		document.addEventListener("touchend", mouseupFunc);
 		document.addEventListener("mouseup", mouseupFunc);
@@ -264,18 +283,18 @@ var create_plugin = (function() {
 				m_foward_button.style.display = "none";
 			} else {
 				if (m_status.auto_mode) {
-					m_autonomous_button.src = AUTO_ICON;
+					m_autonomous_button.set_src(AUTO_ICON, AUTO_ICON);
 					m_foward_button.style.display = "none";
 					m_autonomous_button.style.display = "block";
 				} else {
-					m_autonomous_button.src = MANUAL_ICON;
+					m_autonomous_button.set_src(MANUAL_ICON, MANUAL_ICON);
 					m_foward_button.style.display = "block";
 					m_autonomous_button.style.display = "block";
 				}
 			}
 		}
 
-		m_plugin_host.add_watch(USVC_DOMAIN + "status", function(ret) {
+		m_plugin_host.add_watch(SERVICE_DOMAIN + "status", function(ret) {
 			m_status = JSON.parse(ret);
 			m_status.timestamp = parseInt(Date.now() / 1000);
 			if (m_status.waypoints && m_get_waypoints_callback) {
@@ -552,7 +571,7 @@ var create_plugin = (function() {
 							break;
 						}
 					}
-					var cmd = USVC_DOMAIN + "set_waypoints "
+					var cmd = SERVICE_DOMAIN + "set_waypoints "
 						+ encodeURIComponent(JSON.stringify(m_waypoints));
 					m_plugin_host.send_command(cmd);
 					refresh_waypoints(m_waypoints);
@@ -746,8 +765,8 @@ var create_plugin = (function() {
 								var msg = timestr + "<br/>" + m_status.lat
 									+ "," + m_status.lon + "<br/>" + "bat:"
 									+ m_status.bat + "V" + "<br/>" + "thr:"
-									+ m_status.thruster_pwm + "us" + "<br/>"
-									+ "rud:" + m_status.rudder_pwm + "us";
+									+ m_status.thruster + "us" + "<br/>"
+									+ "rud:" + m_status.rudder + "us";
 								map_plugin.set_popup_msg(msg);
 								timer = setTimeout(popup_update, 500);
 							};
@@ -765,14 +784,14 @@ var create_plugin = (function() {
 							edit_waypoint(m_waypoints[idx], ext, function(wp,
 								_ext) {
 								m_waypoints[idx] = wp;
-								var cmd = USVC_DOMAIN
+								var cmd = SERVICE_DOMAIN
 									+ "set_waypoints "
 									+ encodeURIComponent(JSON
 										.stringify(m_waypoints));
 								m_plugin_host.send_command(cmd);
 								refresh_waypoints(m_waypoints);
 								if (!ext.next_waypoint && _ext.next_waypoint) {
-									var cmd = USVC_DOMAIN
+									var cmd = SERVICE_DOMAIN
 										+ "set_next_waypoint_idx " + idx;
 									m_plugin_host.send_command(cmd);
 								}
@@ -819,7 +838,7 @@ var create_plugin = (function() {
 						if (m_wp_mode == "EDIT") {// remove
 							var idx = waypoint_features[0].get('idx');
 							m_waypoints.splice(idx, 1);
-							var cmd = USVC_DOMAIN
+							var cmd = SERVICE_DOMAIN
 								+ "set_waypoints "
 								+ encodeURIComponent(JSON
 									.stringify(m_waypoints));
@@ -835,7 +854,7 @@ var create_plugin = (function() {
 							lat : toFixedFloat(lonlat[1], 6),
 							lon : toFixedFloat(lonlat[0], 6)
 						}));
-						var cmd = USVC_DOMAIN + "set_waypoints "
+						var cmd = SERVICE_DOMAIN + "set_waypoints "
 							+ encodeURIComponent(JSON.stringify(m_waypoints));
 						m_plugin_host.send_command(cmd);
 						refresh_waypoints(m_waypoints);
@@ -1090,14 +1109,8 @@ var create_plugin = (function() {
 				var params = event.split(" ");
 				switch (params[0]) {
 					case "MOVE" :
-						var cmd = USVC_DOMAIN + "move";
-						cmd += sprintf(" %.3f %.3f", MOVE_TIMEOUT, 50);
-						m_plugin_host.send_command(cmd);
 						break;
 					case "STOP" :
-						var cmd = USVC_DOMAIN + "stop";
-						cmd += sprintf(" %.3f %.3f", 0, 0);
-						m_plugin_host.send_command(cmd);
 						break;
 					case "STEREO_ENABLED" :
 						stereo_enabled = !stereo_enabled;
@@ -1123,16 +1136,13 @@ var create_plugin = (function() {
 					case "GO2NEXT_MENU" :
 						m_plugin_host.send_command(SYSTEM_DOMAIN
 							+ "go2next_menu");
-					case "SET_RUDDER_PWM" :
-						var cmd = USVC_DOMAIN + "set_rudder_pwm " + params[1];
-						m_plugin_host.send_command(cmd);
-						break;
-					case "SET_THRUSTER_PWM" :
-						var cmd = USVC_DOMAIN + "set_thruster_pwm " + params[1];
+					case "SET_THRUSTER" :
+						var cmd = SERVICE_DOMAIN + "set_thruster " + params[1]
+							+ " " + params[2];
 						m_plugin_host.send_command(cmd);
 						break;
 					case "CHANGE_AUTONOMOUS" :
-						var cmd = USVC_DOMAIN + "set_automode "
+						var cmd = SERVICE_DOMAIN + "set_automode "
 							+ (m_status.auto_mode ? "0" : "1");
 						m_plugin_host.send_command(cmd);
 						break;
