@@ -80,14 +80,14 @@ var create_plugin = (function() {
 		button.set_src = function(src_normal, src_pushed) {
 			button.src_normal = src_normal;
 			button.src_pushed = src_pushed;
-			button.src = (button.down ? src_pushed : src);
+			button.src = (!button.down ? src_normal : src_pushed);
 		}
 
 		var sx = 0, sy = 0;
 		var x_axis = 0;// -1:1
-		var x_axis_candidate = null;
+		var x_axis_candidate = 0;
 		var y_axis = 0;// -1:1
-		var y_axis_candidate = null;
+		var y_axis_candidate = 0;
 		var mousedownFunc = function(ev) {
 			if (callback) {
 				callback({
@@ -103,6 +103,8 @@ var create_plugin = (function() {
 			sy = ev.clientY;
 			x_axis = 0;
 			y_axis = 0;
+			x_axis_candidate = 0;
+			y_axis_candidate = 0;
 
 			button.down = true;
 			if (button.src_pushed) {
@@ -119,6 +121,8 @@ var create_plugin = (function() {
 			button.down = false;
 			button.src = button.src_normal;
 
+			x_axis = 0;
+			y_axis = 0;
 			x_axis_candidate = 0;
 			y_axis_candidate = 0;
 		}
@@ -144,20 +148,15 @@ var create_plugin = (function() {
 			if (dx == 0) {
 				// do nothing
 			} else {
-				x_axis += dx / limit;
-				x_axis = Math.max(-1, Math.min(x_axis, 1));
-				if (x_axis_candidate != x_axis) {
-					x_axis_candidate = x_axis;
-				}
+				x_axis_candidate += dx / limit;
+				x_axis_candidate = Math.max(-1, Math.min(x_axis_candidate, 1));
 			}
 			if (dy == 0) {
 				// do nothing
 			} else {
-				y_axis -= dy / limit;// minus means system coodinate to
-				y_axis = Math.max(-1, Math.min(y_axis, 1));
-				if (y_axis_candidate != y_axis) {
-					y_axis_candidate = y_axis;
-				}
+				y_axis_candidate -= dy / limit;// minus means system coodinate
+				// to
+				y_axis_candidate = Math.max(-1, Math.min(y_axis_candidate, 1));
 			}
 			ev.preventDefault();
 			ev.stopPropagation();
@@ -177,18 +176,22 @@ var create_plugin = (function() {
 			var ev = {
 				type : "axis",
 				x : x_axis,
-				y : y_axis
+				dx : 0,
+				y : y_axis,
+				dy : 0,
 			};
-			if (x_axis_candidate) {
+			if (x_axis_candidate != x_axis) {
+				ev.x = x_axis_candidate;
+				ev.dx = x_axis_candidate - x_axis;
+
 				x_axis = x_axis_candidate;
-				x_axis_candidate = null;
-				ev.x = x_axis;
 				updated = true;
 			}
-			if (y_axis_candidate) {
+			if (y_axis_candidate != y_axis) {
+				ev.y = y_axis_candidate;
+				ev.dy = y_axis_candidate - y_axis;
+
 				y_axis = y_axis_candidate;
-				y_axis_candidate = null;
-				ev.y = y_axis;
 				updated = true;
 			}
 			if (updated && callback) {
@@ -219,17 +222,25 @@ var create_plugin = (function() {
 		m_plugin_host.send_command(SERVICE_DOMAIN + "get_history");
 	}
 	function init(plugin, options) {
+		console.log(plugin.name + "::init()");
 
 		m_foward_button = create_button(FORWARD_ICON, FORWARD_PUSHED_ICON, function(
 			e) {
-			if (e.type == "axis") {
-				plugin.event_handler_act("SET_THRUSTER " + e.x + " " + e.y);
+			switch (e.type) {
+				case "axis" :
+					plugin.event_handler_act("SET_THRUSTER "
+						+ Math.ceil(e.y * 100) + " " + Math.ceil(e.dx * 100));
+					break;
+				case "up" :
+					plugin.event_handler_act("SET_THRUSTER 0");
+					break;
 			}
 		});
 		m_foward_button
 			.setAttribute("style", "position:absolute; bottom:33%; right:10%;");
 
-		m_autonomous_button = create_button(MANUAL_ICON, NULL, function(e) {
+		m_autonomous_button = create_button(MANUAL_ICON, MANUAL_ICON, function(
+			e) {
 			if (e.type == "down") {
 				plugin.event_handler_act("CHANGE_AUTONOMOUS");
 			}
@@ -1137,9 +1148,14 @@ var create_plugin = (function() {
 						m_plugin_host.send_command(SYSTEM_DOMAIN
 							+ "go2next_menu");
 					case "SET_THRUSTER" :
-						var cmd = SERVICE_DOMAIN + "set_thruster " + params[1]
-							+ " " + params[2];
-						m_plugin_host.send_command(cmd);
+						if (params.length > 1 && !isNaN(params[1])) {
+							var cmd = SERVICE_DOMAIN + "set_thruster "
+								+ params[1];
+							if (params.length > 2 && !isNaN(params[2])) {
+								cmd += " " + params[2];
+							}
+							m_plugin_host.send_command(cmd);
+						}
 						break;
 					case "CHANGE_AUTONOMOUS" :
 						var cmd = SERVICE_DOMAIN + "set_automode "

@@ -23,7 +23,7 @@ var create_plugin = (function() {
 		button.set_src = function(src_normal, src_pushed) {
 			button.src_normal = src_normal;
 			button.src_pushed = src_pushed;
-			button.src = (button.down ? src_pushed : src);
+			button.src = (!button.down ? src_normal : src_pushed);
 		}
 
 		var sx = 0, sy = 0;
@@ -148,6 +148,8 @@ var create_plugin = (function() {
 	}
 
 	function init(plugin) {
+		console.log(plugin.name + "::init()");
+		
 		m_a_button = create_button(A_ICON, A_ICON, function(e) {
 			console.log("A:" + JSON.stringify(e));
 		});

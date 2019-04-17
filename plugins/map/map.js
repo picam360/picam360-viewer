@@ -89,6 +89,7 @@ var create_plugin = (function() {
 		}
 	}
 	function init(plugin) {
+		console.log(plugin.name + "::init()");
 
 		var script = document.createElement('script');
 		script.src = "https://openlayers.org/en/v5.1.3/build/ol.js";
