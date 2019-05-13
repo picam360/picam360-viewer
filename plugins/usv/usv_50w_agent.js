@@ -812,11 +812,17 @@ var create_plugin = (function() {
 							var popup_update = function() {
 								var timestr = new Date(parseInt(m_status.timestamp) * 1000)
 									.toLocaleString();
-								var msg = timestr + "<br/>" + m_status.lat
-									+ "," + m_status.lon + "<br/>" + "bat:"
-									+ m_status.bat + "V" + "<br/>" + "thr:"
-									+ m_status.thruster + "us" + "<br/>"
-									+ "rud:" + m_status.rudder + "us";
+								var msg = "";
+								msg += timestr + "<br/>";
+								msg += m_status.lat + "," + m_status.lon
+									+ "<br/>";
+								msg += "spd:" + m_status.spd + "km/s" + "<br/>";
+								msg += "bat:" + m_status.bat + "V" + "<br/>";
+								msg += "bamp:" + m_status.bamp + "A" + "<br/>";
+								msg += "samp:" + m_status.samp + "A" + "<br/>";
+								msg += "thr:" + m_status.thruster + "us"
+									+ "<br/>";
+								msg += "rud:" + m_status.rudder + "us";
 								map_plugin.set_popup_msg(msg);
 								timer = setTimeout(popup_update, 500);
 							};
