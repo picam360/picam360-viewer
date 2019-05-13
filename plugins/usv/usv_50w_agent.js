@@ -352,6 +352,8 @@ var create_plugin = (function() {
 				var featureHistoryCurrent = new ol.Feature();
 				// gps_point
 				var featureGpsPoint = new ol.Feature();
+				// operator_point
+				var featureOperatorPoint = new ol.Feature();
 				// target
 				var featureTarget = new ol.Feature();
 
@@ -469,12 +471,55 @@ var create_plugin = (function() {
 
 				var layerGpsPoint = new ol.layer.Vector({
 					source : new ol.source.Vector({
-						features : [featureGpsPoint]
+						features : [featureGpsPoint, featureOperatorPoint]
 					})
 				});
 				map.addLayer(layerGpsPoint);
 
+				// current position
 				setInterval(function() {
+					// operator position
+					if (navigator.geolocation) {
+						navigator.geolocation.getCurrentPosition(function(
+							position) {
+							var data = position.coords;
+							var accLatlng = data.accuracy;
+							var accAlt = data.altitudeAccuracy;
+							var speed = data.speed;
+							var gps_point_obj = new ol.geom.Point(ol.proj
+								.fromLonLat([position.coords.longitude,
+									position.coords.latitude]));
+							featureOperatorPoint.setGeometry(gps_point_obj);
+							featureOperatorPoint.setStyle([
+								new ol.style.Style({
+									image : new ol.style.Icon({
+										opacity : 1.0,
+										src : VEHICLE_ICON,
+										anchor : [0.5, 0.5],
+										rotateWithView : false,
+										rotation : position.coords.heading
+											? Math.PI * position.coords.heading
+												/ 180
+												+ map.getView().getRotation()
+											: 0
+									})
+								}), new ol.style.Style({
+									image : new ol.style.Circle({
+										radius : 15,
+										stroke : new ol.style.Stroke({
+											color : [255, 255, 255],
+											width : 2
+										})
+									})
+								})]);
+						}, function(error) {
+						}, {
+							"enableHighAccuracy" : false,
+							"timeout" : 8000,
+							"maximumAge" : 2000,
+						});
+					}
+					// vehicle position
 					if (m_status.lon && m_status.lat) {
 						var gps_point_obj = new ol.geom.Point(ol.proj
 							.fromLonLat([m_status.lon, m_status.lat]));
