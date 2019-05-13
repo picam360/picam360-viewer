@@ -406,7 +406,7 @@ var app = (function() {
 				this.init_common_options_done = true;
 			}
 			loadFile("common_config.json", function(chunk_array) {
-				var txt = String.fromCharCode.apply("", chunk_array[0]);
+				var txt = (new TextDecoder).decode(chunk_array[0]);
 				if (txt) {
 					options = JSON.parse(txt);
 				}
@@ -460,7 +460,7 @@ var app = (function() {
 			self.plugin_host
 				.getFile("config.json", function(chunk_array) {
 					var _options = [];
-					var txt = String.fromCharCode.apply("", chunk_array[0]);
+					var txt = (new TextDecoder).decode(chunk_array[0]);
 					if (txt) {
 						_options = JSON.parse(txt);
 					}
@@ -482,8 +482,8 @@ var app = (function() {
 							self.plugin_host
 								.getFile(_options.plugin_paths[idx], function(
 									chunk_array) {
-									var script_str = String.fromCharCode
-										.apply("", chunk_array[0]);
+									var script_str = (new TextDecoder)
+										.decode(chunk_array[0]);
 									var script = document
 										.createElement('script');
 									script.onload = function() {
@@ -572,8 +572,8 @@ var app = (function() {
 								.GetPayloadLength());
 						}
 					} else if (packet.GetPayloadType() == PT_STATUS) {// status
-						var str = String.fromCharCode
-							.apply("", new Uint8Array(packet.GetPayload()));
+						var str = (new TextDecoder)
+							.decode(new Uint8Array(packet.GetPayload()));
 						var split = str.split('"');
 						var name = UPSTREAM_DOMAIN + split[1];
 						var value = decodeURIComponent(split[3]);
@@ -585,7 +585,7 @@ var app = (function() {
 						var view = new DataView(array.buffer, array.byteOffset);
 						var header_size = view.getUint16(0, false);
 						var header = array.slice(2, 2 + header_size);
-						var header_str = String.fromCharCode.apply("", header);
+						var header_str = (new TextDecoder).decode(header);
 						var data = array.slice(2 + header_size);
 						var key = "dummy";
 						var seq = 0;
@@ -653,8 +653,8 @@ var app = (function() {
 							}
 							var pack = PacketHeader(data[0]);
 							if (pack.GetPayloadType() == PT_STATUS) {
-								var str = String.fromCharCode
-									.apply("", new Uint8Array(pack.GetPayload()));
+								var str = (new TextDecoder)
+									.decode(new Uint8Array(pack.GetPayload()));
 								var split = str.split('"');
 								var name = split[1];
 								var value = split[3].split(' ');
