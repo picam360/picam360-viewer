@@ -482,7 +482,7 @@ var create_plugin = (function() {
 					if (navigator.geolocation) {
 						navigator.geolocation.getCurrentPosition(function(
 							position) {
-							var heading = m_plugin_host.get_view_north();
+							var heading = -m_plugin_host.get_view_north();
 							var gps_point_obj = new ol.geom.Point(ol.proj
 								.fromLonLat([position.coords.longitude,
 									position.coords.latitude]));
