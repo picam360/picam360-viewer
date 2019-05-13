@@ -4,11 +4,15 @@ function MPU(plugin_host) {
 	var m_debugoutput_time = Date.now();
 	var m_quat = new THREE.Quaternion(0, 0, 0, 1);
 	var m_north_diff = 0;
+	var m_north = 0;
 
 	var self = {
 		// return THREE.Quaternion
 		get_quaternion : function() {
 			return m_quat.clone();
+		},
+		get_north : function() {
+			return m_north;
 		},
 		set_attitude : function(pitch, yaw, roll) {
 			var quat = new THREE.Quaternion()
@@ -91,13 +95,13 @@ function MPU(plugin_host) {
 								.degToRad(0), "YXZ"));
 						quat = quat.multiply(offset_quat);
 
-						var north = -attitude.webkitCompassHeading
+						m_north = -attitude.webkitCompassHeading
 							- window.orientation;
 						var euler = new THREE.Euler()
 							.setFromQuaternion(quat, "YXZ");
 						if (Math.abs(euler.x * 180 / Math.PI) < 45
 							&& Math.abs(euler.z * 180 / Math.PI) < 45) {
-							m_north_diff = euler.y * 180 / Math.PI - north;
+							m_north_diff = euler.y * 180 / Math.PI - m_north;
 						}
 						var north_diff_quat = new THREE.Quaternion()
 							.setFromEuler(new THREE.Euler(THREE.Math
@@ -113,7 +117,7 @@ function MPU(plugin_host) {
 							m_debugoutput_time = time;
 							// console.log(attitude);
 							m_plugin_host
-								.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", north, m_north_diff, euler.x
+								.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", m_north, m_north_diff, euler.x
 									* 180 / Math.PI, euler.y * 180 / Math.PI, euler.z
 									* 180 / Math.PI), 5);
 						}

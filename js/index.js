@@ -213,6 +213,13 @@ var app = (function() {
 					return new THREE.Quaternion();
 				}
 			},
+			get_view_north : function() {
+				if (mpu) {
+					return mpu.get_north();
+				} else {
+					return 0;
+				}
+			},
 			get_fov : function() {
 				return m_view_fov;
 			},

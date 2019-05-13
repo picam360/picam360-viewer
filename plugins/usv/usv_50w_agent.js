@@ -482,10 +482,7 @@ var create_plugin = (function() {
 					if (navigator.geolocation) {
 						navigator.geolocation.getCurrentPosition(function(
 							position) {
-							var data = position.coords;
-							var accLatlng = data.accuracy;
-							var accAlt = data.altitudeAccuracy;
-							var speed = data.speed;
+							var heading = m_plugin_host.get_view_north();
 							var gps_point_obj = new ol.geom.Point(ol.proj
 								.fromLonLat([position.coords.longitude,
 									position.coords.latitude]));
@@ -497,11 +494,8 @@ var create_plugin = (function() {
 										src : VEHICLE_ICON,
 										anchor : [0.5, 0.5],
 										rotateWithView : false,
-										rotation : position.coords.heading
-											? Math.PI * position.coords.heading
-												/ 180
-												+ map.getView().getRotation()
-											: 0
+										rotation : Math.PI * heading / 180
+											+ map.getView().getRotation()
 									})
 								}), new ol.style.Style({
 									image : new ol.style.Circle({
