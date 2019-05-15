@@ -301,9 +301,9 @@ var create_plugin = (function() {
 					switch (m_status.operation_mode) {
 						case "MANUAL" :
 							if (e.x <= -1.0) {
-								m_operation_mode_button.next_mode = "HOME";
-							} else if (e.y <= -1.0) {
 								m_operation_mode_button.next_mode = "FOLLOW";
+							} else if (e.y <= -1.0) {
+								m_operation_mode_button.next_mode = "HOME";
 							} else if (e.y >= 1.0) {
 								m_operation_mode_button.next_mode = "WAYPOINT";
 							} else {
@@ -592,7 +592,7 @@ var create_plugin = (function() {
 					if (m_operator_pos) {
 						var heading = -m_plugin_host.get_view_north();
 						var gps_point_obj = new ol.geom.Point(ol.proj
-							.fromLonLat([m_operator_pos.lot, m_operator_pos.lat]));
+							.fromLonLat([m_operator_pos.lon, m_operator_pos.lat]));
 						featureOperatorPoint.setGeometry(gps_point_obj);
 						featureOperatorPoint.setStyle([
 							new ol.style.Style({
