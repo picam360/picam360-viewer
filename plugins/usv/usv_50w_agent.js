@@ -917,7 +917,7 @@ var create_plugin = (function() {
 								msg += timestr + "<br/>";
 								msg += m_status.lat + "," + m_status.lon
 									+ "<br/>";
-								msg += "spd:" + m_status.spd + "km/s" + "<br/>";
+								msg += "spd:" + m_status.spd + "km/h" + "<br/>";
 								msg += "bat:" + m_status.bat + "V" + "<br/>";
 								msg += "bamp:" + m_status.bamp + "A" + "<br/>";
 								msg += "samp:" + m_status.samp + "A" + "<br/>";
