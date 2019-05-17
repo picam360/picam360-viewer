@@ -307,7 +307,7 @@ var create_plugin = (function() {
 							} else if (e.y >= 1.0) {
 								m_operation_mode_button.next_mode = "WAYPOINT";
 							} else {
-								m_operation_mode_button.next_mode = "MANUAL";
+								m_operation_mode_button.next_mode = undefined;
 							}
 							break;
 						default :
@@ -319,7 +319,7 @@ var create_plugin = (function() {
 						plugin.event_handler_act("CHANGE_"
 							+ m_operation_mode_button.next_mode);
 						m_operation_mode_button.next_mode = undefined;
-					} else if (e.elapsed_ms > 2000) {
+					} else if (e.elapsed_ms > 1000) {
 						if (m_status.operation_mode == "STANBY") {
 							plugin.event_handler_act("CHANGE_MANUAL");
 						} else {
