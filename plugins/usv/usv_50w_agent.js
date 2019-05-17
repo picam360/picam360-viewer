@@ -37,6 +37,8 @@ var create_plugin = (function() {
 	var FOLLOW2_ICON = "data:image/svg+xml," + button_svg("F", "000099");
 	var MANUAL_ICON = "data:image/svg+xml," + button_svg("M", "0000FF");
 	var MANUAL2_ICON = "data:image/svg+xml," + button_svg("M", "000099");
+	var EMERGENCY_ICON = "data:image/svg+xml," + button_svg("E", "0000FF");
+	var EMERGENCY2_ICON = "data:image/svg+xml," + button_svg("E", "000099");
 	var STANBY_ICON = "data:image/svg+xml," + button_svg("S", "0000FF");
 	var STANBY2_ICON = "data:image/svg+xml," + button_svg("S", "000099");
 	// map
@@ -306,6 +308,8 @@ var create_plugin = (function() {
 								m_operation_mode_button.next_mode = "HOME";
 							} else if (e.y >= 1.0) {
 								m_operation_mode_button.next_mode = "WAYPOINT";
+							} else if (e.x >= 1.0) {
+								m_operation_mode_button.next_mode = "EMERGENCY";
 							} else {
 								m_operation_mode_button.next_mode = undefined;
 							}
@@ -333,6 +337,7 @@ var create_plugin = (function() {
 								plugin.event_handler_act("CHANGE_MANUAL");
 								break;
 							case "MANUAL" :
+							case "EMERGENCY" :
 								break;
 							case "STANBY" :
 							default :
@@ -376,6 +381,12 @@ var create_plugin = (function() {
 					case "MANUAL" :
 						m_operation_mode_button
 							.set_src(MANUAL_ICON, MANUAL2_ICON);
+						m_foward_button.style.display = "block";
+						m_operation_mode_button.style.display = "block";
+						break;
+					case "EMERGENCY" :
+						m_operation_mode_button
+							.set_src(EMERGENCY_ICON, EMERGENCY2_ICON);
 						m_foward_button.style.display = "block";
 						m_operation_mode_button.style.display = "block";
 						break;
@@ -1321,6 +1332,10 @@ var create_plugin = (function() {
 						break;
 					case "CHANGE_MANUAL" :
 						var cmd = SERVICE_DOMAIN + "set_operation_mode MANUAL";
+						m_plugin_host.send_command(cmd);
+						break;
+					case "CHANGE_EMERGENCY" :
+						var cmd = SERVICE_DOMAIN + "set_operation_mode EMERGENCY";
 						m_plugin_host.send_command(cmd);
 						break;
 					case "CHANGE_STANBY" :
