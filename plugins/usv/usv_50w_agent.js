@@ -475,6 +475,8 @@ var create_plugin = (function() {
 				var featureGpsPoint = new ol.Feature();
 				// operator_point
 				var featureOperatorPoint = new ol.Feature();
+				// home_point
+				var featureHomePoint = new ol.Feature();
 				// target
 				var featureTarget = new ol.Feature();
 
@@ -592,7 +594,7 @@ var create_plugin = (function() {
 
 				var layerGpsPoint = new ol.layer.Vector({
 					source : new ol.source.Vector({
-						features : [featureGpsPoint, featureOperatorPoint]
+						features : [featureGpsPoint, featureOperatorPoint, featureHomePoint]
 					})
 				});
 				map.addLayer(layerGpsPoint);
@@ -620,6 +622,33 @@ var create_plugin = (function() {
 									radius : 15,
 									stroke : new ol.style.Stroke({
 										color : [255, 255, 255],
+										width : 2
+									})
+								})
+							})]);
+					}
+					//home
+					if (m_status.home) {
+						var tol = m_status.home.tol || 30;
+						var radius = map.getPixelFromCoordinate([tol, 0])[0]
+							- map.getPixelFromCoordinate([0, 0])[0];
+						var gps_point_obj = new ol.geom.Point(ol.proj
+							.fromLonLat([m_status.home.lon, m_status.home.lat]));
+						featureOperatorPoint.setGeometry(gps_point_obj);
+						featureOperatorPoint.setStyle([
+							new ol.style.Style({
+								image : new ol.style.Icon({
+									opacity : 1.0,
+									src : HOME_ICON,
+									anchor : [0.5, 0.5],
+									rotateWithView : false,
+									rotation : 0
+								})
+							}), new ol.style.Style({
+								image : new ol.style.Circle({
+									radius : radius,
+									stroke : new ol.style.Stroke({
+										color : [0, 255, 0],
 										width : 2
 									})
 								})
