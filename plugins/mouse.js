@@ -36,8 +36,8 @@ var create_plugin = (function() {
 		var fov = 120;
 		var mousedownFunc = function(ev) {
 			if (ev.type == "touchstart") {
-				ev.clientX = ev.pageX;
-				ev.clientY = ev.pageY;
+				ev.clientX = ev.targetTouches[0].clientX;
+				ev.clientY = ev.targetTouches[0].pageY;
 			}
 			down = true;
 			sx = ev.clientX;
@@ -47,8 +47,8 @@ var create_plugin = (function() {
 		};
 		var mousemoveFunc = function(ev) {
 			if (ev.type == "touchmove") {
-				ev.clientX = ev.pageX;
-				ev.clientY = ev.pageY;
+				ev.clientX = ev.targetTouches[0].pageX;
+				ev.clientY = ev.targetTouches[0].pageY;
 				ev.button = 0;
 			}
 			if (!down || swipeable || ev.button != 0) {
