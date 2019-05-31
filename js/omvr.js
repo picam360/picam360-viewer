@@ -221,7 +221,7 @@ function OMVR() {
 		var vertices = [];
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
-			var theta = i * Math.PI / num_of_steps;
+			var theta = Math.pow(i / num_of_steps, 1.2) * Math.PI;
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
 				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
@@ -746,7 +746,7 @@ function OMVR() {
 			for (var k = 0; k < num_of_materials; k++) {
 				var geometry;
 				if (self.vertex_type == "picam360map") {
-					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
+					geometry = quaterSphereGeometry(256, k * Math.PI / 2);
 				} else if (self.vertex_type == "equirectangular") {
 					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
 				} else if (self.vertex_type == "window") {
@@ -780,9 +780,9 @@ function OMVR() {
 							type : 'f',
 							value : 1
 						},
-						pitch_2_r : {
-							type : 'fv1',
-							value : []
+						pitch_2_r_gamma : {
+							type : 'f',
+							value : 1
 						},
 						tex : {
 							type : 't',
@@ -839,69 +839,10 @@ function OMVR() {
 				quat_correct.setFromEuler(euler_correct);
 
 				if (self.vertex_type == "picam360map") {
-					{// pitch to r look-up table
-						if (!m_pitch_2_r_cache[m_texture_fov]) {
-							var stepnum = 256;
-							var fov_min = 30;
-							var fov_max = 120;
-							var fov_factor = 1.0
-								- (Math
-									.min(Math.max(m_texture_fov / 2.0, fov_min), fov_max) - fov_min)
-								/ (fov_max - fov_min) / 2.0;
-							var fov_rad = m_texture_fov * Math.PI / 180.0;
-							var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
-							var y_ary = [0.0, fov_rad, Math.PI];
-							var x_ary2 = [];
-							var y_ary2 = [];
-							var p0 = {
-								x : 0.0,
-								y : 0.0
-							};
-							var p1 = {
-								x : fov_factor,
-								y : -fov_factor + 1.0
-							};
-							var p2 = {
-								x : 1.0,
-								y : 1.0
-							};
-							for (var i = 0; i < stepnum; i++) {
-								var p = QuadraticBezPoint(p0, p1, p2, i
-									/ (stepnum - 1));
-								x_ary2[i] = p.x;
-								y_ary2[i] = p.y;
-							}
-							// invert x y
-							var stepnum3 = 64;
-							var x_ary3 = [];
-							var y_ary3 = [];
-							for (var i = 0; i < stepnum3; i++) {
-								x_ary3[i] = i / (stepnum3 - 1);
-								for (var j = 0; j < stepnum - 1; j++) {
-									if (x_ary3[i] >= y_ary2[j]
-										&& x_ary3[i] <= y_ary2[j + 1]) {
-										var ratio = (x_ary3[i] - y_ary2[j])
-											/ (y_ary2[j + 1] - y_ary2[j]);
-										y_ary3[i] = ratio
-											* (x_ary2[j + 1] - x_ary2[j])
-											+ x_ary2[j];
-										y_ary3[i] *= Math.sqrt(2.0);
-										break;
-									}
-								}
-							}
-							var resol_ary = [];
-							for (var i = 0; i < stepnum3 - 1; i++) {
-								resol_ary[i] = m_texture_width
-									* (y_ary3[i + 1] - y_ary3[i]) * stepnum3;
-								// console.log("" + (x_ary3[i] * 180) + ","
-								// + y_ary3[i] + "," + resol_ary[i]);
-							}
-
-							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
-						}
-						self
-							.setShaderParam("pitch_2_r", m_pitch_2_r_cache[m_texture_fov]);
+					{// gamma
+						var gamma = Math.log(m_view_fov / 2.0 / 180.0)
+							/ Math.log(1.0 / Math.sqrt(2));
+						self.setShaderParam("pitch_2_r_gamma", 1 / gamma);
 					}
 					{// focal point shift
 						var diff_quat = m_view_tex_diff_quat;
@@ -943,7 +884,7 @@ function OMVR() {
 		},
 
 		pushAudioStream : function(left, right) {
-			if (!m_audio_play){
+			if (!m_audio_play) {
 				return;
 			}
 			var cutoff;
