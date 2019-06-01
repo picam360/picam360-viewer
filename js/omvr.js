@@ -221,7 +221,7 @@ function OMVR() {
 		var vertices = [];
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
-			var theta = Math.pow(i / num_of_steps, 2) * Math.PI;
+			var theta = Math.pow(i / num_of_steps, 1.2) * Math.PI;
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
 				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
@@ -746,7 +746,7 @@ function OMVR() {
 			for (var k = 0; k < num_of_materials; k++) {
 				var geometry;
 				if (self.vertex_type == "picam360map") {
-					geometry = quaterSphereGeometry(256, k * Math.PI / 2);
+					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
 				} else if (self.vertex_type == "equirectangular") {
 					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
 				} else if (self.vertex_type == "window") {
