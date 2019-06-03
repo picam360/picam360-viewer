@@ -11,6 +11,8 @@ function OMVR() {
 	var m_view_quat_time = new Date().getTime();
 	var m_view_av_rad = 0;
 	var m_view_av_n = new THREE.Vector3(0, 0, 1);
+	
+	var m_table_cache = [];
 
 	var m_camera, m_scene, m_renderer;
 
@@ -40,7 +42,6 @@ function OMVR() {
 	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
-	var m_pitch_2_r_cache = [];
 
 	var m_texture_tmp_time = 0;
 	var m_texture_tmp_num = 0;
@@ -221,7 +222,7 @@ function OMVR() {
 		var vertices = [];
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
-			var theta = Math.pow(i / num_of_steps, 1.2) * Math.PI;
+			var theta = Math.pow(i / num_of_steps, 1.5) * Math.PI;
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
 				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
@@ -664,6 +665,39 @@ function OMVR() {
 			m_texture_v.minFilter = THREE.LinearFilter;// performance
 			m_texture_v.anisotropy = m_renderer.getMaxAnisotropy();
 
+			var get_y_return_str_func = function(cur) {
+				var str = "";
+				if (cur == 31) {
+					str += "return 1.0;\n";
+				} else {
+					str += "float k = (y_table[" + (cur + 1) + "] - y_table["
+						+ cur + "]) / (x_table[" + (cur + 1) + "] - x_table["
+						+ cur + "]);\n";
+					str += "return k * (x - x_table[" + cur + "]) + y_table["
+						+ cur + "];\n";
+
+				}
+				return str;
+			}
+			var get_y_str_func = function(cur, s) {
+				var str = "";
+				if (s == 0) {
+					str += "if(x <= x_table[" + cur + "]) {\n";
+					str += get_y_return_str_func(cur - 1);
+					str += "}else{\n";
+					str += get_y_return_str_func(cur);
+					str += "}\n";
+				} else {
+					str += "if(x <= x_table[" + cur + "]) {\n";
+					str += get_y_str_func(parseInt(cur - s), parseInt(s / 2));
+					str += "}else{\n";
+					str += get_y_str_func(parseInt(cur + s), parseInt(s / 2));
+					str += "}\n";
+				}
+				return str;
+			};
+			var get_y_str = get_y_str_func(32 / 2, 32 / 4);
+
 			// load shader
 			var loaded_shader_num = 0;
 			var shader_list = [{
@@ -696,7 +730,8 @@ function OMVR() {
 			}, ];
 			shader_list.forEach(function(item) {
 				loadFile(item.url, function(shader) {
-					m_shaders[item.shader] = shader;
+					m_shaders[item.shader] = shader
+						.replace("%GET_Y%", get_y_str);
 					loaded_shader_num++;
 					if (callback && loaded_shader_num == shader_list.length) {
 						callback();
@@ -780,7 +815,11 @@ function OMVR() {
 							type : 'f',
 							value : 1
 						},
-						pitch_2_r : {
+						r_table : {
+							type : 'fv1',
+							value : []
+						},
+						pitch_table : {
 							type : 'fv1',
 							value : []
 						},
@@ -839,69 +878,51 @@ function OMVR() {
 				quat_correct.setFromEuler(euler_correct);
 
 				if (self.vertex_type == "picam360map") {
+
 					{// pitch to r look-up table
-						if (!m_pitch_2_r_cache[m_texture_fov]) {
-							var stepnum = 256;
+						if (!m_table_cache[m_texture_fov]) {
+							var stepnum = 32;
 							var fov_min = 30;
 							var fov_max = 120;
 							var fov_factor = 1.0
 								- (Math
 									.min(Math.max(m_texture_fov / 2.0, fov_min), fov_max) - fov_min)
 								/ (fov_max - fov_min) / 2.0;
-							var fov_rad = m_texture_fov * Math.PI / 180.0;
-							var x_ary = [0.0, 1.0, Math.sqrt(2.0)];
-							var y_ary = [0.0, fov_rad, Math.PI];
-							var x_ary2 = [];
-							var y_ary2 = [];
+							var x_ary = [];
+							var y_ary = [];
 							var p0 = {
 								x : 0.0,
 								y : 0.0
 							};
 							var p1 = {
-								x : fov_factor,
-								y : -fov_factor + 1.0
+								x : fov_factor * Math.sqrt(2.0),
+								y : (1.0 - fov_factor) * Math.PI
 							};
 							var p2 = {
-								x : 1.0,
-								y : 1.0
+								x : Math.sqrt(2.0),
+								y : Math.PI
 							};
 							for (var i = 0; i < stepnum; i++) {
 								var p = QuadraticBezPoint(p0, p1, p2, i
 									/ (stepnum - 1));
-								x_ary2[i] = p.x;
-								y_ary2[i] = p.y;
+								x_ary[i] = p.x;
+								y_ary[i] = p.y;
 							}
-							// invert x y
-							var stepnum3 = 64;
-							var x_ary3 = [];
-							var y_ary3 = [];
-							for (var i = 0; i < stepnum3; i++) {
-								x_ary3[i] = i / (stepnum3 - 1);
-								for (var j = 0; j < stepnum - 1; j++) {
-									if (x_ary3[i] >= y_ary2[j]
-										&& x_ary3[i] <= y_ary2[j + 1]) {
-										var ratio = (x_ary3[i] - y_ary2[j])
-											/ (y_ary2[j + 1] - y_ary2[j]);
-										y_ary3[i] = ratio
-											* (x_ary2[j + 1] - x_ary2[j])
-											+ x_ary2[j];
-										y_ary3[i] *= Math.sqrt(2.0);
-										break;
-									}
+							if (false) { // for debug
+								var resol_ary = [];
+								for (var i = 0; i < stepnum - 1; i++) {
+									resol_ary[i] = m_texture_width
+										* (y_ary[i + 1] - y_ary[i]) * stepnum;
+									console.log("" + (x_ary[i] * 180) + ","
+										+ y_ary[i] + "," + resol_ary[i]);
 								}
 							}
-							var resol_ary = [];
-							for (var i = 0; i < stepnum3 - 1; i++) {
-								resol_ary[i] = m_texture_width
-									* (y_ary3[i + 1] - y_ary3[i]) * stepnum3;
-								// console.log("" + (x_ary3[i] * 180) + ","
-								// + y_ary3[i] + "," + resol_ary[i]);
-							}
-
-							m_pitch_2_r_cache[m_texture_fov] = y_ary3;
+							m_table_cache[m_texture_fov] = [x_ary, y_ary];
 						}
 						self
-							.setShaderParam("pitch_2_r", m_pitch_2_r_cache[m_texture_fov]);
+							.setShaderParam("r_table", m_table_cache[m_texture_fov][0]);
+						self
+							.setShaderParam("pitch_table", m_table_cache[m_texture_fov][1]);
 					}
 					{// focal point shift
 						var diff_quat = m_view_tex_diff_quat;
@@ -943,7 +964,7 @@ function OMVR() {
 		},
 
 		pushAudioStream : function(left, right) {
-			if (!m_audio_play){
+			if (!m_audio_play) {
 				return;
 			}
 			var cutoff;
