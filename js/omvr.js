@@ -218,11 +218,17 @@ function OMVR() {
 
 		var positions = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
 
+		var pi_idx = 3 * num_of_steps / 4;
 		var indices = [];
 		var vertices = [];
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
-			var theta = Math.pow(i / num_of_steps, 1.5) * Math.PI;
+			var theta;
+			if(i <= pi_idx){
+				theta = Math.pow(i / pi_idx, 1.5) * (Math.PI / 2);
+			} else {
+				theta = (Math.PI / 2) / (num_of_steps - pi_idx) * (i - pi_idx) + (Math.PI / 2);
+			}
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
 				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
