@@ -11,7 +11,7 @@ function OMVR() {
 	var m_view_quat_time = new Date().getTime();
 	var m_view_av_rad = 0;
 	var m_view_av_n = new THREE.Vector3(0, 0, 1);
-	
+
 	var m_table_cache = [];
 
 	var m_camera, m_scene, m_renderer;
@@ -19,7 +19,6 @@ function OMVR() {
 	var m_window_mode = false;
 	var m_canvas;
 	var m_context;
-	var m_effect;
 
 	var m_limit_fov = 180;
 	var m_maxfov = 150;
@@ -118,7 +117,6 @@ function OMVR() {
 		m_camera.updateProjectionMatrix();
 
 		m_renderer.setSize(window.innerWidth, window.innerHeight);
-		m_effect.setSize(window.innerWidth, window.innerHeight);
 	}
 
 	function splitExt(filename) {
@@ -224,10 +222,11 @@ function OMVR() {
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
 			var theta;
-			if(i <= pi_idx){
+			if (i <= pi_idx) {
 				theta = Math.pow(i / pi_idx, 1.5) * (Math.PI / 2);
 			} else {
-				theta = (Math.PI / 2) / (num_of_steps - pi_idx) * (i - pi_idx) + (Math.PI / 2);
+				theta = (Math.PI / 2) / (num_of_steps - pi_idx) * (i - pi_idx)
+					+ (Math.PI / 2);
 			}
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
@@ -536,7 +535,8 @@ function OMVR() {
 			}
 			if (vertex_type == "window") {
 				m_limit_fov = m_view_fov;
-			} else if (vertex_type == "picam360map") {
+			} else if (vertex_type == "picam360map"
+				|| vertex_type == "picam360map3d") {
 				m_limit_fov = 180;
 			}
 			if (type == "raw_bmp") {
@@ -640,9 +640,6 @@ function OMVR() {
 			m_renderer.setSize(window.innerWidth, window.innerHeight);
 			container.appendChild(m_renderer.domElement);
 
-			m_effect = new THREE.StereoEffect(m_renderer);
-			m_effect.setSize(window.innerWidth, window.innerHeight);
-
 			onWindowResize();
 			window.addEventListener('resize', onWindowResize, false);
 
@@ -725,6 +722,15 @@ function OMVR() {
 				url : "shader/picam360map_rgb.frag?cache=no",
 				shader : "picam360map_rgb_fragment_shader"
 			}, {
+				url : "shader/picam360map.vert?cache=no",
+				shader : "picam360map3d_vertex_shader"
+			}, {
+				url : "shader/picam360map3d_yuv.frag?cache=no",
+				shader : "picam360map3d_yuv_fragment_shader"
+			}, {
+				url : "shader/picam360map3d_rgb.frag?cache=no",
+				shader : "picam360map3d_rgb_fragment_shader"
+			}, {
 				url : "shader/equirectangular.vert?cache=no",
 				shader : "equirectangular_vertex_shader"
 			}, {
@@ -783,10 +789,13 @@ function OMVR() {
 				m_scene.remove(m_scene.children[i]);
 			}
 
-			var num_of_materials = (self.vertex_type == "picam360map") ? 4 : 1;
+			var num_of_materials = (self.vertex_type == "picam360map" || self.vertex_type == "picam360map3d")
+				? 4
+				: 1;
 			for (var k = 0; k < num_of_materials; k++) {
 				var geometry;
-				if (self.vertex_type == "picam360map") {
+				if (self.vertex_type == "picam360map"
+					|| self.vertex_type == "picam360map3d") {
 					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
 				} else if (self.vertex_type == "equirectangular") {
 					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
@@ -801,6 +810,10 @@ function OMVR() {
 					fragmentShader : m_shaders[vertex_type + "_"
 						+ fragment_type + "_fragment_shader"],
 					uniforms : {
+						eye_index : {
+							type : 'f',
+							value : 0
+						},
 						material_index : {
 							type : 'f',
 							value : k
@@ -883,7 +896,8 @@ function OMVR() {
 				var quat_correct = new THREE.Quaternion();
 				quat_correct.setFromEuler(euler_correct);
 
-				if (self.vertex_type == "picam360map") {
+				if (self.vertex_type == "picam360map"
+					|| self.vertex_type == "picam360map3d") {
 
 					{// pitch to r look-up table
 						if (!m_table_cache[m_texture_fov]) {
@@ -963,7 +977,22 @@ function OMVR() {
 				}
 			}
 			if (stereoEnabled) {
-				m_effect.render(m_scene, m_camera);
+				var size = m_renderer.getSize();
+				m_renderer.enableScissorTest(true);
+
+				self.setShaderParam("eye_index", 0);
+				m_renderer.setScissor(0, 0, size.width / 2, size.height);
+				m_renderer.setViewport(0, 0, size.width / 2, size.height);
+				m_renderer.render(m_scene, m_camera);
+
+				self.setShaderParam("eye_index", 1);
+				m_renderer
+					.setScissor(size.width / 2, 0, size.width / 2, size.height);
+				m_renderer
+					.setViewport(size.width / 2, 0, size.width / 2, size.height);
+				m_renderer.render(m_scene, m_camera);
+
+				m_renderer.enableScissorTest(false);
 			} else {
 				m_renderer.render(m_scene, m_camera);
 			}
