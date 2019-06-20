@@ -232,6 +232,10 @@ var app = (function() {
 				self.send_event("PLUGIN_HOST", value
 					? "STEREO_ENABLED"
 					: "STEREO_DISABLED");
+
+				var cmd = UPSTREAM_DOMAIN;
+				cmd += "set_stereo " + (value ? 1 : 0);
+				self.send_command(cmd);
 			},
 			set_audio : function(value) {
 				omvr.setAudioEnabled(value);

@@ -506,6 +506,7 @@ function OMVR() {
 						case "WINDOW" :
 						case "EQUIRECTANGULAR" :
 						case "PICAM360MAP" :
+						case "PICAM360MAP3D" :
 							vertex_type = map["mode"][2].toLowerCase();
 							break;
 						default :
@@ -994,6 +995,7 @@ function OMVR() {
 
 				m_renderer.enableScissorTest(false);
 			} else {
+				self.setShaderParam("eye_index", 0);
 				m_renderer.render(m_scene, m_camera);
 			}
 		},
