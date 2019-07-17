@@ -76,12 +76,6 @@ function MPU(plugin_host) {
 		},
 
 		initDeviceOrientationEventLisener : function() {
-			window.ondeviceorientation = function(evt){
-				console.log(evt);
-			}
-			window.onorientationchange = function(evt){
-				console.log(evt);
-			}
 			window
 				.addEventListener('deviceorientation', function(attitude) {
 					if (attitude['detail']) {
