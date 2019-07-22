@@ -652,9 +652,47 @@ var app = (function() {
 				var valid_timediff = 0;
 				var min_rtt = 0;
 				var ping_cnt = 0;
-				var cmd = "<picam360:command id=\"0\" value=\"ping "
-					+ new Date().getTime() + "\" />"
-				var pack = rtcp.buildpacket(cmd, PT_CMD);
+				if (query['frame-mode']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_mode "
+						+ query['frame-mode'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				if (query['frame-width']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_width "
+						+ query['frame-width'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				if (query['frame-height']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_height "
+						+ query['frame-height'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				if (query['frame-fps']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_fps "
+						+ query['frame-fps'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				if (query['frame-encode']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_encode "
+						+ query['frame-encode'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				if (query['frame-bitrate']) {
+					var cmd = "<picam360:command id=\"0\" value=\"frame_bitrate "
+						+ query['frame-bitrate'] + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+					rtcp.sendpacket(conn, pack);
+				}
+				{// ping
+					var cmd = "<picam360:command id=\"0\" value=\"ping "
+						+ new Date().getTime() + "\" />"
+					var pack = rtcp.buildpacket(cmd, PT_CMD);
+				}
 				rtcp.sendpacket(conn, pack);
 				conn
 					.on('data', function(data) {
