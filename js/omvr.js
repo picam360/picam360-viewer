@@ -109,6 +109,11 @@ function OMVR() {
 		}
 	}
 
+	function gotoTop() {
+		document.body.scrollTop = 0;
+		document.documentElement.scrollTop = 0; 
+	}
+
 	function onWindowResize() {
 		m_canvas.width = window.innerWidth;
 		m_canvas.height = window.innerHeight;
@@ -117,6 +122,8 @@ function OMVR() {
 		m_camera.updateProjectionMatrix();
 
 		m_renderer.setSize(window.innerWidth, window.innerHeight);
+
+		gotoTop();
 	}
 
 	function splitExt(filename) {
