@@ -115,10 +115,10 @@ function OMVR() {
 	}
 
 	function onWindowResize() {
-		var w = (window.orientation == 0)
+		var w = Math.abs(window.orientation || 0) != 90
 			? window.parent.screen.width
 			: window.parent.screen.height;
-		var h = (window.orientation == 0)
+		var h = Math.abs(window.orientation || 0) != 90
 			? window.parent.screen.height
 			: window.parent.screen.width;
 		m_canvas.width = w;
@@ -128,7 +128,7 @@ function OMVR() {
 		m_camera.updateProjectionMatrix();
 
 		m_renderer.setSize(w, h);
-		
+
 		gotoTop();
 	}
 
