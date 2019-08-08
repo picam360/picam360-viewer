@@ -789,6 +789,14 @@ var app = (function() {
 				if (m_fpp) {
 					view_quat = omvr.predict_view_quaternion();
 				}
+				if (query['horizon-opt'] != "no"
+					&& query['horizon-opt'] != "false") {
+					var euler = new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
+						.degToRad(45), THREE.Math.degToRad(0), "YXZ");
+
+					var quat = new THREE.Quaternion().setFromEuler(euler);
+					view_quat = view_quat.multiply(quat);
+				}
 				var cmd = UPSTREAM_DOMAIN;
 				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
 				cmd += sprintf(" fov=%.3f client_key=%s server_key=%s", fov
