@@ -111,18 +111,24 @@ function OMVR() {
 
 	function gotoTop() {
 		document.body.scrollTop = 0;
-		document.documentElement.scrollTop = 0; 
+		document.documentElement.scrollTop = 0;
 	}
 
 	function onWindowResize() {
-		m_canvas.width = window.innerWidth;
-		m_canvas.height = window.innerHeight;
+		var w = (window.orientation == 0)
+			? window.parent.screen.width
+			: window.parent.screen.height;
+		var h = (window.orientation == 0)
+			? window.parent.screen.height
+			: window.parent.screen.width;
+		m_canvas.width = w;
+		m_canvas.height = h;
 
-		m_camera.aspect = window.innerWidth / window.innerHeight;
+		m_camera.aspect = w / h;
 		m_camera.updateProjectionMatrix();
 
-		m_renderer.setSize(window.innerWidth, window.innerHeight);
-
+		m_renderer.setSize(w, h);
+		
 		gotoTop();
 	}
 
