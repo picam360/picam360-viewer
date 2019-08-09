@@ -659,7 +659,8 @@ function OMVR() {
 			window.addEventListener('resize', onWindowResize, false);
 
 			// texture
-			var filter = THREE.NearestFilter;// THREE.LinearFilter
+			// var filter = THREE.NearestFilter;
+			var filter = THREE.LinearFilter;
 			m_texture = new THREE.Texture(new Image());
 			m_texture.needsUpdate = true;
 			m_texture.generateMipmaps = false;// performance
