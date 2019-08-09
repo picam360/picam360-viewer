@@ -35,7 +35,7 @@ var app = (function() {
 	var tilt = 0;
 	var socket;
 	var m_view_fov = 120;
-	var target_fps = 10;
+	var m_skip_frame = 2;
 	var auto_scroll = false;
 	var view_offset_lock = false;
 	var m_afov = false;
@@ -973,8 +973,8 @@ var app = (function() {
 				m_vertex_type = query['vertex-type'];
 			}
 
-			if (query['fps']) {
-				target_fps = parseFloat(query['fps']);
+			if (query['skip-frame']) {
+				m_skip_frame = parseFloat(query['skip-frame']);
 			}
 			if (query['auto-scroll']) {
 				auto_scroll = parseBoolean(query['auto-scroll']);
@@ -1115,90 +1115,103 @@ var app = (function() {
 			return (socket != null || peer != null);
 		},
 		start_animate : function() {
-			setInterval(function() {
+			var frame_count = 0;
+			function redraw() {
+				requestAnimationFrame(redraw);
+				frame_count++;
 				if (!m_frame_active) {
 					return;
 				}
-				var divStatus = document.getElementById("divStatus");
-				if (divStatus) {
-					var status = "";
-					var texture_info = omvr.get_info();
-					{
-						status += "texture<br/>";
-						status += "fps:" + texture_info.fps.toFixed(3)
-							+ "<br/>";
-						status += "latency:"
-							+ (texture_info.latency * 1000).toFixed(0)
-							+ "ms<br/>";
-						status += "processed:"
-							+ (texture_info.processed * 1000).toFixed(0)
-							+ "ms<br/>";
-						status += "encoded:"
-							+ (texture_info.encoded * 1000).toFixed(0)
-							+ "ms<br/>";
-						status += "decoded:"
-							+ (texture_info.decoded * 1000).toFixed(0)
-							+ "ms<br/>";
-						status += "rtt:" + (texture_info.rtt * 1000).toFixed(0)
-							+ "ms<br/>";
-						status += "<br/>";
-					}
-
-					{
-						var rtp_info = rtp.get_info();
-						status += "packet<br/>";
-						status += "bitrate:" + rtp_info.bitrate.toFixed(3)
-							+ "Mbit/s<br/>";
-						status += "<br/>";
-					}
-
-					{
-						status += "upstream<br/>";
-						status += m_info.replace(/\n/gm, "<br/>");
-						status += "<br/>";
-					}
-
-					divStatus.innerHTML = status;
+				if ((frame_count % (m_skip_frame + 1)) != 0) {
+					return;
 				}
-				if (m_menu_visible) {
-					var info = "";
-					{
-						var defualt_color = "#ffffff";
-						var activated_color = "#00ffff";
-						var selected_color = "#ff00ff";
-						var marked_color = "#ffff00";
-						var rows = m_menu.split("\n");
-						var _nodes_index = rows[0].split(",");
-						var nodes_index = [];
-						for (var i = 0; i < _nodes_index.length; i++) {
-							nodes_index[_nodes_index[i].toLowerCase()] = i;
-						}
-						info += "<pre align=\"left\">";
-						for (var i = 1; i < rows.length; i++) {
-							if (!rows[i]) {
-								continue;
-							}
-							var nodes = rows[i].split(",");
-							var color = nodes[nodes_index["selected"]] == "1"
-								? selected_color
-								: nodes[nodes_index["activated"]] == "1"
-									? activated_color
-									: nodes[nodes_index["marked"]] == "1"
-										? marked_color
-										: defualt_color;
-							info += " ".repeat(4 * nodes[nodes_index["depth"]])
-								+ "<font color=\"" + color + "\">"
-								+ nodes[nodes_index["name"]] + "</font>"
+				if ((frame_count % 30) == 0) {
+					var divStatus = document.getElementById("divStatus");
+					if (divStatus) {
+						var status = "";
+						var texture_info = omvr.get_info();
+						{
+							status += "texture<br/>";
+							status += "fps:" + texture_info.fps.toFixed(3)
 								+ "<br/>";
+							status += "latency:"
+								+ (texture_info.latency * 1000).toFixed(0)
+								+ "ms<br/>";
+							status += "processed:"
+								+ (texture_info.processed * 1000).toFixed(0)
+								+ "ms<br/>";
+							status += "encoded:"
+								+ (texture_info.encoded * 1000).toFixed(0)
+								+ "ms<br/>";
+							status += "decoded:"
+								+ (texture_info.decoded * 1000).toFixed(0)
+								+ "ms<br/>";
+							status += "rtt:"
+								+ (texture_info.rtt * 1000).toFixed(0)
+								+ "ms<br/>";
+							status += "<br/>";
 						}
-						info += "</pre>";
+
+						{
+							var rtp_info = rtp.get_info();
+							status += "packet<br/>";
+							status += "bitrate:" + rtp_info.bitrate.toFixed(3)
+								+ "Mbit/s<br/>";
+							status += "<br/>";
+						}
+
+						{
+							status += "upstream<br/>";
+							status += m_info.replace(/\n/gm, "<br/>");
+							status += "<br/>";
+						}
+
+						divStatus.innerHTML = status;
 					}
+					if (m_menu_visible) {
+						var info = "";
+						{
+							var defualt_color = "#ffffff";
+							var activated_color = "#00ffff";
+							var selected_color = "#ff00ff";
+							var marked_color = "#ffff00";
+							var rows = m_menu.split("\n");
+							var _nodes_index = rows[0].split(",");
+							var nodes_index = [];
+							for (var i = 0; i < _nodes_index.length; i++) {
+								nodes_index[_nodes_index[i].toLowerCase()] = i;
+							}
+							info += "<pre align=\"left\">";
+							for (var i = 1; i < rows.length; i++) {
+								if (!rows[i]) {
+									continue;
+								}
+								var nodes = rows[i].split(",");
+								var color = nodes[nodes_index["selected"]] == "1"
+									? selected_color
+									: nodes[nodes_index["activated"]] == "1"
+										? activated_color
+										: nodes[nodes_index["marked"]] == "1"
+											? marked_color
+											: defualt_color;
+								info += " "
+									.repeat(4 * nodes[nodes_index["depth"]])
+									+ "<font color=\""
+									+ color
+									+ "\">"
+									+ nodes[nodes_index["name"]]
+									+ "</font>"
+									+ "<br/>";
+							}
+							info += "</pre>";
+						}
 
-					self.plugin_host.set_info(info);
+						self.plugin_host.set_info(info);
+					}
 				}
-
 				omvr.animate();
-			}, 1000 / target_fps);
+			}
+			redraw();
 		},
 	};
 	return self;

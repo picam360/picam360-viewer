@@ -12,6 +12,7 @@ function OMVR() {
 	var m_view_av_rad = 0;
 	var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
+	var m_view_fov_cache = 0;
 	var m_table_cache = [];
 
 	var m_camera, m_scene, m_renderer;
@@ -658,28 +659,29 @@ function OMVR() {
 			window.addEventListener('resize', onWindowResize, false);
 
 			// texture
+			var filter = THREE.NearestFilter;// THREE.LinearFilter
 			m_texture = new THREE.Texture(new Image());
 			m_texture.needsUpdate = true;
 			m_texture.generateMipmaps = false;// performance
-			m_texture.minFilter = THREE.LinearFilter;// performance
+			m_texture.minFilter = filter;// performance
 			m_texture.anisotropy = m_renderer.getMaxAnisotropy();
 
 			m_texture_y = new THREE.Texture(new Image());
 			m_texture_y.needsUpdate = true;
 			m_texture_y.generateMipmaps = false;// performance
-			m_texture_y.minFilter = THREE.LinearFilter;// performance
+			m_texture_y.minFilter = filter;// performance
 			m_texture_y.anisotropy = m_renderer.getMaxAnisotropy();
 
 			m_texture_u = new THREE.Texture(new Image());
 			m_texture_u.needsUpdate = true;
 			m_texture_u.generateMipmaps = false;// performance
-			m_texture_u.minFilter = THREE.LinearFilter;// performance
+			m_texture_u.minFilter = filter;// performance
 			m_texture_u.anisotropy = m_renderer.getMaxAnisotropy();
 
 			m_texture_v = new THREE.Texture(new Image());
 			m_texture_v.needsUpdate = true;
 			m_texture_v.generateMipmaps = false;// performance
-			m_texture_v.minFilter = THREE.LinearFilter;// performance
+			m_texture_v.minFilter = filter;// performance
 			m_texture_v.anisotropy = m_renderer.getMaxAnisotropy();
 
 			var get_y_return_str_func = function(cur) {
@@ -979,7 +981,8 @@ function OMVR() {
 						.makeRotationFromQuaternion(view_quat));
 				}
 
-				{
+				if (m_view_fov_cache != m_view_fov) {
+					m_view_fov_cache = m_view_fov;
 					var window_aspect = (stereoEnabled
 						? window.innerWidth / 2
 						: window.innerWidth)
@@ -996,16 +999,14 @@ function OMVR() {
 						self.setShaderParam("frame_scaley", scale
 							* window_aspect);
 					}
+					self.setShaderParam("pixel_size_x", 1.0 / m_texture_width);
+					self.setShaderParam("pixel_size_y", 1.0 / m_texture_height);
 				}
-			}
-			{
-				self.setShaderParam("pixel_size_x", 1.0 / m_texture_width);
-				self.setShaderParam("pixel_size_y", 1.0 / m_texture_height);
 			}
 			if (stereoEnabled) {
 				var size = m_renderer.getSize();
 				m_renderer.enableScissorTest(true);
-				
+
 				self.setShaderParam("eye_index", 0);
 				m_renderer.setScissor(0, 0, size.width / 2, size.height);
 				m_renderer.setViewport(0, 0, size.width / 2, size.height);
