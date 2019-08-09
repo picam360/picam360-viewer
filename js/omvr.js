@@ -828,6 +828,14 @@ function OMVR() {
 							type : 'f',
 							value : 0
 						},
+						pixel_size_x : {
+							type : 'f',
+							value : 0.001
+						},
+						pixel_size_y : {
+							type : 'f',
+							value : 0.001
+						},
 						material_index : {
 							type : 'f',
 							value : k
@@ -990,10 +998,14 @@ function OMVR() {
 					}
 				}
 			}
+			{
+				self.setShaderParam("pixel_size_x", 1.0 / m_texture_width);
+				self.setShaderParam("pixel_size_y", 1.0 / m_texture_height);
+			}
 			if (stereoEnabled) {
 				var size = m_renderer.getSize();
 				m_renderer.enableScissorTest(true);
-
+				
 				self.setShaderParam("eye_index", 0);
 				m_renderer.setScissor(0, 0, size.width / 2, size.height);
 				m_renderer.setViewport(0, 0, size.width / 2, size.height);
