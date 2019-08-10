@@ -230,18 +230,22 @@ function OMVR() {
 
 		var positions = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
 
-		var pi_idx = 3 * num_of_steps / 4;
+		var r2pitch_table = get_r2pitch_table(m_texture_fov);
+		var pi_idx = parseInt(1.0 / Math.sqrt(2) * num_of_steps);
 		var indices = [];
 		var vertices = [];
 		var index = 0;
 		for (var i = 0; i <= num_of_steps; i++) {
 			var theta;
+			var r;
 			if (i <= pi_idx) {
-				theta = Math.pow(i / pi_idx, 1.5) * (Math.PI / 2);
+				r = i / pi_idx;
 			} else {
-				theta = (Math.PI / 2) / (num_of_steps - pi_idx) * (i - pi_idx)
-					+ (Math.PI / 2);
+				r = (Math.sqrt(2) - 1.0) * (i - pi_idx)
+					/ (num_of_steps - pi_idx) + 1.0;
 			}
+			theta = get_y(r, r2pitch_table[0], r2pitch_table[1], 32);
+			//console.log(r + ":" + theta);
 			var verticesRow = [];
 			for (var j = 0; j <= num_of_steps / 4; j++) {
 				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
@@ -328,6 +332,57 @@ function OMVR() {
 		o.y += v * p2.y;
 
 		return o;
+	}
+	function get_r2pitch_table(fov) {
+		var stepnum = 32;
+		var fov_min = 30;
+		var fov_max = 120;
+		var fov_factor = 1.0
+			- (Math.min(Math.max(fov / 2.0, fov_min), fov_max) - fov_min)
+			/ (fov_max - fov_min) / 2.0;
+		var x_ary = [];
+		var y_ary = [];
+		var p0 = {
+			x : 0.0,
+			y : 0.0
+		};
+		var p1 = {
+			x : fov_factor * Math.sqrt(2.0),
+			y : (1.0 - fov_factor) * Math.PI
+		};
+		var p2 = {
+			x : Math.sqrt(2.0),
+			y : Math.PI
+		};
+		for (var i = 0; i < stepnum; i++) {
+			var p = QuadraticBezPoint(p0, p1, p2, i / (stepnum - 1));
+			x_ary[i] = p.x;
+			y_ary[i] = p.y;
+		}
+		if (false) { // for debug
+			var resol_ary = [];
+			for (var i = 0; i < stepnum - 1; i++) {
+				resol_ary[i] = m_texture_width * (y_ary[i + 1] - y_ary[i])
+					* stepnum;
+				console.log("" + (x_ary[i] * 180) + "," + y_ary[i] + ","
+					+ resol_ary[i]);
+			}
+		}
+		return [x_ary, y_ary];
+	}
+
+	function get_y(x, x_table, y_table, table_size) {
+		var cur = table_size / 2;
+		for (var s = table_size / 4; s > 0; s /= 2) {
+			cur += (x <= x_table[cur]) ? -s : s;
+		}
+		if (x <= x_table[cur]) {
+			cur--;
+		}
+		var cur_p1 = cur + 1;
+		var k = (y_table[cur_p1] - y_table[cur])
+			/ (x_table[cur_p1] - x_table[cur]);
+		return k * (x - x_table[cur]) + y_table[cur];
 	}
 
 	var stereoEnabled = false;
@@ -926,43 +981,7 @@ function OMVR() {
 
 					{// pitch to r look-up table
 						if (!m_table_cache[m_texture_fov]) {
-							var stepnum = 32;
-							var fov_min = 30;
-							var fov_max = 120;
-							var fov_factor = 1.0
-								- (Math
-									.min(Math.max(m_texture_fov / 2.0, fov_min), fov_max) - fov_min)
-								/ (fov_max - fov_min) / 2.0;
-							var x_ary = [];
-							var y_ary = [];
-							var p0 = {
-								x : 0.0,
-								y : 0.0
-							};
-							var p1 = {
-								x : fov_factor * Math.sqrt(2.0),
-								y : (1.0 - fov_factor) * Math.PI
-							};
-							var p2 = {
-								x : Math.sqrt(2.0),
-								y : Math.PI
-							};
-							for (var i = 0; i < stepnum; i++) {
-								var p = QuadraticBezPoint(p0, p1, p2, i
-									/ (stepnum - 1));
-								x_ary[i] = p.x;
-								y_ary[i] = p.y;
-							}
-							if (false) { // for debug
-								var resol_ary = [];
-								for (var i = 0; i < stepnum - 1; i++) {
-									resol_ary[i] = m_texture_width
-										* (y_ary[i + 1] - y_ary[i]) * stepnum;
-									console.log("" + (x_ary[i] * 180) + ","
-										+ y_ary[i] + "," + resol_ary[i]);
-								}
-							}
-							m_table_cache[m_texture_fov] = [x_ary, y_ary];
+							m_table_cache[m_texture_fov] = get_r2pitch_table(m_texture_fov);
 						}
 						self
 							.setShaderParam("r_table", m_table_cache[m_texture_fov][0]);
