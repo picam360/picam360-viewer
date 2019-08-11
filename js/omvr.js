@@ -868,7 +868,7 @@ function OMVR() {
 				var geometry;
 				if (self.vertex_type == "picam360map"
 					|| self.vertex_type == "picam360map3d") {
-					geometry = quaterSphereGeometry(64, k * Math.PI / 2);
+					geometry = quaterSphereGeometry(256, k * Math.PI / 2);
 				} else if (self.vertex_type == "equirectangular") {
 					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
 				} else if (self.vertex_type == "window") {
