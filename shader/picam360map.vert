@@ -1,7 +1,6 @@
 //position is windowed sphere
 const int STEPNUM = 32;
 
-uniform float material_index;
 uniform float frame_scalex;
 uniform float frame_scaley;
 uniform float pixel_size_x;
@@ -24,8 +23,16 @@ float get_y(float x, float x_table[STEPNUM], float y_table[STEPNUM]) {
 }
 
 void main(void) {
-	float pitch = acos(position.z);
-	float roll = atan(position.y, position.x);
+	float x = position.x;
+	float y = position.y;
+	float z = position.z;
+	float material_index = sqrt(x * x + y * y + z * z);
+	x /= material_index;
+	y /= material_index;
+	z /= material_index;
+	material_index = floor(material_index - 0.5);
+	float pitch = acos(z);
+	float roll = atan(y, x);
 	float r = get_y(pitch, pitch_table, r_table);
 	if (r > 1.0) {
 		float roll_base;
@@ -51,7 +58,7 @@ void main(void) {
 		roll = roll_diff * roll_gain + roll_base;
 	}
 
-	if (position.z == 1.0) {
+	if (z == 1.0) {
 		roll = 0.0;
 	}
 	float tex_x = r * cos(roll); //[-1:1]
@@ -70,7 +77,7 @@ void main(void) {
 		tcoord.y = 1.0;
 	}
 
-	vec4 pos = unif_matrix * vec4(position, 1.0);
+	vec4 pos = unif_matrix * vec4(x, y, z, 1.0);
 	if (pos.z > 0.0) {
 		float x = pos.x / pos.z;
 		float y = pos.y / pos.z;

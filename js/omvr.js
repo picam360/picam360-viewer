@@ -222,11 +222,11 @@ function OMVR() {
 		return geometry;
 	}
 
-	function quaterSphereGeometry(num_of_steps, offset) {
+	function quaterSphereGeometry(num_of_steps) {
 		var bufferGeometry = new THREE.BufferGeometry();
 		bufferGeometry.type = 'QuaterSphereBufferGeometry';
 
-		var vertexCount = ((num_of_steps + 1) * (num_of_steps / 4 + 1));
+		var vertexCount = ((num_of_steps + 1) * (num_of_steps / 4 + 1) * 4);
 
 		var positions = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
 
@@ -235,42 +235,46 @@ function OMVR() {
 		var indices = [];
 		var vertices = [];
 		var index = 0;
-		for (var i = 0; i <= num_of_steps; i++) {
-			var theta;
-			var r;
-			if (i <= pi_idx) {
-				r = i / pi_idx;
-			} else {
-				r = (Math.sqrt(2) - 1.0) * (i - pi_idx)
-					/ (num_of_steps - pi_idx) + 1.0;
+		for (var k = 0; k < 4; k++) {
+			var offset = k * Math.PI / 2;
+			var offset_idx = vertices.length;
+			for (var i = 0; i <= num_of_steps; i++) {
+				var theta;
+				var r;
+				if (i <= pi_idx) {
+					r = i / pi_idx;
+				} else {
+					r = (Math.sqrt(2) - 1.0) * (i - pi_idx)
+						/ (num_of_steps - pi_idx) + 1.0;
+				}
+				theta = get_y(r, r2pitch_table[0], r2pitch_table[1], 32);
+				// console.log(r + ":" + theta);
+				var verticesRow = [];
+				for (var j = 0; j <= num_of_steps / 4; j++) {
+					var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
+					var x = Math.sin(theta) * Math.cos(phi) * (k + 1);
+					var y = Math.sin(theta) * Math.sin(phi) * (k + 1);
+					var z = Math.cos(theta) * (k + 1);
+
+					positions.setXYZ(index, x, y, z);
+
+					verticesRow.push(index);
+
+					index++;
+				}
+				vertices.push(verticesRow);
 			}
-			theta = get_y(r, r2pitch_table[0], r2pitch_table[1], 32);
-			//console.log(r + ":" + theta);
-			var verticesRow = [];
-			for (var j = 0; j <= num_of_steps / 4; j++) {
-				var phi = j * (Math.PI / 2) / (num_of_steps / 4) + offset;
-				var x = Math.sin(theta) * Math.cos(phi);
-				var y = Math.sin(theta) * Math.sin(phi);
-				var z = Math.cos(theta);
 
-				positions.setXYZ(index, x, y, z);
+			for (var i = 0; i < num_of_steps; i++) {
+				for (var j = 0; j < num_of_steps / 4; j++) {
+					var v1 = vertices[i + offset_idx][j + 1];
+					var v2 = vertices[i + offset_idx][j];
+					var v3 = vertices[i + 1 + offset_idx][j];
+					var v4 = vertices[i + 1 + offset_idx][j + 1];
 
-				verticesRow.push(index);
-
-				index++;
-			}
-			vertices.push(verticesRow);
-		}
-
-		for (var i = 0; i < num_of_steps; i++) {
-			for (var j = 0; j < num_of_steps; j++) {
-				var v1 = vertices[i][j + 1];
-				var v2 = vertices[i][j];
-				var v3 = vertices[i + 1][j];
-				var v4 = vertices[i + 1][j + 1];
-
-				indices.push(v1, v2, v4);
-				indices.push(v2, v3, v4);
+					indices.push(v1, v2, v4);
+					indices.push(v2, v3, v4);
+				}
 			}
 		}
 
@@ -861,21 +865,22 @@ function OMVR() {
 				m_scene.remove(m_scene.children[i]);
 			}
 
-			var num_of_materials = (self.vertex_type == "picam360map" || self.vertex_type == "picam360map3d")
-				? 4
-				: 1;
-			for (var k = 0; k < num_of_materials; k++) {
+			{
 				var geometry;
-				if (self.vertex_type == "picam360map"
-					|| self.vertex_type == "picam360map3d") {
-					geometry = quaterSphereGeometry(256, k * Math.PI / 2);
-				} else if (self.vertex_type == "equirectangular") {
-					geometry = windowGeometry(m_maxfov, m_maxfov, 64);
-				} else if (self.vertex_type == "window") {
-					// position is x:[-1,1],y:[-1,1]
-					geometry = new THREE.PlaneGeometry(2, 2);
-				} else {
-					continue;
+				switch (self.vertex_type) {
+					case "picam360map" :
+					case "picam360map3d" :
+						geometry = quaterSphereGeometry(64);
+						break;
+					case "equirectangular" :
+						geometry = windowGeometry(m_maxfov, m_maxfov, 64);
+						break;
+					case "window" :
+					default :
+						// position is x:[-1,1],y:[-1,1]
+						geometry = new THREE.PlaneGeometry(2, 2);
+						self.vertex_type = "window";
+						break;
 				}
 				var material = new THREE.ShaderMaterial({
 					vertexShader : m_shaders[vertex_type + "_vertex_shader"],
@@ -893,10 +898,6 @@ function OMVR() {
 						pixel_size_y : {
 							type : 'f',
 							value : 0.001
-						},
-						material_index : {
-							type : 'f',
-							value : k
 						},
 						frame_scalex : {
 							type : 'f',
