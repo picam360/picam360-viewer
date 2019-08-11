@@ -390,6 +390,7 @@ function OMVR() {
 	}
 
 	var stereoEnabled = false;
+	var handle_frame_params = null;
 
 	var self = {
 		set_view_quaternion : function(value) {
@@ -520,6 +521,16 @@ function OMVR() {
 		},
 
 		handle_frame : function(type, data, width, height, info, time) {
+			handle_frame_params = {
+				type : type,
+				data : data,
+				width : width,
+				height : height,
+				info : info,
+				time : time,
+			};
+		},
+		_handle_frame : function(type, data, width, height, info, time) {
 			m_texture_num++;
 
 			var now = new Date().getTime();
@@ -969,6 +980,12 @@ function OMVR() {
 		},
 
 		animate : function(elapsedTime) {
+			if (handle_frame_params) {
+				var params = handle_frame_params;
+				handle_frame_params = null;
+				self
+					._handle_frame(params.type, params.data, params.width, params.height, params.info, params.time);
+			}
 			m_view_tex_diff_quat = m_tex_quat.clone().conjugate()
 				.multiply(m_view_quat);
 			{
