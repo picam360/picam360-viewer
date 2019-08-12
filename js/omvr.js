@@ -131,6 +131,8 @@ function OMVR() {
 		m_renderer.setSize(w, h);
 
 		gotoTop();
+
+		m_view_fov_cache = 0;//cache clear
 	}
 
 	function splitExt(filename) {
