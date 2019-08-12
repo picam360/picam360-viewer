@@ -881,7 +881,7 @@ function OMVR() {
 				switch (self.vertex_type) {
 					case "picam360map" :
 					case "picam360map3d" :
-						geometry = quaterSphereGeometry(64);
+						geometry = quaterSphereGeometry(256);
 						break;
 					case "equirectangular" :
 						geometry = windowGeometry(m_maxfov, m_maxfov, 64);
