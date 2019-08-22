@@ -1062,8 +1062,8 @@ var app = (function() {
 						return pc.createAnswer();
 					}).then(function(sdp) {
 						console.log('Created answer.');
-						pc.setLocalDescription(sdp);
 						sdp.sdp = sdp.sdp.replace(/a=fmtp:111/, 'a=fmtp:111 stereo=1\r\na=fmtp:111');
+						pc.setLocalDescription(sdp);
 						sig.answer(offer.src, sdp);
 					}).catch(function(err) {
 						console.log('Failed answering:' + err);
