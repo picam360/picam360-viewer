@@ -42,6 +42,8 @@ function OMVR() {
 	var m_texture_v;
 	var m_video;
 	var m_videoStart = 0;
+	var m_audio;
+	var m_audio_type = "stream";
 
 	var m_texture_tmp_time = 0;
 	var m_texture_tmp_num = 0;
@@ -72,6 +74,9 @@ function OMVR() {
 	};
 
 	// audio
+	var m_audio = document.createElement('audio');
+	document.body.appendChild(m_audio);
+	
 	var m_audio_buffer_size = 4096;
 	var m_audio_contxt = new (window.AudioContext || window.webkitAudioContext);
 	var m_audio_play = false;
@@ -466,6 +471,10 @@ function OMVR() {
 			};
 			return info;
 		},
+		
+		loadAudio : function(audio_url) {
+			m_audio.srcObject = audio_url;
+		},
 
 		loadTexture : function(image_url, image_type) {
 
@@ -522,17 +531,17 @@ function OMVR() {
 			return m_texture_num;
 		},
 
+//		handle_frame : function(type, data, width, height, info, time) {
+//			handle_frame_params = {
+//				type : type,
+//				data : data,
+//				width : width,
+//				height : height,
+//				info : info,
+//				time : time,
+//			};
+//		},
 		handle_frame : function(type, data, width, height, info, time) {
-			handle_frame_params = {
-				type : type,
-				data : data,
-				width : width,
-				height : height,
-				info : info,
-				time : time,
-			};
-		},
-		_handle_frame : function(type, data, width, height, info, time) {
 			m_texture_num++;
 
 			var now = new Date().getTime();
@@ -1088,15 +1097,27 @@ function OMVR() {
 				return;
 			}
 			m_audio_play = bln;
-			if (m_audio_play) {
-				m_audio_source = m_audio_contxt.createBufferSource();
-				m_audio_source.connect(m_audio_script_proc);
-				m_audio_script_proc.connect(m_audio_contxt.destination);
-				m_audio_source.start();
-			} else {
-				m_audio_source.stop();
-				m_audio_source.disconnect(m_audio_script_proc);
-				m_audio_script_proc.disconnect(m_audio_contxt.destination);
+			switch(m_audio_type){
+				case "buffer":
+					if (m_audio_play) {
+						m_audio_source = m_audio_contxt.createBufferSource();
+						m_audio_source.connect(m_audio_script_proc);
+						m_audio_script_proc.connect(m_audio_contxt.destination);
+						m_audio_source.start();
+					} else {
+						m_audio_source.stop();
+						m_audio_source.disconnect(m_audio_script_proc);
+						m_audio_script_proc.disconnect(m_audio_contxt.destination);
+					}
+					break;
+				case "stream":
+				default:
+					if (m_audio_play) {
+						m_audio.play();
+					} else {
+						m_audio.pause();
+					}
+					break;
 			}
 		},
 

@@ -42,6 +42,7 @@ var app = (function() {
 	var m_fpp = false;
 	var m_vertex_type = "";
 	var debug = 0;
+	var m_audio = null;
 
 	// main canvas
 	var canvas;
@@ -82,6 +83,8 @@ var app = (function() {
 	var m_menu_visible = false;
 	var m_info = "";
 	var m_menu = "";
+	
+	var m_pc = null;
 
 	function set_is_recording(value) {
 		if (is_recording != value) {
@@ -133,7 +136,8 @@ var app = (function() {
 	}
 
 	function uuid() {
-		var uuid = "", i, random;
+		var uuid = "",
+			i, random;
 		for (i = 0; i < 32; i++) {
 			random = Math.random() * 16 | 0;
 
@@ -176,7 +180,7 @@ var app = (function() {
 		}
 
 		var self = {
-			get_plugin : function(name) {
+			get_plugin: function(name) {
 				for (var i = 0; i < plugins.length; i++) {
 					if (name == plugins[i].name) {
 						return plugins[i];
@@ -184,7 +188,7 @@ var app = (function() {
 				}
 				return null;
 			},
-			send_command : function(cmd) {
+			send_command: function(cmd) {
 				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
 					cmd2upstream_list.push(cmd.substr(UPSTREAM_DOMAIN.length));
 					return;
@@ -196,72 +200,72 @@ var app = (function() {
 				}
 				handle_command(cmd);
 			},
-			send_event : function(sender, event) {
+			send_event: function(sender, event) {
 				for (var i = 0; i < plugins.length; i++) {
 					if (plugins[i].event_handler) {
 						plugins[i].event_handler(sender, event);
 					}
 				}
 			},
-			add_watch : function(name, callback) {
+			add_watch: function(name, callback) {
 				watches[name] = callback;
 			},
-			get_view_quaternion : function() {
+			get_view_quaternion: function() {
 				if (mpu) {
 					return mpu.get_quaternion();
 				} else {
 					return new THREE.Quaternion();
 				}
 			},
-			get_view_north : function() {
+			get_view_north: function() {
 				if (mpu) {
 					return mpu.get_north();
 				} else {
 					return 0;
 				}
 			},
-			get_fov : function() {
+			get_fov: function() {
 				return m_view_fov;
 			},
-			set_fov : function(value) {
+			set_fov: function(value) {
 				m_view_fov = value;
 				omvr.setViewFov(m_view_fov);
 			},
-			set_stereo : function(value) {
+			set_stereo: function(value) {
 				omvr.setStereoEnabled(value);
-				self.send_event("PLUGIN_HOST", value
-					? "STEREO_ENABLED"
-					: "STEREO_DISABLED");
+				self.send_event("PLUGIN_HOST", value ?
+					"STEREO_ENABLED" :
+					"STEREO_DISABLED");
 
 				var cmd = UPSTREAM_DOMAIN;
 				cmd += "set_stereo " + (value ? 1 : 0);
 				self.send_command(cmd);
 			},
-			set_audio : function(value) {
+			set_audio: function(value) {
 				omvr.setAudioEnabled(value);
-				self.send_event("PLUGIN_HOST", value
-					? "AUDIO_ENABLED"
-					: "AUDIO_DISABLED");
+				self.send_event("PLUGIN_HOST", value ?
+					"AUDIO_ENABLED" :
+					"AUDIO_DISABLED");
 			},
-			set_view_offset : function(value) {
+			set_view_offset: function(value) {
 				if (view_offset_lock) {
 					return;
 				}
 				view_offset = value;
 				auto_scroll = false;
 			},
-			get_view_offset : function() {
+			get_view_offset: function() {
 				return view_offset.clone();
 			},
-			snap : function() {
+			snap: function() {
 				var key = uuid();
 				self.send_command(SERVER_DOMAIN + "snap " + key);
 				filerequest_list.push({
-					filename : 'picam360.jpeg',
-					key : key,
-					callback : function(chunk_array) {
+					filename: 'picam360.jpeg',
+					key: key,
+					callback: function(chunk_array) {
 						var blob = new Blob(chunk_array, {
-							type : "image/jpeg"
+							type: "image/jpeg"
 						});
 						var url = (URL || webkitURL || mozURL)
 							.createObjectURL(blob);
@@ -269,16 +273,16 @@ var app = (function() {
 					}
 				});
 			},
-			rec : function() {
+			rec: function() {
 				if (is_recording) {
 					var key = uuid();
 					self.send_command(SERVER_DOMAIN + "stop_record " + key);
 					filerequest_list.push({
-						filename : 'picam360.mp4',
-						key : key,
-						callback : function(chunk_array) {
+						filename: 'picam360.mp4',
+						key: key,
+						callback: function(chunk_array) {
 							var blob = new Blob(chunk_array, {
-								type : "video/mp4"
+								type: "video/mp4"
 							});
 							var url = (URL || webkitURL || mozURL)
 								.createObjectURL(blob);
@@ -289,44 +293,44 @@ var app = (function() {
 					self.send_command(SERVER_DOMAIN + "start_record");
 				}
 			},
-			call : function(bln) {
+			call: function(bln) {
 				if (bln) {
 					core.start_call();
 				} else {
 					core.stop_call();
 				}
 			},
-			log : function(str, level) {
+			log: function(str, level) {
 				if (level && level <= debug) {
 					console.log(str);
 				}
 			},
-			set_menu_visible : function(bln) {
+			set_menu_visible: function(bln) {
 				// self.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' +
 				// (bln?'1':'0'));
 				m_menu_visible = bln;
-				overlay.style.visibility = m_menu_visible
-					? "visible"
-					: "hidden";
+				overlay.style.visibility = m_menu_visible ?
+					"visible" :
+					"hidden";
 			},
-			set_info : function(str) {
+			set_info: function(str) {
 				overlay.innerHTML = str;
 			},
-			getFile : function(path, callback) {
+			getFile: function(path, callback) {
 				if (!query['force-local'] && core.connected()) {
 					var key = uuid();
 					filerequest_list.push({
-						filename : path,
-						key : key,
-						callback : callback
+						filename: path,
+						key: key,
+						callback: callback
 					});
-					self.send_command(SERVER_DOMAIN + "get_file " + path + " "
-						+ key);
+					self.send_command(SERVER_DOMAIN + "get_file " + path + " " +
+						key);
 				} else {
 					loadFile(path, callback);
 				}
 			},
-			refresh_app_menu : function() {
+			refresh_app_menu: function() {
 				if (peer && p2p_num_of_members >= 2) {
 					document.getElementById("uiCall").style.display = "block";
 				} else {
@@ -338,9 +342,9 @@ var app = (function() {
 					}
 				}
 			},
-			restore_app_menu : function() {
+			restore_app_menu: function() {
 				app.menu.setMenuPage("menu.html", {
-					callback : function() {
+					callback: function() {
 						for (var i = 0; i < plugins.length; i++) {
 							if (plugins[i].on_restore_app_menu) {
 								plugins[i].on_restore_app_menu(app.menu);
@@ -354,10 +358,10 @@ var app = (function() {
 		return self;
 	};
 	var self = {
-		plugin_host : null,
-		isDeviceReady : false,
+		plugin_host: null,
+		isDeviceReady: false,
 		// Application Constructor
-		initialize : function() {
+		initialize: function() {
 			app.receivedEvent('initialize');
 			this.bindEvents();
 
@@ -375,13 +379,13 @@ var app = (function() {
 					return;
 				}
 				switch (args['function']) {
-					case 'dispatchEvent' :
+					case 'dispatchEvent':
 						var event = new CustomEvent(args['event_name'], {
-							'detail' : JSON.parse(args['event_data'])
+							'detail': JSON.parse(args['event_data'])
 						});
 						window.dispatchEvent(event);
 						break;
-					default :
+					default:
 						alert("no handler : " + args['function']);
 				}
 			});
@@ -391,7 +395,7 @@ var app = (function() {
 		//
 		// Bind any events that are required on startup. Common events are:
 		// 'load', 'deviceready', 'offline', and 'online'.
-		bindEvents : function() {
+		bindEvents: function() {
 			document.addEventListener('deviceready', this.onDeviceReady, false);
 		},
 		// deviceready Event Handler
@@ -399,18 +403,18 @@ var app = (function() {
 		// The scope of 'this' is the event. In order to call the
 		// 'receivedEvent'
 		// function, we must explicitly call 'app.receivedEvent(...);'
-		onDeviceReady : function() {
+		onDeviceReady: function() {
 			app.receivedEvent('deviceready');
 			app.isDeviceReady = true;
 		},
 
 		// Update DOM on a Received Event
-		receivedEvent : function(id) {
+		receivedEvent: function(id) {
 			console.log('Received Event: ' + id);
 		},
 
-		init_common_options_done : false,
-		init_common_options : function(callback) {
+		init_common_options_done: false,
+		init_common_options: function(callback) {
 			if (this.init_common_options_done) {
 				return;
 			} else {
@@ -438,8 +442,7 @@ var app = (function() {
 								for (var i = 0; i < plugins.length; i++) {
 									if (plugins[i].init_options) {
 										plugins[i]
-											.init_options(options[plugins[i].name]
-												|| {});
+											.init_options(options[plugins[i].name] || {});
 									}
 								}
 								if (callback) {
@@ -460,8 +463,8 @@ var app = (function() {
 				}
 			});
 		},
-		init_options_done : false,
-		init_options : function(callback) {
+		init_options_done: false,
+		init_options: function(callback) {
 			if (this.init_options_done) {
 				return;
 			} else {
@@ -487,8 +490,8 @@ var app = (function() {
 						view_offset = new THREE.Quaternion()
 							.setFromEuler(euler);
 					}
-					if (_options.plugin_paths
-						&& _options.plugin_paths.length != 0) {
+					if (_options.plugin_paths &&
+						_options.plugin_paths.length != 0) {
 						function load_plugin(idx) {
 							self.plugin_host
 								.getFile(_options.plugin_paths[idx], function(
@@ -498,8 +501,8 @@ var app = (function() {
 									var script = document
 										.createElement('script');
 									script.onload = function() {
-										console.log("loaded : "
-											+ _options.plugin_paths[idx]);
+										console.log("loaded : " +
+											_options.plugin_paths[idx]);
 										if (create_plugin) {
 											var plugin = create_plugin(self.plugin_host);
 											plugins.push(plugin);
@@ -511,8 +514,7 @@ var app = (function() {
 											for (var i = 0; i < plugins.length; i++) {
 												if (plugins[i].init_options) {
 													plugins[i]
-														.init_options(_options[plugins[i].name]
-															|| {});
+														.init_options(_options[plugins[i].name] || {});
 												}
 											}
 											if (callback) {
@@ -520,10 +522,10 @@ var app = (function() {
 											}
 										}
 									};
-									console.log("loding : "
-										+ _options.plugin_paths[idx]);
+									console.log("loding : " +
+										_options.plugin_paths[idx]);
 									var blob = new Blob(chunk_array, {
-										type : "text/javascript"
+										type: "text/javascript"
 									});
 									var url = window.URL || window.webkitURL;
 									script.src = url.createObjectURL(blob);
@@ -540,7 +542,7 @@ var app = (function() {
 				});
 		},
 
-		init_network : function(callback, err_callback) {
+		init_network: function(callback, err_callback) {
 			// init network related matters
 			// data stream handling
 			rtp = Rtp();
@@ -548,27 +550,27 @@ var app = (function() {
 			// set rtp callback
 			rtp
 				.set_callback(function(packet) {
-					if (packet.GetPayloadType() == PT_AUDIO_BASE) {// audio
+					if (packet.GetPayloadType() == PT_AUDIO_BASE) { // audio
 						if (opus_decoder) {
 							opus_decoder.decode(packet.GetPayload());
 							if (audio_first_packet_s == 0) {
-								var latency = new Date().getTime()
-									/ 1000
-									- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
-									+ self.valid_timediff / 1000;
-								console.log("audio_first_packet:latency:"
-									+ latency);
+								var latency = new Date().getTime() /
+									1000 -
+									(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
+									self.valid_timediff / 1000;
+								console.log("audio_first_packet:latency:" +
+									latency);
 								audio_first_packet_s = new Date().getTime() / 1000;
 							}
 						}
-					} else if (packet.GetPayloadType() == PT_CAM_BASE) {// image
+					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
 						if (query['rtp-debug']) {
-							var latency = new Date().getTime()
-								/ 1000
-								- (packet.GetTimestamp() + packet.GetSsrc() / 1E6)
-								+ self.valid_timediff / 1000;
-							console.log("seq:" + packet.GetSequenceNumber()
-								+ ":latency:" + latency);
+							var latency = new Date().getTime() /
+								1000 -
+								(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
+								self.valid_timediff / 1000;
+							console.log("seq:" + packet.GetSequenceNumber() +
+								":latency:" + latency);
 						}
 						if (mjpeg_decoder) {
 							mjpeg_decoder.decode(packet.GetPayload(), packet
@@ -582,7 +584,7 @@ var app = (function() {
 							h265_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
 						}
-					} else if (packet.GetPayloadType() == PT_STATUS) {// status
+					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
 							.decode(new Uint8Array(packet.GetPayload()));
 						var split = str.split('"');
@@ -591,7 +593,7 @@ var app = (function() {
 						if (watches[name]) {
 							watches[name](value);
 						}
-					} else if (packet.GetPayloadType() == PT_FILE) {// file
+					} else if (packet.GetPayloadType() == PT_FILE) { // file
 						var array = packet.GetPayload();
 						var view = new DataView(array.buffer, array.byteOffset);
 						var header_size = view.getUint16(0, false);
@@ -635,11 +637,11 @@ var app = (function() {
 					return;
 				}
 				var value = cmd2upstream_list.shift();
-				var cmd = "<picam360:command id=\"" + app.rtcp_command_id
-					+ "\" value=\"" + value + "\" />"
+				var cmd = "<picam360:command id=\"" + app.rtcp_command_id +
+					"\" value=\"" + value + "\" />"
 				rtcp.sendpacket(rtcp.buildpacket(cmd, PT_CMD));
 				app.rtcp_command_id++;
-			}, 10);// 100hz
+			}, 10); // 100hz
 			var connection_callback = function(conn) {
 				var is_init = false;
 				var init_con = function() {
@@ -653,44 +655,43 @@ var app = (function() {
 				var min_rtt = 0;
 				var ping_cnt = 0;
 				if (query['frame-mode']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_mode "
-						+ query['frame-mode'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_mode " +
+						query['frame-mode'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
 				}
 				if (query['frame-width']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_width "
-						+ query['frame-width'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_width " +
+						query['frame-width'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
 				}
 				if (query['frame-height']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_height "
-						+ query['frame-height'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_height " +
+						query['frame-height'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
 				}
 				if (query['frame-fps']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_fps "
-						+ query['frame-fps'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_fps " +
+						query['frame-fps'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
 				}
 				if (query['frame-encode']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_encode "
-						+ query['frame-encode'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_encode " +
+						query['frame-encode'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
 				}
 				if (query['frame-bitrate']) {
-					var cmd = "<picam360:command id=\"0\" value=\"frame_bitrate "
-						+ query['frame-bitrate'] + "\" />"
+					var cmd = "<picam360:command id=\"0\" value=\"frame_bitrate " +
+						query['frame-bitrate'] + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 					rtcp.sendpacket(conn, pack);
-				}
-				{// ping
-					var cmd = "<picam360:command id=\"0\" value=\"ping "
-						+ new Date().getTime() + "\" />"
+				} { // ping
+					var cmd = "<picam360:command id=\"0\" value=\"ping " +
+						new Date().getTime() + "\" />"
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 				}
 				rtcp.sendpacket(conn, pack);
@@ -698,7 +699,7 @@ var app = (function() {
 					.on('data', function(data) {
 						if (!is_init) {
 							if (!Array.isArray(data)) {
-								packets = [data];
+								data = [data];
 							}
 							var pack = PacketHeader(data[0]);
 							if (pack.GetPayloadType() == PT_STATUS) {
@@ -716,25 +717,25 @@ var app = (function() {
 										min_rtt = rtt;
 										valid_timediff = timediff;
 									}
-									console.log(name + ":" + value + ":rtt="
-										+ rtt);
+									console.log(name + ":" + value + ":rtt=" +
+										rtt);
 									if (ping_cnt < 10) {
-										var cmd = "<picam360:command id=\"0\" value=\"ping "
-											+ new Date().getTime() + "\" />"
+										var cmd = "<picam360:command id=\"0\" value=\"ping " +
+											new Date().getTime() + "\" />"
 										var pack = rtcp
 											.buildpacket(cmd, PT_CMD);
 										rtcp.sendpacket(conn, pack);
 										return;
 									} else {
-										var cmd = "<picam360:command id=\"0\" value=\"set_timediff "
-											+ valid_timediff + "\" />";
+										var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
+											valid_timediff + "\" />";
 										var pack = rtcp
 											.buildpacket(cmd, PT_CMD);
 										rtcp.sendpacket(conn, pack);
 
-										console.log("min_rtt=" + min_rtt
-											+ ":valid_timediff:"
-											+ valid_timediff);
+										console.log("min_rtt=" + min_rtt +
+											":valid_timediff:" +
+											valid_timediff);
 										self.valid_timediff = valid_timediff;
 									}
 								}
@@ -757,13 +758,12 @@ var app = (function() {
 			}
 		},
 
-		handle_frame : function(type, data, width, height, info, time) {
+		handle_frame: function(type, data, width, height, info, time) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
 				m_frame_active = true;
-			}
-			{
+			} {
 				var server_key = "";
 				if (info) {
 					var split = info.split(' ');
@@ -777,10 +777,10 @@ var app = (function() {
 				}
 				var client_key = new Date().getTime().toString();
 				var fov = m_view_fov;
-				var quat = self.plugin_host.get_view_quaternion()
-					|| new THREE.Quaternion();
-				var view_offset_quat = self.plugin_host.get_view_offset()
-					|| new THREE.Quaternion();
+				var quat = self.plugin_host.get_view_quaternion() ||
+					new THREE.Quaternion();
+				var view_offset_quat = self.plugin_host.get_view_offset() ||
+					new THREE.Quaternion();
 				var view_quat = view_offset_quat.multiply(quat);
 				if (m_afov) {
 					fov = omvr.get_adaptive_texture_fov();
@@ -789,8 +789,8 @@ var app = (function() {
 				if (m_fpp) {
 					view_quat = omvr.predict_view_quaternion();
 				}
-				if (query['horizon-opt'] != "no"
-					&& query['horizon-opt'] != "false") {
+				if (query['horizon-opt'] != "no" &&
+					query['horizon-opt'] != "false") {
 					var euler = new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
 						.degToRad(45), THREE.Math.degToRad(0), "YXZ");
 
@@ -807,27 +807,27 @@ var app = (function() {
 			omvr.handle_frame(type, data, width, height, info, time);
 		},
 
-		handle_audio_frame : function(left, right) {
+		handle_audio_frame: function(left, right) {
 			if (audio_first_packet_s != -1) {
-				var latency = new Date().getTime() / 1000
-					- audio_first_packet_s;
+				var latency = new Date().getTime() / 1000 -
+					audio_first_packet_s;
 				console.log("audio_first_decode:latency:" + latency);
 				audio_first_packet_s = -1;
 			}
 			omvr.pushAudioStream(left, right);
 		},
 
-		init_webgl : function() {
+		init_webgl: function() {
 			// webgl handling
 			omvr = OMVR();
 			omvr
 				.init(canvas, function() {
 					setInterval(function() {
-						var quat = self.plugin_host.get_view_quaternion()
-							|| new THREE.Quaternion();
+						var quat = self.plugin_host.get_view_quaternion() ||
+							new THREE.Quaternion();
 						var view_offset_quat = self.plugin_host
-							.get_view_offset()
-							|| new THREE.Quaternion();
+							.get_view_offset() ||
+							new THREE.Quaternion();
 						var view_quat = view_offset_quat.multiply(quat);
 						omvr.set_view_quaternion(view_quat);
 						if (auto_scroll) {
@@ -839,7 +839,7 @@ var app = (function() {
 								.multiply(view_offset_diff_quat).multiply(quat
 									.conjugate());
 						}
-					}, 33);// 30hz
+					}, 33); // 30hz
 
 					if (default_image_url) {
 						m_frame_active = true;
@@ -853,15 +853,15 @@ var app = (function() {
 					omvr.vertex_type_forcibly = m_vertex_type;
 
 					// video decoder
-					h264_decoder = H264Decoder();
-					mjpeg_decoder = MjpegDecoder();
+					// h264_decoder = H264Decoder();
+					// mjpeg_decoder = MjpegDecoder();
 					h265_decoder = H265Decoder();
-					h264_decoder.set_frame_callback(self.handle_frame);
-					mjpeg_decoder.set_frame_callback(self.handle_frame);
+					// h264_decoder.set_frame_callback(self.handle_frame);
+					// mjpeg_decoder.set_frame_callback(self.handle_frame);
 					h265_decoder.set_frame_callback(self.handle_frame);
 
-					opus_decoder = OpusDecoder();
-					opus_decoder.set_frame_callback(self.handle_audio_frame);
+					// opus_decoder = OpusDecoder();
+					// opus_decoder.set_frame_callback(self.handle_audio_frame);
 
 					// motion processer unit
 					mpu = MPU(self.plugin_host);
@@ -872,10 +872,10 @@ var app = (function() {
 				});
 		},
 
-		init_watch : function() {
+		init_watch: function() {
 			self.plugin_host.add_watch("upstream.error", function(value) {
 				switch (value.toLowerCase()) {
-					case "exceeded_num_of_clients" :
+					case "exceeded_num_of_clients":
 						self.plugin_host
 							.set_info("error : Exceeded num of clients");
 						break;
@@ -909,15 +909,15 @@ var app = (function() {
 						return;
 					}
 					navigator.getUserMedia({
-						video : false,
-						audio : true
+						video: false,
+						audio: true
 					}, function(stream) {
 						peer_call = new Peer({
-							host : SIGNALING_HOST,
-							port : SIGNALING_PORT,
-							secure : SIGNALING_SECURE,
-							key : P2P_API_KEY,
-							debug : debug
+							host: SIGNALING_HOST,
+							port: SIGNALING_PORT,
+							secure: SIGNALING_SECURE,
+							key: P2P_API_KEY,
+							debug: debug
 						});
 						var call = peer_call.call(p2p_uuid_call, stream);
 						call.on('stream', function(remoteStream) {
@@ -940,13 +940,13 @@ var app = (function() {
 				});
 		},
 
-		rtcp_command_id : 0,
+		rtcp_command_id: 0,
 
-		main : function() {
+		main: function() {
 			app.receivedEvent('main');
 
-			navigator.getUserMedia = navigator.getUserMedia
-				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+			navigator.getUserMedia = navigator.getUserMedia ||
+				navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 			function parseBoolean(str) {
 				return str == "yes" || str == "on" || str == "true";
@@ -1006,7 +1006,7 @@ var app = (function() {
 				self.init_options();
 			});
 		},
-		start_ws : function(callback, err_callback) {
+		start_ws: function(callback, err_callback) {
 			// websocket
 			jQuery.getScript(server_url + 'socket.io/socket.io.js')
 				.done(function(script, textStatus) {
@@ -1029,62 +1029,111 @@ var app = (function() {
 					err_callback();
 				});
 		},
-		start_p2p : function(p2p_uuid, callback, err_callback) {
+		start_p2p: function(p2p_uuid, callback, err_callback) {
 			var options = {
-				host : SIGNALING_HOST,
-				port : SIGNALING_PORT,
-				secure : SIGNALING_SECURE,
-				key : P2P_API_KEY,
-				debug : debug,
+				host: SIGNALING_HOST,
+				port: SIGNALING_PORT,
+				secure: SIGNALING_SECURE,
+				key: P2P_API_KEY,
+				debug: debug,
 			};
 			if (query['turn_server']) {
 				options['config'] = {
-					'iceServers' : [{
-						urls : 'turn:turn.picam360.com:3478',
-						username : "picam360",
-						credential : "picam360"
+					'iceServers': [{
+						urls: 'turn:turn.picam360.com:3478',
+						username: "picam360",
+						credential: "picam360"
 					}]
 				};
 			}
-			peer = new Peer(options);
-			peer.on('error', function(err) {
-				if (err.type == "peer-unavailable") {
-					self.plugin_host.set_info("error : Could not connect "
-						+ p2p_uuid);
-					peer = null;
-					err_callback();
-				}
-			});
-			peer_conn = peer.connect(p2p_uuid, {
-				reliable : (query['webrtc-udp'] == 'true') ? false : true,
-				constraints : {}
-			});
-			peer_conn.on('open', function() {
-				console.log("p2p connection established as downstream.");
-				callback(peer_conn);
-				peer_conn.on('close', function() {
-					self.plugin_host.set_info("p2p connection closed");
-					self.plugin_host.set_menu_visible(true);
-					m_frame_active = false;
+			var sig = new Signaling(options);
+			sig.connect(function() {
+				var pc = new RTCPeerConnection({
+					sdpSemantics: 'unified-plan'
 				});
+				m_pc = pc;
+
+				sig.onoffer = function(offer) {
+					pc.setRemoteDescription(offer.payload.sdp).then(function() {
+						return pc.createAnswer();
+					}).then(function(sdp) {
+						console.log('Created answer.');
+						pc.setLocalDescription(sdp);
+						sdp.sdp = sdp.sdp.replace(/a=fmtp:111/, 'a=fmtp:111 stereo=1\r\na=fmtp:111');
+						sig.answer(offer.src, sdp);
+					}).catch(function(err) {
+						console.log('Failed answering:' + err);
+					});
+					pc.onicecandidate = function(event) {
+						if (event.candidate) {
+							sig.candidate(offer.src, event.candidate);
+						} else {
+							// All ICE candidates have been sent
+						}
+					};
+					pc.ondatachannel = function(ev) {
+						console.log('Data channel is created!');
+						var dc = ev.channel;
+						dc.onopen = function() {
+							console.log("p2p connection established as downstream.");
+							const stream = new MediaStream(m_pc.getReceivers().map(receiver => receiver.track));
+							omvr.loadAudio(stream);
+							class DataChannel extends EventEmitter {
+							    constructor() {
+							    	super();
+							        var self = this;
+									this.peerConnection = pc;
+							    	dc.addEventListener('message', function(data){
+							    		self.emit('data', data.data);
+							    	});
+								}
+								send(data){
+									dc.send(data);
+								}
+								close(){
+									pc.close();
+								}
+							}
+							var conn = new DataChannel();
+							callback(conn);
+						};
+						dc.onclose = function() {
+							self.plugin_host.set_info("p2p connection closed");
+							self.plugin_host.set_menu_visible(true);
+							m_frame_active = false;
+						};
+					};
+					pc.onerror = function(err) {
+						if (err.type == "peer-unavailable") {
+							self.plugin_host.set_info("error : Could not connect " +
+								p2p_uuid);
+							peer = null;
+							err_callback();
+						}
+					};
+				};
+				sig.oncandidate = function(candidate) {
+					pc.addIceCandidate(candidate.payload.ice);
+				};
+				sig.request_offer(p2p_uuid);
 			});
 		},
-		stop_p2p : function() {
+		stop_p2p: function() {
 			peer = null;
 		},
-		start_call : function() {
+		start_call: function() {
 			p2p_uuid_call = uuid();
 			peer_call = new Peer(p2p_uuid_call, {
-				host : SIGNALING_HOST,
-				port : SIGNALING_PORT,
-				secure : SIGNALING_SECURE,
-				key : P2P_API_KEY,
-				debug : debug
+				host: SIGNALING_HOST,
+				port: SIGNALING_PORT,
+				secure: SIGNALING_SECURE,
+				key: P2P_API_KEY,
+				debug: debug
 			});
 			peer_call.on('call', function(call) {
 				navigator.getUserMedia({
-					video : false,
-					audio : true
+					video: false,
+					audio: true
 				}, function(stream) {
 					call.answer(stream);
 					call.on('stream', function(remoteStream) {
@@ -1099,23 +1148,23 @@ var app = (function() {
 						setTimeout(function() {
 							audio.play();
 						}, 2000);
-						self.plugin_host.send_command(SERVER_DOMAIN
-							+ "request_call " + "");// reset
+						self.plugin_host.send_command(SERVER_DOMAIN +
+							"request_call " + ""); // reset
 					});
 				}, function(err) {
 					console.log('Failed to get local stream', err);
 				});
 			});
-			self.plugin_host.send_command(SERVER_DOMAIN + "request_call "
-				+ p2p_uuid_call);
+			self.plugin_host.send_command(SERVER_DOMAIN + "request_call " +
+				p2p_uuid_call);
 		},
-		stop_call : function() {
-		},
-		connected : function() {
+		stop_call: function() {},
+		connected: function() {
 			return (socket != null || peer != null);
 		},
-		start_animate : function() {
+		start_animate: function() {
 			var frame_count = 0;
+
 			function redraw() {
 				requestAnimationFrame(redraw);
 				frame_count++;
@@ -1129,34 +1178,33 @@ var app = (function() {
 					var divStatus = document.getElementById("divStatus");
 					if (divStatus) {
 						var status = "";
-						var texture_info = omvr.get_info();
-						{
+						var texture_info = omvr.get_info(); {
 							status += "texture<br/>";
-							status += "fps:" + texture_info.fps.toFixed(3)
-								+ "<br/>";
-							status += "latency:"
-								+ (texture_info.latency * 1000).toFixed(0)
-								+ "ms<br/>";
-							status += "processed:"
-								+ (texture_info.processed * 1000).toFixed(0)
-								+ "ms<br/>";
-							status += "encoded:"
-								+ (texture_info.encoded * 1000).toFixed(0)
-								+ "ms<br/>";
-							status += "decoded:"
-								+ (texture_info.decoded * 1000).toFixed(0)
-								+ "ms<br/>";
-							status += "rtt:"
-								+ (texture_info.rtt * 1000).toFixed(0)
-								+ "ms<br/>";
+							status += "fps:" + texture_info.fps.toFixed(3) +
+								"<br/>";
+							status += "latency:" +
+								(texture_info.latency * 1000).toFixed(0) +
+								"ms<br/>";
+							status += "processed:" +
+								(texture_info.processed * 1000).toFixed(0) +
+								"ms<br/>";
+							status += "encoded:" +
+								(texture_info.encoded * 1000).toFixed(0) +
+								"ms<br/>";
+							status += "decoded:" +
+								(texture_info.decoded * 1000).toFixed(0) +
+								"ms<br/>";
+							status += "rtt:" +
+								(texture_info.rtt * 1000).toFixed(0) +
+								"ms<br/>";
 							status += "<br/>";
 						}
 
 						{
 							var rtp_info = rtp.get_info();
 							status += "packet<br/>";
-							status += "bitrate:" + rtp_info.bitrate.toFixed(3)
-								+ "Mbit/s<br/>";
+							status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
+								"Mbit/s<br/>";
 							status += "<br/>";
 						}
 
@@ -1169,8 +1217,7 @@ var app = (function() {
 						divStatus.innerHTML = status;
 					}
 					if (m_menu_visible) {
-						var info = "";
-						{
+						var info = ""; {
 							var defualt_color = "#ffffff";
 							var activated_color = "#00ffff";
 							var selected_color = "#ff00ff";
@@ -1187,21 +1234,21 @@ var app = (function() {
 									continue;
 								}
 								var nodes = rows[i].split(",");
-								var color = nodes[nodes_index["selected"]] == "1"
-									? selected_color
-									: nodes[nodes_index["activated"]] == "1"
-										? activated_color
-										: nodes[nodes_index["marked"]] == "1"
-											? marked_color
-											: defualt_color;
+								var color = nodes[nodes_index["selected"]] == "1" ?
+									selected_color :
+									nodes[nodes_index["activated"]] == "1" ?
+									activated_color :
+									nodes[nodes_index["marked"]] == "1" ?
+									marked_color :
+									defualt_color;
 								info += " "
-									.repeat(4 * nodes[nodes_index["depth"]])
-									+ "<font color=\""
-									+ color
-									+ "\">"
-									+ nodes[nodes_index["name"]]
-									+ "</font>"
-									+ "<br/>";
+									.repeat(4 * nodes[nodes_index["depth"]]) +
+									"<font color=\"" +
+									color +
+									"\">" +
+									nodes[nodes_index["name"]] +
+									"</font>" +
+									"<br/>";
 							}
 							info += "</pre>";
 						}
