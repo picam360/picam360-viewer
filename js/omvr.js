@@ -531,17 +531,17 @@ function OMVR() {
 			return m_texture_num;
 		},
 
-//		handle_frame : function(type, data, width, height, info, time) {
-//			handle_frame_params = {
-//				type : type,
-//				data : data,
-//				width : width,
-//				height : height,
-//				info : info,
-//				time : time,
-//			};
-//		},
 		handle_frame : function(type, data, width, height, info, time) {
+			handle_frame_params = {
+				type : type,
+				data : data,
+				width : width,
+				height : height,
+				info : info,
+				time : time,
+			};
+		},
+		_handle_frame : function(type, data, width, height, info, time) {
 			m_texture_num++;
 
 			var now = new Date().getTime();
