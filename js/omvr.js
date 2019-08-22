@@ -76,7 +76,7 @@ function OMVR() {
 	// audio
 	var m_audio = document.createElement('audio');
 	document.body.appendChild(m_audio);
-	
+
 	var m_audio_buffer_size = 4096;
 	var m_audio_contxt = new (window.AudioContext || window.webkitAudioContext);
 	var m_audio_play = false;
@@ -137,7 +137,7 @@ function OMVR() {
 
 		gotoTop();
 
-		m_view_fov_cache = 0;//cache clear
+		m_view_fov_cache = 0;// cache clear
 	}
 
 	function splitExt(filename) {
@@ -471,9 +471,10 @@ function OMVR() {
 			};
 			return info;
 		},
-		
+
 		loadAudio : function(audio_url) {
 			m_audio.srcObject = audio_url;
+			m_audio.load();
 		},
 
 		loadTexture : function(image_url, image_type) {
@@ -531,16 +532,16 @@ function OMVR() {
 			return m_texture_num;
 		},
 
-//		handle_frame : function(type, data, width, height, info, time) {
-//			handle_frame_params = {
-//				type : type,
-//				data : data,
-//				width : width,
-//				height : height,
-//				info : info,
-//				time : time,
-//			};
-//		},
+		// handle_frame : function(type, data, width, height, info, time) {
+		// handle_frame_params = {
+		// type : type,
+		// data : data,
+		// width : width,
+		// height : height,
+		// info : info,
+		// time : time,
+		// };
+		// },
 		handle_frame : function(type, data, width, height, info, time) {
 			m_texture_num++;
 
@@ -1097,8 +1098,8 @@ function OMVR() {
 				return;
 			}
 			m_audio_play = bln;
-			switch(m_audio_type){
-				case "buffer":
+			switch (m_audio_type) {
+				case "buffer" :
 					if (m_audio_play) {
 						m_audio_source = m_audio_contxt.createBufferSource();
 						m_audio_source.connect(m_audio_script_proc);
@@ -1107,14 +1108,24 @@ function OMVR() {
 					} else {
 						m_audio_source.stop();
 						m_audio_source.disconnect(m_audio_script_proc);
-						m_audio_script_proc.disconnect(m_audio_contxt.destination);
+						m_audio_script_proc
+							.disconnect(m_audio_contxt.destination);
 					}
 					break;
-				case "stream":
-				default:
+				case "stream" :
+				default :
 					if (m_audio_play) {
-						m_audio.volume = 1.0;//max
-						m_audio.play();
+						m_audio.volume = 1.0;// max
+						if (m_audio.readyState === 4) {
+							m_audio.play();
+						} else {
+							m_audio
+								.addEventListener('canplaythrough', function(e) {
+									m_audio
+										.removeEventListener('canplaythrough', arguments.callee);
+									m_audio.play();
+								});
+						}
 					} else {
 						m_audio.pause();
 					}
