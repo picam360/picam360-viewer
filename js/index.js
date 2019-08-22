@@ -1035,21 +1035,25 @@ var app = (function() {
 				port: SIGNALING_PORT,
 				secure: SIGNALING_SECURE,
 				key: P2P_API_KEY,
-				debug: debug,
+				iceServers : [
+	                         	{"urls": "stun:stun.l.google.com:19302"},
+	                        	{"urls": "stun:stun1.l.google.com:19302"},
+	                        	{"urls": "stun:stun2.l.google.com:19302"},
+	                        ],
+	        	debug: debug,
 			};
 			if (query['turn_server']) {
-				options['config'] = {
-					'iceServers': [{
-						urls: 'turn:turn.picam360.com:3478',
-						username: "picam360",
-						credential: "picam360"
-					}]
-				};
+				options.iceServers.push({
+					urls: 'turn:turn.picam360.com:3478',
+					username: "picam360",
+					credential: "picam360"
+				});
 			}
 			var sig = new Signaling(options);
 			sig.connect(function() {
 				var pc = new RTCPeerConnection({
-					sdpSemantics: 'unified-plan'
+					sdpSemantics: 'unified-plan',
+					iceServers: options.iceServers
 				});
 				m_pc = pc;
 
