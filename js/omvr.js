@@ -474,7 +474,6 @@ function OMVR() {
 
 		loadAudio : function(audio_url) {
 			m_audio.srcObject = audio_url;
-			m_audio.load();
 		},
 
 		loadTexture : function(image_url, image_type) {
@@ -1115,6 +1114,7 @@ function OMVR() {
 				case "stream" :
 				default :
 					if (m_audio_play) {
+						m_audio.load();
 						m_audio.volume = 1.0;// max
 						if (m_audio.readyState === 4) {
 							m_audio.play();
