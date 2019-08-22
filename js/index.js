@@ -1042,7 +1042,7 @@ var app = (function() {
 	                        ],
 	        	debug: debug,
 			};
-			if (query['turn_server']) {
+			if (query['turn-server']) {
 				options.iceServers.push({
 					urls: 'turn:turn.picam360.com:3478',
 					username: "picam360",

@@ -1113,6 +1113,7 @@ function OMVR() {
 				case "stream":
 				default:
 					if (m_audio_play) {
+						m_audio.volume = 1.0;//max
 						m_audio.play();
 					} else {
 						m_audio.pause();
