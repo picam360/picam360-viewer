@@ -42,7 +42,6 @@ var app = (function() {
 	var m_fpp = false;
 	var m_vertex_type = "";
 	var debug = 0;
-	var m_audio = null;
 
 	// main canvas
 	var canvas;
@@ -50,6 +49,7 @@ var app = (function() {
 	var overlay;
 	// webgl handling
 	var omvr;
+	var m_audio_handler;
 	// data stream handling
 	var rtp;
 	var rtcp;
@@ -242,7 +242,7 @@ var app = (function() {
 				self.send_command(cmd);
 			},
 			set_audio: function(value) {
-				omvr.setAudioEnabled(value);
+				m_audio_handler.setAudioEnabled(value);
 				self.send_event("PLUGIN_HOST", value ?
 					"AUDIO_ENABLED" :
 					"AUDIO_DISABLED");
@@ -641,7 +641,7 @@ var app = (function() {
 					"\" value=\"" + value + "\" />"
 				rtcp.sendpacket(rtcp.buildpacket(cmd, PT_CMD));
 				app.rtcp_command_id++;
-			}, 10); // 100hz
+			}, 20); // 50hz
 			var connection_callback = function(conn) {
 				var is_init = false;
 				var init_con = function() {
@@ -814,33 +814,15 @@ var app = (function() {
 				console.log("audio_first_decode:latency:" + latency);
 				audio_first_packet_s = -1;
 			}
-			omvr.pushAudioStream(left, right);
+			m_audio_handler.pushAudioStream(left, right);
 		},
 
 		init_webgl: function() {
 			// webgl handling
+			m_audio_handler = new AudioHandler();
 			omvr = OMVR();
 			omvr
 				.init(canvas, function() {
-					setInterval(function() {
-						var quat = self.plugin_host.get_view_quaternion() ||
-							new THREE.Quaternion();
-						var view_offset_quat = self.plugin_host
-							.get_view_offset() ||
-							new THREE.Quaternion();
-						var view_quat = view_offset_quat.multiply(quat);
-						omvr.set_view_quaternion(view_quat);
-						if (auto_scroll) {
-							var view_offset_diff_quat = new THREE.Quaternion()
-								.setFromEuler(new THREE.Euler(THREE.Math
-									.degToRad(0), THREE.Math.degToRad(0), THREE.Math
-									.degToRad(0.5), "YXZ"));
-							view_offset = view_quat
-								.multiply(view_offset_diff_quat).multiply(quat
-									.conjugate());
-						}
-					}, 33); // 30hz
-
 					if (default_image_url) {
 						m_frame_active = true;
 						omvr.setViewFov(m_view_fov);
@@ -853,11 +835,11 @@ var app = (function() {
 					omvr.vertex_type_forcibly = m_vertex_type;
 
 					// video decoder
-					// h264_decoder = H264Decoder();
-					// mjpeg_decoder = MjpegDecoder();
+					h264_decoder = H264Decoder();
+					mjpeg_decoder = MjpegDecoder();
 					h265_decoder = H265Decoder();
-					// h264_decoder.set_frame_callback(self.handle_frame);
-					// mjpeg_decoder.set_frame_callback(self.handle_frame);
+					h264_decoder.set_frame_callback(self.handle_frame);
+					mjpeg_decoder.set_frame_callback(self.handle_frame);
 					h265_decoder.set_frame_callback(self.handle_frame);
 
 					// opus_decoder = OpusDecoder();
@@ -1081,7 +1063,7 @@ var app = (function() {
 						dc.onopen = function() {
 							console.log("p2p connection established as downstream.");
 							const stream = new MediaStream(m_pc.getReceivers().map(receiver => receiver.track));
-							omvr.loadAudio(stream);
+							m_audio_handler.loadAudio(stream);
 							class DataChannel extends EventEmitter {
 							    constructor() {
 							    	super();
@@ -1177,6 +1159,24 @@ var app = (function() {
 				}
 				if ((frame_count % (m_skip_frame + 1)) != 0) {
 					return;
+				}
+				{
+					var quat = self.plugin_host.get_view_quaternion() ||
+						new THREE.Quaternion();
+					var view_offset_quat = self.plugin_host
+						.get_view_offset() ||
+						new THREE.Quaternion();
+					var view_quat = view_offset_quat.multiply(quat);
+					omvr.set_view_quaternion(view_quat);
+					if (auto_scroll) {
+						var view_offset_diff_quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(0), THREE.Math.degToRad(0), THREE.Math
+								.degToRad(0.5), "YXZ"));
+						view_offset = view_quat
+							.multiply(view_offset_diff_quat).multiply(quat
+								.conjugate());
+					}
 				}
 				if ((frame_count % 30) == 0) {
 					var divStatus = document.getElementById("divStatus");
