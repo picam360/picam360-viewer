@@ -39,14 +39,15 @@
 		var m_canvas;
 
 		// focal point tune
-		var m_view_quat_1 = new THREE.Quaternion();
 		var m_view_quat = new THREE.Quaternion();
 		var m_tex_quat = new THREE.Quaternion();
-		var m_view_tex_diff_quat = new THREE.Quaternion();
-		var m_view_quat_1_time = new Date().getTime();
-		var m_view_quat_time = new Date().getTime();
-		var m_view_av_rad = 0;
-		var m_view_av_n = new THREE.Vector3(0, 0, 1);
+		
+//		var m_view_quat_1 = new THREE.Quaternion();
+//		var m_view_tex_diff_quat = new THREE.Quaternion();
+//		var m_view_quat_1_time = new Date().getTime();
+//		var m_view_quat_time = new Date().getTime();
+//		var m_view_av_rad = 0;
+//		var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
 		// diagnotics
 		var m_texture_latency = 0;
@@ -108,56 +109,56 @@
 	
 				gotoTop();
 			},
-			set_view_quaternion : function(value) {
-				m_view_quat_1 = m_view_quat;
-				m_view_quat_1_time = m_view_quat_time;
-				m_view_quat = value;
-				m_view_quat_time = new Date().getTime();
-
-				var diff_time = (m_view_quat_time - m_view_quat_1_time) / 1000;
-				var diff_quat = m_view_quat_1.clone().conjugate()
-					.multiply(m_view_quat);
-				var cos = diff_quat.w;
-				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
-					* diff_quat.y + diff_quat.z * diff_quat.z);
-				m_view_av_rad = (Math.atan2(sin, cos) * 2) / diff_time;
-				// console.log("cos:" + cos + ",sin:" + sin + ",av:"
-				// + (180 * m_view_av_rad / Math.PI));
-				if (sin == 0) {
-					m_view_av_n = new THREE.Vector3(0, 0, 1);
-				} else {
-					m_view_av_n = new THREE.Vector3(diff_quat.x / sin, diff_quat.y
-						/ sin, diff_quat.z / sin);
-				}
-			},
-			predict_view_quaternion : function() {
-				var rad = m_view_av_rad * m_texture_latency;
-				var cos = Math.cos(rad / 2);
-				var sin = Math.sin(rad / 2);
-				var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
-					* m_view_av_n.y, sin * m_view_av_n.z, cos);
-				return m_view_quat.clone().multiply(diff_quat);
-			},
-			get_adaptive_texture_fov : function() {
-				var diff_quat = m_view_tex_diff_quat;
-				var cos = diff_quat.w;
-				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
-					* diff_quat.y + diff_quat.z * diff_quat.z);
-				var diff_theta = Math.atan2(sin, cos) * 2;
-				while (Math.abs(diff_theta) > Math.PI) {
-					if (diff_theta > 0) {
-						diff_theta -= 2 * Math.PI;
-					} else {
-						diff_theta += 2 * Math.PI;
-					}
-				}
-				var fov = m_view_fov + 180 * Math.abs(diff_theta) / Math.PI;
-				fov = Math.round(fov / 5) * 5;
-				if (fov > m_limit_fov) {
-					fov = m_limit_fov;
-				}
-				return fov;
-			},
+//			set_view_quaternion : function(value) {
+//				m_view_quat_1 = m_view_quat;
+//				m_view_quat_1_time = m_view_quat_time;
+//				m_view_quat = value;
+//				m_view_quat_time = new Date().getTime();
+//
+//				var diff_time = (m_view_quat_time - m_view_quat_1_time) / 1000;
+//				var diff_quat = m_view_quat_1.clone().conjugate()
+//					.multiply(m_view_quat);
+//				var cos = diff_quat.w;
+//				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+//					* diff_quat.y + diff_quat.z * diff_quat.z);
+//				m_view_av_rad = (Math.atan2(sin, cos) * 2) / diff_time;
+//				// console.log("cos:" + cos + ",sin:" + sin + ",av:"
+//				// + (180 * m_view_av_rad / Math.PI));
+//				if (sin == 0) {
+//					m_view_av_n = new THREE.Vector3(0, 0, 1);
+//				} else {
+//					m_view_av_n = new THREE.Vector3(diff_quat.x / sin, diff_quat.y
+//						/ sin, diff_quat.z / sin);
+//				}
+//			},
+//			predict_view_quaternion : function() {
+//				var rad = m_view_av_rad * m_texture_latency;
+//				var cos = Math.cos(rad / 2);
+//				var sin = Math.sin(rad / 2);
+//				var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
+//					* m_view_av_n.y, sin * m_view_av_n.z, cos);
+//				return m_view_quat.clone().multiply(diff_quat);
+//			},
+//			get_adaptive_texture_fov : function() {
+//				var diff_quat = m_view_tex_diff_quat;
+//				var cos = diff_quat.w;
+//				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+//					* diff_quat.y + diff_quat.z * diff_quat.z);
+//				var diff_theta = Math.atan2(sin, cos) * 2;
+//				while (Math.abs(diff_theta) > Math.PI) {
+//					if (diff_theta > 0) {
+//						diff_theta -= 2 * Math.PI;
+//					} else {
+//						diff_theta += 2 * Math.PI;
+//					}
+//				}
+//				var fov = m_view_fov + 180 * Math.abs(diff_theta) / Math.PI;
+//				fov = Math.round(fov / 5) * 5;
+//				if (fov > m_limit_fov) {
+//					fov = m_limit_fov;
+//				}
+//				return fov;
+//			},
 
 			fps : 0,
 			checkImageDelay : 1000,

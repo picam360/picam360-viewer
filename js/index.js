@@ -1170,7 +1170,6 @@ var app = (function() {
 						.get_view_offset() ||
 						new THREE.Quaternion();
 					view_quat = view_offset_quat.multiply(quat);
-					m_video_handler.set_view_quaternion(view_quat);
 					if (auto_scroll) {
 						var view_offset_diff_quat = new THREE.Quaternion()
 							.setFromEuler(new THREE.Euler(THREE.Math
