@@ -177,6 +177,7 @@
 					encoded : m_texture_encoded,
 					decoded : m_texture_decoded,
 					rtt : rtt,
+					offscreen : (m_worker != null),
 				};
 				return info;
 			},

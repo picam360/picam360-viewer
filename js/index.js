@@ -1187,9 +1187,12 @@ var app = (function() {
 						var status = "";
 						var texture_info = m_video_handler.get_info(); {
 							status += "texture<br/>";
-							status += "vfps:" + texture_info.video_fps.toFixed(3) +
+							status += "v-fps:" + texture_info.video_fps.toFixed(3) +
 								"<br/>";
-							status += "rfps:" + texture_info.animate_fps.toFixed(3) +
+							if(texture_info.offscreen){
+								status += "o";
+							}
+							status += "r-fps:" + texture_info.animate_fps.toFixed(3) +
 								"<br/>";
 							status += "latency:" +
 								(texture_info.latency * 1000).toFixed(0) +
