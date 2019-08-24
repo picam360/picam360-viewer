@@ -48,8 +48,9 @@ var app = (function() {
 	// overlay
 	var overlay;
 	// webgl handling
-	var omvr;
-	var m_audio_handler;
+	var m_video_handler;
+	// audio handling
+	var m_audio_handler = null;
 	// data stream handling
 	var rtp;
 	var rtcp;
@@ -95,6 +96,10 @@ var app = (function() {
 				document.getElementById('imgRec').src = "img/start_record_icon.png";
 			}
 		}
+	}
+	
+	function parseBoolean(str) {
+		return str == "yes" || str == "on" || str == "true";
 	}
 
 	function GetQueryString() {
@@ -229,10 +234,9 @@ var app = (function() {
 			},
 			set_fov: function(value) {
 				m_view_fov = value;
-				omvr.setViewFov(m_view_fov);
 			},
 			set_stereo: function(value) {
-				omvr.setStereoEnabled(value);
+				m_video_handler.setStereoEnabled(value);
 				self.send_event("PLUGIN_HOST", value ?
 					"STEREO_ENABLED" :
 					"STEREO_DISABLED");
@@ -783,14 +787,13 @@ var app = (function() {
 					new THREE.Quaternion();
 				var view_quat = view_offset_quat.multiply(quat);
 				if (m_afov) {
-					fov = omvr.get_adaptive_texture_fov();
+					fov = m_video_handler.get_adaptive_texture_fov();
 					fov = (fov / 5).toFixed(0) * 5;
 				}
 				if (m_fpp) {
-					view_quat = omvr.predict_view_quaternion();
+					view_quat = m_video_handler.predict_view_quaternion();
 				}
-				if (query['horizon-opt'] != "no" &&
-					query['horizon-opt'] != "false") {
+				if (parseBoolean(query['horizon-opt'] || 'true')) {
 					var euler = new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
 						.degToRad(45), THREE.Math.degToRad(0), "YXZ");
 
@@ -804,7 +807,7 @@ var app = (function() {
 				self.plugin_host.send_command(cmd);
 			}
 
-			omvr.handle_frame(type, data, width, height, info, time);
+			m_video_handler.handle_frame(type, data, width, height, info, time);
 		},
 
 		handle_audio_frame: function(left, right) {
@@ -818,21 +821,19 @@ var app = (function() {
 		},
 
 		init_webgl: function() {
-			// webgl handling
 			m_audio_handler = new AudioHandler();
-			omvr = OMVR();
-			omvr
-				.init(canvas, function() {
+			// webgl handling
+			m_video_handler = new VideoHandler();
+			m_video_handler
+				.init({canvas, offscreen : parseBoolean(query['offscreen'] || 'true')}, function() {
 					if (default_image_url) {
 						m_frame_active = true;
-						omvr.setViewFov(m_view_fov);
-						omvr.setModel("equirectangular", "rgb");
-						omvr.loadTexture(default_image_url);
+						m_video_handler.setModel("equirectangular", "rgb");
+						m_video_handler.loadTexture(default_image_url);
 					} else {
-						omvr.setViewFov(m_view_fov);
-						omvr.setModel("window", "rgb");
+						m_video_handler.setModel("window", "rgb");
 					}
-					omvr.vertex_type_forcibly = m_vertex_type;
+					m_video_handler.vertex_type_forcibly = m_vertex_type;
 
 					// video decoder
 					h264_decoder = H264Decoder();
@@ -871,7 +872,11 @@ var app = (function() {
 				value) {
 				if (value != p2p_num_of_members) {
 					p2p_num_of_members = value;
-					self.plugin_host.restore_app_menu();
+					try{
+						self.plugin_host.restore_app_menu();
+					}catch(e){
+						// do nothing
+					}
 				}
 			});
 			self.plugin_host.add_watch("upstream.info", function(value) {
@@ -930,9 +935,6 @@ var app = (function() {
 			navigator.getUserMedia = navigator.getUserMedia ||
 				navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
-			function parseBoolean(str) {
-				return str == "yes" || str == "on" || str == "true";
-			}
 			if (query['server-url']) {
 				server_url = query['server-url'];
 			}
@@ -1160,14 +1162,15 @@ var app = (function() {
 				if ((frame_count % (m_skip_frame + 1)) != 0) {
 					return;
 				}
-				{
+				var view_quat;
+				{// set_view_quaternion
 					var quat = self.plugin_host.get_view_quaternion() ||
 						new THREE.Quaternion();
 					var view_offset_quat = self.plugin_host
 						.get_view_offset() ||
 						new THREE.Quaternion();
-					var view_quat = view_offset_quat.multiply(quat);
-					omvr.set_view_quaternion(view_quat);
+					view_quat = view_offset_quat.multiply(quat);
+					m_video_handler.set_view_quaternion(view_quat);
 					if (auto_scroll) {
 						var view_offset_diff_quat = new THREE.Quaternion()
 							.setFromEuler(new THREE.Euler(THREE.Math
@@ -1182,9 +1185,11 @@ var app = (function() {
 					var divStatus = document.getElementById("divStatus");
 					if (divStatus) {
 						var status = "";
-						var texture_info = omvr.get_info(); {
+						var texture_info = m_video_handler.get_info(); {
 							status += "texture<br/>";
-							status += "fps:" + texture_info.fps.toFixed(3) +
+							status += "vfps:" + texture_info.video_fps.toFixed(3) +
+								"<br/>";
+							status += "rfps:" + texture_info.animate_fps.toFixed(3) +
 								"<br/>";
 							status += "latency:" +
 								(texture_info.latency * 1000).toFixed(0) +
@@ -1260,7 +1265,7 @@ var app = (function() {
 						self.plugin_host.set_info(info);
 					}
 				}
-				omvr.animate();
+				m_video_handler.animate(m_view_fov, view_quat);
 			}
 			redraw();
 		},
