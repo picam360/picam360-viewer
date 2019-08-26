@@ -12,6 +12,7 @@ var options = {
 	reuseMemory : true
 };
 var decoder = new libde265.Decoder(options);
+decoder.disable_filters(true);
 decoder.set_image_callback(function(image) {
 	var image_buf = image.get_yuv();
 	postMessage({

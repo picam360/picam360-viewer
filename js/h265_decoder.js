@@ -82,6 +82,7 @@ function H265Decoder(callback) {
 		var script = document.createElement('script');
 		script.onload = function() {
 			decoder = new libde265.Decoder(options);
+			decoder.disable_filters(true);
 			decoder
 				.set_image_callback(function(image) {
 					m_decoded_frame_num++;
