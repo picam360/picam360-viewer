@@ -702,49 +702,57 @@ var app = (function() {
 				conn
 					.on('data', function(data) {
 						if (!is_init) {
-							if (!Array.isArray(data)) {
-								data = [data];
-							}
-							var pack = PacketHeader(data[0]);
-							if (pack.GetPayloadType() == PT_STATUS) {
-								var str = (new TextDecoder)
-									.decode(new Uint8Array(pack.GetPayload()));
-								var split = str.split('"');
-								var name = split[1];
-								var value = split[3].split(' ');
-								if (name == "pong") {
-									ping_cnt++;
-									var now = new Date().getTime();
-									var rtt = now - parseInt(value[0]);
-									var timediff = value[1] - (now - rtt / 2);
-									if (min_rtt == 0 || rtt < min_rtt) {
-										min_rtt = rtt;
-										valid_timediff = timediff;
-									}
-									console.log(name + ":" + value + ":rtt=" +
-										rtt);
-									if (ping_cnt < 10) {
-										var cmd = "<picam360:command id=\"0\" value=\"ping " +
-											new Date().getTime() + "\" />"
-										var pack = rtcp
-											.buildpacket(cmd, PT_CMD);
-										rtcp.sendpacket(conn, pack);
-										return;
-									} else {
-										var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
-											valid_timediff + "\" />";
-										var pack = rtcp
-											.buildpacket(cmd, PT_CMD);
-										rtcp.sendpacket(conn, pack);
+							function handle_data(data){
+								var pack = PacketHeader(data);
+								if (pack.GetPayloadType() == PT_STATUS) {
+									var str = (new TextDecoder)
+										.decode(new Uint8Array(pack.GetPayload()));
+									var split = str.split('"');
+									var name = split[1];
+									var value = split[3].split(' ');
+									if (name == "pong") {
+										ping_cnt++;
+										var now = new Date().getTime();
+										var rtt = now - parseInt(value[0]);
+										var timediff = value[1] - (now - rtt / 2);
+										if (min_rtt == 0 || rtt < min_rtt) {
+											min_rtt = rtt;
+											valid_timediff = timediff;
+										}
+										console.log(name + ":" + value + ":rtt=" +
+											rtt);
+										if (ping_cnt < 10) {
+											var cmd = "<picam360:command id=\"0\" value=\"ping " +
+												new Date().getTime() + "\" />"
+											var pack = rtcp
+												.buildpacket(cmd, PT_CMD);
+											rtcp.sendpacket(conn, pack);
+											return;
+										} else {
+											var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
+												valid_timediff + "\" />";
+											var pack = rtcp
+												.buildpacket(cmd, PT_CMD);
+											rtcp.sendpacket(conn, pack);
 
-										console.log("min_rtt=" + min_rtt +
-											":valid_timediff:" +
-											valid_timediff);
-										self.valid_timediff = valid_timediff;
+											console.log("min_rtt=" + min_rtt +
+												":valid_timediff:" +
+												valid_timediff);
+											self.valid_timediff = valid_timediff;
+										}
 									}
 								}
+								init_con();
 							}
-							init_con();
+							if(data instanceof Blob) {
+							    var fr = new FileReader();
+							    fr.onload = function(evt) {
+							      handle_data(evt.target.result);
+							    };
+							    fr.readAsArrayBuffer(data);
+							}else{
+								handle_data(data);
+							}
 						}
 					});
 			};
