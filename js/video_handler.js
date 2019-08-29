@@ -29,6 +29,7 @@
 
 	function VideoHandler() {
 		var m_canvas;
+		var m_canvas_act;
 
 		// focal point tune
 		var m_view_quat = new THREE.Quaternion();
@@ -423,14 +424,14 @@
 
 				if (options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
-					var offscreen = m_canvas.transferControlToOffscreen();
+					m_canvas_act = m_canvas.transferControlToOffscreen();
 					m_worker = new Worker(m_base_path
 						+ '../lib/omvr/omvr_worker.js');
 					m_worker.postMessage({
 						type : 'init',
-						canvas : offscreen,
+						canvas : m_canvas_act,
 						devicePixelRatio : window.devicePixelRatio
-					}, [offscreen]);
+					}, [m_canvas_act]);
 					m_worker
 						.addEventListener('message', function(e) {
 							if (e.data.type == 'init_done') {
@@ -440,10 +441,12 @@
 							}
 						});
 				} else {
+					m_canvas_act = m_canvas;
+					
 					var script = document.createElement('script');
 					script.onload = function() {
 						m_omvr = new OMVR();
-						m_omvr.init(m_canvas, window.devicePixelRatio, callback);
+						m_omvr.init(m_canvas_act, window.devicePixelRatio, callback);
 					};
 					script.src = m_base_path + '../lib/omvr/omvr.js';
 
@@ -541,7 +544,7 @@
 				}
 				if(value){
 					m_vr_display.requestPresent([{
-						source: m_canvas
+						source: m_canvas_act
 					}]).then(() => {
 						m_vr_mode = true;
 						// self.updateCanvasSize();//calling timing is not here
@@ -558,6 +561,8 @@
 						}else if(m_omvr){
 							m_omvr.setCanvasSize(w, h);
 						}
+					}).catch(err => {
+						console.log(err);
 					});
 				}else{
 					m_vr_display.exitPresent().then(() => {
