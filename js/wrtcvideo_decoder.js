@@ -8,6 +8,8 @@ function WRTCVideoDecoder(callback) {
 
 	var m_image_capture = null;
 	var m_video = null;
+	var m_videoImage = null;
+	var m_videoImageContext = null;
 	var m_receiver = null;
 
 	function GetQueryString() {
@@ -34,6 +36,81 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
+		new_image_handler : function (imageBitmap, drop){		
+			m_decoded_frame_num = m_video.webkitDecodedFrameCount;
+			//m_decoded_frame_num = m_packet_frame_num - drop - 1;
+			// console.log("m_decoded_frame_num:" +
+			// m_decoded_frame_num);
+			if (m_decoded_frame_num > m_packet_frame_num) {
+				console.log("something wrong");
+				m_decoded_frame_num--; // fail safe
+				return;
+			}
+
+			if (m_frame_callback) {
+				var info = m_frame_info[m_decoded_frame_num];
+				if (!info) {
+					console.log("no view quat info:"
+						+ m_decoded_frame_num + ":"
+						+ m_frame_info.length);
+				} else {
+					m_frame_callback("ImageBitmap", imageBitmap, imageBitmap.width, imageBitmap.height,
+						info.info, info.time);
+				}
+			}
+			var frame_info = {};
+			for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
+				if (m_frame_info[i]) {
+					frame_info[i] = m_frame_info[i];
+				} else {
+					console.log("no view quat info:" + i);
+				}
+			}
+			m_frame_info = frame_info;
+			// if (m_decoded_frame_num !=
+			// m_packet_frame_num) {
+			// console.log("packet & decode are not
+			// synchronized:"
+			// + m_decoded_frame_num + "-" +
+			// m_packet_frame_num);
+			// }
+		},
+		init_state : 0,
+		init : function(){
+			self.init_state++;
+			if(self.init_state == 2){
+				function on_play(e){
+					m_video.play();
+					m_video.play_called = true;
+
+					m_videoImage = document.createElement('canvas');
+					m_videoImage.width = m_video.videoWidth;
+					m_videoImage.height = m_video.videoHeight;
+					m_videoImageContext = m_videoImage.getContext('2d');
+					m_videoImageContext.fillStyle = '#000000';
+					m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
+
+					var last_currentTime = m_video.currentTime;
+					setInterval(function(){
+						var currentTime = m_video.currentTime;
+						if(last_currentTime != currentTime){
+							//console.log("changed : " + m_video.webkitDecodedFrameCount + ":" + count + ":" + (currentTime - last_currentTime));
+							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
+							window.createImageBitmap(m_videoImage).then(imageBitmap =>{
+								self.new_image_handler(imageBitmap, 0);
+							});
+							//var apx = m_videoImageContext.getImageData(m_videoImage.width/2-w/2, m_videoImage.height-w/2, w, w);
+						}
+						last_currentTime = currentTime;
+					}, 10);
+					
+					document.removeEventListener('touchstart', on_play);
+					document.removeEventListener('mousedown', on_play);
+				}
+				document.addEventListener("touchstart", on_play);
+				document.addEventListener("mousedown", on_play);
+			}
+		},
 		set_stream : function(obj, receiver) {
 			m_receiver = receiver;
 			m_video = document.createElement('video');
@@ -41,23 +118,7 @@ function WRTCVideoDecoder(callback) {
 			m_video.srcObject = obj;
 			m_video.load();
 			
-			var agent = window.navigator.userAgent.toLowerCase();
-			if(window.ImageCapture && agent.indexOf('oculus') === -1){
-				m_image_capture = new ImageCapture(obj.getVideoTracks()[0]);
-			}else{
-				m_image_capture = new _ImageCapture(obj.getVideoTracks()[0]);
-			}
-			if(agent.indexOf('firefox') !== -1){
-				m_video.play_required = true;
-				function on_play(e){
-					m_video.play();
-					m_video.play_called = true;
-					document.removeEventListener('touchstart', on_play);
-					document.removeEventListener('mousedown', on_play);
-				}
-				document.addEventListener("touchstart", on_play);
-				document.addEventListener("mousedown", on_play);
-			}
+			self.init();
 // var last_timeStamp = 0;
 // var frame_num=0;
 // var reciever_stats = null;
@@ -85,8 +146,6 @@ function WRTCVideoDecoder(callback) {
 		},
 		set_frame_callback : function(callback) {
 			m_frame_callback = callback;
-		},
-		init : function() {
 		},
 		// @data : Uint8Array
 		decode : function(data) {
@@ -133,68 +192,7 @@ function WRTCVideoDecoder(callback) {
 							info : str,
 							time : new Date().getTime()
 						};
-						if(m_video.play_required && !m_video.play_called){
-							return;
-						}
-						if (m_image_capture.requested) {
-							return;
-						} else {
-							m_image_capture.requested = true;
-						}
-						function on_image_captured(imageBitmap, drop){
-							m_image_capture.requested = false;						
-							// m_decoded_frame_num =
-							// m_video.webkitDecodedFrameCount;
-							m_decoded_frame_num = m_packet_frame_num - drop - 1;
-							// console.log("m_decoded_frame_num:" +
-							// m_decoded_frame_num);
-							if (m_decoded_frame_num > m_packet_frame_num) {
-								console.log("something wrong");
-								m_decoded_frame_num--; // fail safe
-								return;
-							}
-
-							if (m_frame_callback) {
-								var info = m_frame_info[m_decoded_frame_num];
-								if (!info) {
-									console.log("no view quat info:"
-										+ m_decoded_frame_num + ":"
-										+ m_frame_info.length);
-								} else {
-									m_frame_callback("ImageBitmap", imageBitmap, imageBitmap.width, imageBitmap.height,
-										info.info, info.time);
-								}
-							}
-							var frame_info = {};
-							for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
-								if (m_frame_info[i]) {
-									frame_info[i] = m_frame_info[i];
-								} else {
-									console.log("no view quat info:" + i);
-								}
-							}
-							m_frame_info = frame_info;
-							// if (m_decoded_frame_num !=
-							// m_packet_frame_num) {
-							// console.log("packet & decode are not
-							// synchronized:"
-							// + m_decoded_frame_num + "-" +
-							// m_packet_frame_num);
-							// }
-						}
-						m_image_capture.grabFrame()
-						  .then(imageBitmap => {
-//								m_receiver.getStats().then(stats => {
-//									 stats.forEach(function(item, prop) {
-//										 if(prop.startsWith('RTCMediaStreamTrack_receiver_')){
-//										 	 console.log(item.framesDecoded+":"+item.framesDropped);
-//										 	 on_image_captured(imageBitmap, item.framesDropped);
-//										 }
-//									 });
-//								});
-							  	on_image_captured(imageBitmap, 0);
-						  })
-						  .catch(error => console.log(error));
+						self.init();
 							// console.log("packet_frame_num:" +
 							// m_packet_frame_num
 							// + ":" + str);
