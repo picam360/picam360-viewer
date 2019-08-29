@@ -36,6 +36,7 @@ function WRTCVideoDecoder(callback) {
 		set_stream : function(obj, receiver) {
 			m_video = document.createElement('video');
 			m_video.srcObject = obj;
+			m_video.load();
 			if(window.ImageCapture){
 				m_image_capture = new ImageCapture(obj.getVideoTracks()[0]);
 			}
