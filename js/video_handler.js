@@ -26,14 +26,6 @@
 	function splitExt(filename) {
 		return filename.split(/\.(?=[^.]+$)/);
 	}
-	if (navigator.getVRDisplays) {
-		console.log('WebVR 1.1 supported');
-		navigator.getVRDisplays().then(function(displays) {
-			if (displays.length > 0) {
-				console.log("vr display found");
-			}
-		});
-	}
 
 	function VideoHandler() {
 		var m_canvas;
@@ -42,12 +34,12 @@
 		var m_view_quat = new THREE.Quaternion();
 		var m_tex_quat = new THREE.Quaternion();
 		
-//		var m_view_quat_1 = new THREE.Quaternion();
-//		var m_view_tex_diff_quat = new THREE.Quaternion();
-//		var m_view_quat_1_time = new Date().getTime();
-//		var m_view_quat_time = new Date().getTime();
-//		var m_view_av_rad = 0;
-//		var m_view_av_n = new THREE.Vector3(0, 0, 1);
+// var m_view_quat_1 = new THREE.Quaternion();
+// var m_view_tex_diff_quat = new THREE.Quaternion();
+// var m_view_quat_1_time = new Date().getTime();
+// var m_view_quat_time = new Date().getTime();
+// var m_view_av_rad = 0;
+// var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
 		// diagnotics
 		var m_texture_latency = 0;
@@ -83,15 +75,29 @@
 		// params
 		var stereoEnabled = false;
 		var m_limit_fov = 180;
+		var m_vr_mode = false;
+		var m_requestAnimationFrame_target = window;
+		
+		// webvr
+		var m_vr_display = null;
+		if (navigator.getVRDisplays) {
+			console.log('WebVR 1.1 supported');
+			navigator.getVRDisplays().then(function(displays) {
+				if (displays.length > 0) {
+					console.log("vr display found");
+					m_vr_display = displays[0];
+				}
+			});
+		}
 
 		var self = {
 			updateCanvasSize : function() {
-//				var w = Math.abs(window.orientation || 0) != 90
-//					? window.innerWidth
-//					: window.innerHeight;
-//				var h = Math.abs(window.orientation || 0) != 90
-//					? window.innerHeight
-//					: window.innerWidth;
+// var w = Math.abs(window.orientation || 0) != 90
+// ? window.innerWidth
+// : window.innerHeight;
+// var h = Math.abs(window.orientation || 0) != 90
+// ? window.innerHeight
+// : window.innerWidth;
 				var w = window.innerWidth;
 				var h = window.innerHeight;
 				m_canvas.width = w;
@@ -109,56 +115,56 @@
 	
 				gotoTop();
 			},
-//			set_view_quaternion : function(value) {
-//				m_view_quat_1 = m_view_quat;
-//				m_view_quat_1_time = m_view_quat_time;
-//				m_view_quat = value;
-//				m_view_quat_time = new Date().getTime();
+// set_view_quaternion : function(value) {
+// m_view_quat_1 = m_view_quat;
+// m_view_quat_1_time = m_view_quat_time;
+// m_view_quat = value;
+// m_view_quat_time = new Date().getTime();
 //
-//				var diff_time = (m_view_quat_time - m_view_quat_1_time) / 1000;
-//				var diff_quat = m_view_quat_1.clone().conjugate()
-//					.multiply(m_view_quat);
-//				var cos = diff_quat.w;
-//				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
-//					* diff_quat.y + diff_quat.z * diff_quat.z);
-//				m_view_av_rad = (Math.atan2(sin, cos) * 2) / diff_time;
-//				// console.log("cos:" + cos + ",sin:" + sin + ",av:"
-//				// + (180 * m_view_av_rad / Math.PI));
-//				if (sin == 0) {
-//					m_view_av_n = new THREE.Vector3(0, 0, 1);
-//				} else {
-//					m_view_av_n = new THREE.Vector3(diff_quat.x / sin, diff_quat.y
-//						/ sin, diff_quat.z / sin);
-//				}
-//			},
-//			predict_view_quaternion : function() {
-//				var rad = m_view_av_rad * m_texture_latency;
-//				var cos = Math.cos(rad / 2);
-//				var sin = Math.sin(rad / 2);
-//				var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
-//					* m_view_av_n.y, sin * m_view_av_n.z, cos);
-//				return m_view_quat.clone().multiply(diff_quat);
-//			},
-//			get_adaptive_texture_fov : function() {
-//				var diff_quat = m_view_tex_diff_quat;
-//				var cos = diff_quat.w;
-//				var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
-//					* diff_quat.y + diff_quat.z * diff_quat.z);
-//				var diff_theta = Math.atan2(sin, cos) * 2;
-//				while (Math.abs(diff_theta) > Math.PI) {
-//					if (diff_theta > 0) {
-//						diff_theta -= 2 * Math.PI;
-//					} else {
-//						diff_theta += 2 * Math.PI;
-//					}
-//				}
-//				var fov = m_view_fov + 180 * Math.abs(diff_theta) / Math.PI;
-//				fov = Math.round(fov / 5) * 5;
-//				if (fov > m_limit_fov) {
-//					fov = m_limit_fov;
-//				}
-//				return fov;
-//			},
+// var diff_time = (m_view_quat_time - m_view_quat_1_time) / 1000;
+// var diff_quat = m_view_quat_1.clone().conjugate()
+// .multiply(m_view_quat);
+// var cos = diff_quat.w;
+// var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+// * diff_quat.y + diff_quat.z * diff_quat.z);
+// m_view_av_rad = (Math.atan2(sin, cos) * 2) / diff_time;
+// // console.log("cos:" + cos + ",sin:" + sin + ",av:"
+// // + (180 * m_view_av_rad / Math.PI));
+// if (sin == 0) {
+// m_view_av_n = new THREE.Vector3(0, 0, 1);
+// } else {
+// m_view_av_n = new THREE.Vector3(diff_quat.x / sin, diff_quat.y
+// / sin, diff_quat.z / sin);
+// }
+// },
+// predict_view_quaternion : function() {
+// var rad = m_view_av_rad * m_texture_latency;
+// var cos = Math.cos(rad / 2);
+// var sin = Math.sin(rad / 2);
+// var diff_quat = new THREE.Quaternion(sin * m_view_av_n.x, sin
+// * m_view_av_n.y, sin * m_view_av_n.z, cos);
+// return m_view_quat.clone().multiply(diff_quat);
+// },
+// get_adaptive_texture_fov : function() {
+// var diff_quat = m_view_tex_diff_quat;
+// var cos = diff_quat.w;
+// var sin = Math.sqrt(diff_quat.x * diff_quat.x + diff_quat.y
+// * diff_quat.y + diff_quat.z * diff_quat.z);
+// var diff_theta = Math.atan2(sin, cos) * 2;
+// while (Math.abs(diff_theta) > Math.PI) {
+// if (diff_theta > 0) {
+// diff_theta -= 2 * Math.PI;
+// } else {
+// diff_theta += 2 * Math.PI;
+// }
+// }
+// var fov = m_view_fov + 180 * Math.abs(diff_theta) / Math.PI;
+// fov = Math.round(fov / 5) * 5;
+// if (fov > m_limit_fov) {
+// fov = m_limit_fov;
+// }
+// return fov;
+// },
 
 			fps : 0,
 			checkImageDelay : 1000,
@@ -459,8 +465,35 @@
 					m_omvr.setModel(vertex_type, fragment_type);
 				}
 			},
+			
+			get_view_quaternion_vr : function(){
+				if(!m_vr_display){
+					return new THREE.Quaternion();
+				}
+				var frameData = new VRFrameData();
+				m_vr_display.getFrameData(frameData);
+				var m = new THREE.Matrix4();
+				m.elements = frameData.leftViewMatrix;
+				var quat = new THREE.Quaternion().setFromRotationMatrix(m);
+				var view_quat = new THREE.Quaternion(-quat.x, -quat.z, quat.y, quat.w);
+				var euler_correct = new THREE.Euler(THREE.Math
+					.degToRad(90), THREE.Math.degToRad(0), THREE.Math
+					.degToRad(0), "YXZ");
+				var quat_correct = new THREE.Quaternion().setFromEuler(euler_correct);
+				view_quat = quat_correct.clone().multiply(view_quat);
+				return view_quat;
+			},
+			
+			get_view_quaternion_normal : function(){
+				return new THREE.Quaternion();
+			},
+			
+			view_quat : new THREE.Quaternion(),
+			get_view_quaternion : function(){
+				return self.view_quat;
+			},
 
-			animate : function(fov, quat) {
+			animate : function(fov) {
 				m_animate_num++;
 				{// fps
 					var now = new Date().getTime();
@@ -474,19 +507,76 @@
 						m_animate_tmp_time = now;
 					}
 				}
+				if(m_requestAnimationFrame_target == m_vr_display){
+					self.view_quat = self.get_view_quaternion_vr();
+				}else{
+					self.view_quat = self.get_view_quaternion_normal();
+				}
 				if (m_worker) {
 					m_worker.postMessage({
 						type : 'animate',
 						fov,
-						quat,
+						quat : self.view_quat,
 					});
 				} else {
-					m_omvr.animate(fov, quat);
+					m_omvr.animate(fov, self.view_quat);
 				}
+				if(m_requestAnimationFrame_target == m_vr_display){
+					m_vr_display.submitFrame();
+				}
+			},
 
+			requestAnimationFrame : function(callback) {
+				if(m_vr_mode && m_vr_display){
+					m_requestAnimationFrame_target = m_vr_display;
+				}else{
+					m_requestAnimationFrame_target = window;
+				}
+				m_requestAnimationFrame_target.requestAnimationFrame(callback);
+			},
+			
+			setVRMode : function(value){
+				if(!self.vr_supported()){
+					return;
+				}
+				if(value){
+					m_vr_display.requestPresent([{
+						source: m_canvas
+					}]).then(() => {
+						m_vr_mode = true;
+						// self.updateCanvasSize();//calling timing is not here
+						var w = m_canvas.width;
+						var h = m_canvas.height;
+						w = 2400;
+						h = 1353;
+						if(m_worker){
+							m_worker.postMessage({
+								type : 'setCanvasSize',
+								width : w,
+								height : h,
+							});
+						}else if(m_omvr){
+							m_omvr.setCanvasSize(w, h);
+						}
+					});
+				}else{
+					m_vr_display.exitPresent().then(() => {
+						m_vr_mode = false;
+						self.updateCanvasSize();// calling timing is not here
+					});
+				}
+			},
+			
+			get_vr_mode : function(){
+				return m_vr_mode;
+			},
+			
+			vr_supported : function(){
+				return m_vr_display != null;
 			},
 
 			setStereoEnabled : function(value) {
+				self.setVRMode(value);
 				if (m_worker) {
 					m_worker.postMessage({
 						type : 'setStereoEnabled',

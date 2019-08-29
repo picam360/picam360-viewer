@@ -40,10 +40,13 @@ function WRTCVideoDecoder(callback) {
 			m_video.crossOrigin = "*";
 			m_video.srcObject = obj;
 			m_video.load();
-			if(window.ImageCapture){
-				m_image_capture = new ImageCapture(obj.getVideoTracks()[0]);
-			}
+			
 			var agent = window.navigator.userAgent.toLowerCase();
+			if(window.ImageCapture && agent.indexOf('oculus') === -1){
+				m_image_capture = new ImageCapture(obj.getVideoTracks()[0]);
+			}else{
+				m_image_capture = new _ImageCapture(obj.getVideoTracks()[0]);
+			}
 			if(agent.indexOf('firefox') !== -1){
 				m_video.play_required = true;
 				function on_play(e){

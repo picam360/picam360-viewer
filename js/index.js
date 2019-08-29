@@ -238,6 +238,9 @@ var app = (function() {
 			},
 			set_stereo: function(value) {
 				m_video_handler.setStereoEnabled(value);
+				if(m_video_handler.vr_supported()){
+					self.set_audio(value);
+				}
 				self.send_event("PLUGIN_HOST", value ?
 					"STEREO_ENABLED" :
 					"STEREO_DISABLED");
@@ -794,11 +797,7 @@ var app = (function() {
 				}
 				var client_key = new Date().getTime().toString();
 				var fov = m_view_fov;
-				var quat = self.plugin_host.get_view_quaternion() ||
-					new THREE.Quaternion();
-				var view_offset_quat = self.plugin_host.get_view_offset() ||
-					new THREE.Quaternion();
-				var view_quat = view_offset_quat.multiply(quat);
+				var view_quat = m_video_handler.get_view_quaternion();
 				if (m_afov) {
 					fov = m_video_handler.get_adaptive_texture_fov();
 					fov = (fov / 5).toFixed(0) * 5;
@@ -837,6 +836,24 @@ var app = (function() {
 			m_audio_handler = new AudioHandler();
 			// webgl handling
 			m_video_handler = new VideoHandler();
+			m_video_handler.get_view_quaternion_normal = function() {// set_view_quaternion
+				var quat = self.plugin_host.get_view_quaternion() || new THREE.Quaternion();
+				var view_offset_quat = self.plugin_host.get_view_offset() || new THREE.Quaternion();
+				var view_quat = view_offset_quat.multiply(quat);
+				return view_quat;
+			};
+			setInterval(function(){
+				if (auto_scroll) {
+					var view_quat = m_video_handler.get_view_quaternion_normal();
+					var view_offset_diff_quat = new THREE.Quaternion()
+						.setFromEuler(new THREE.Euler(THREE.Math
+							.degToRad(0), THREE.Math.degToRad(0), THREE.Math
+							.degToRad(0.5), "YXZ"));
+					view_offset = view_quat
+						.multiply(view_offset_diff_quat).multiply(quat
+							.conjugate());
+				}
+			}, 100);
 			m_video_handler
 				.init({canvas, offscreen : parseBoolean(query['offscreen'] || 'true')}, function() {
 					if (default_image_url) {
@@ -1179,120 +1196,105 @@ var app = (function() {
 			var frame_count = 0;
 
 			function redraw() {
-				requestAnimationFrame(redraw);
-				frame_count++;
-				if (!m_frame_active) {
-					return;
-				}
-				if ((frame_count % (m_skip_frame + 1)) != 0) {
-					return;
-				}
-				var view_quat;
-				{// set_view_quaternion
-					var quat = self.plugin_host.get_view_quaternion() ||
-						new THREE.Quaternion();
-					var view_offset_quat = self.plugin_host
-						.get_view_offset() ||
-						new THREE.Quaternion();
-					view_quat = view_offset_quat.multiply(quat);
-					if (auto_scroll) {
-						var view_offset_diff_quat = new THREE.Quaternion()
-							.setFromEuler(new THREE.Euler(THREE.Math
-								.degToRad(0), THREE.Math.degToRad(0), THREE.Math
-								.degToRad(0.5), "YXZ"));
-						view_offset = view_quat
-							.multiply(view_offset_diff_quat).multiply(quat
-								.conjugate());
+				try{
+					frame_count++;
+					if (!m_frame_active) {
+						return;
 					}
-				}
-				if ((frame_count % 30) == 0) {
-					var divStatus = document.getElementById("divStatus");
-					if (divStatus) {
-						var status = "";
-						var texture_info = m_video_handler.get_info(); {
-							status += "texture<br/>";
-							status += "v-fps:" + texture_info.video_fps.toFixed(3) +
-								"<br/>";
-							if(texture_info.offscreen){
-								status += "o";
-							}
-							status += "r-fps:" + texture_info.animate_fps.toFixed(3) +
-								"<br/>";
-							status += "latency:" +
-								(texture_info.latency * 1000).toFixed(0) +
-								"ms<br/>";
-							status += "processed:" +
-								(texture_info.processed * 1000).toFixed(0) +
-								"ms<br/>";
-							status += "encoded:" +
-								(texture_info.encoded * 1000).toFixed(0) +
-								"ms<br/>";
-							status += "decoded:" +
-								(texture_info.decoded * 1000).toFixed(0) +
-								"ms<br/>";
-							status += "rtt:" +
-								(texture_info.rtt * 1000).toFixed(0) +
-								"ms<br/>";
-							status += "<br/>";
-						}
-
-						{
-							var rtp_info = rtp.get_info();
-							status += "packet<br/>";
-							status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
-								"Mbit/s<br/>";
-							status += "<br/>";
-						}
-
-						{
-							status += "upstream<br/>";
-							status += m_info.replace(/\n/gm, "<br/>");
-							status += "<br/>";
-						}
-
-						divStatus.innerHTML = status;
+					if (!m_video_handler.get_vr_mode() && (frame_count % (m_skip_frame + 1)) != 0) {
+						return;
 					}
-					if (m_menu_visible) {
-						var info = ""; {
-							var defualt_color = "#ffffff";
-							var activated_color = "#00ffff";
-							var selected_color = "#ff00ff";
-							var marked_color = "#ffff00";
-							var rows = m_menu.split("\n");
-							var _nodes_index = rows[0].split(",");
-							var nodes_index = [];
-							for (var i = 0; i < _nodes_index.length; i++) {
-								nodes_index[_nodes_index[i].toLowerCase()] = i;
-							}
-							info += "<pre align=\"left\">";
-							for (var i = 1; i < rows.length; i++) {
-								if (!rows[i]) {
-									continue;
-								}
-								var nodes = rows[i].split(",");
-								var color = nodes[nodes_index["selected"]] == "1" ?
-									selected_color :
-									nodes[nodes_index["activated"]] == "1" ?
-									activated_color :
-									nodes[nodes_index["marked"]] == "1" ?
-									marked_color :
-									defualt_color;
-								info += " "
-									.repeat(4 * nodes[nodes_index["depth"]]) +
-									"<font color=\"" +
-									color +
-									"\">" +
-									nodes[nodes_index["name"]] +
-									"</font>" +
+					if ((frame_count % 30) == 0) {
+						var divStatus = document.getElementById("divStatus");
+						if (divStatus) {
+							var status = "";
+							var texture_info = m_video_handler.get_info(); {
+								status += "texture<br/>";
+								status += "v-fps:" + texture_info.video_fps.toFixed(3) +
 									"<br/>";
+								if(texture_info.offscreen){
+									status += "o";
+								}
+								status += "r-fps:" + texture_info.animate_fps.toFixed(3) +
+									"<br/>";
+								status += "latency:" +
+									(texture_info.latency * 1000).toFixed(0) +
+									"ms<br/>";
+								status += "processed:" +
+									(texture_info.processed * 1000).toFixed(0) +
+									"ms<br/>";
+								status += "encoded:" +
+									(texture_info.encoded * 1000).toFixed(0) +
+									"ms<br/>";
+								status += "decoded:" +
+									(texture_info.decoded * 1000).toFixed(0) +
+									"ms<br/>";
+								status += "rtt:" +
+									(texture_info.rtt * 1000).toFixed(0) +
+									"ms<br/>";
+								status += "<br/>";
 							}
-							info += "</pre>";
+	
+							{
+								var rtp_info = rtp.get_info();
+								status += "packet<br/>";
+								status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
+									"Mbit/s<br/>";
+								status += "<br/>";
+							}
+	
+							{
+								status += "upstream<br/>";
+								status += m_info.replace(/\n/gm, "<br/>");
+								status += "<br/>";
+							}
+	
+							divStatus.innerHTML = status;
 						}
-
-						self.plugin_host.set_info(info);
+						if (m_menu_visible) {
+							var info = ""; {
+								var defualt_color = "#ffffff";
+								var activated_color = "#00ffff";
+								var selected_color = "#ff00ff";
+								var marked_color = "#ffff00";
+								var rows = m_menu.split("\n");
+								var _nodes_index = rows[0].split(",");
+								var nodes_index = [];
+								for (var i = 0; i < _nodes_index.length; i++) {
+									nodes_index[_nodes_index[i].toLowerCase()] = i;
+								}
+								info += "<pre align=\"left\">";
+								for (var i = 1; i < rows.length; i++) {
+									if (!rows[i]) {
+										continue;
+									}
+									var nodes = rows[i].split(",");
+									var color = nodes[nodes_index["selected"]] == "1" ?
+										selected_color :
+										nodes[nodes_index["activated"]] == "1" ?
+										activated_color :
+										nodes[nodes_index["marked"]] == "1" ?
+										marked_color :
+										defualt_color;
+									info += " "
+										.repeat(4 * nodes[nodes_index["depth"]]) +
+										"<font color=\"" +
+										color +
+										"\">" +
+										nodes[nodes_index["name"]] +
+										"</font>" +
+										"<br/>";
+								}
+								info += "</pre>";
+							}
+	
+							self.plugin_host.set_info(info);
+						}
 					}
+					m_video_handler.animate(m_view_fov);
+				} finally {
+					m_video_handler.requestAnimationFrame(redraw);
 				}
-				m_video_handler.animate(m_view_fov, view_quat);
 			}
 			redraw();
 		},
