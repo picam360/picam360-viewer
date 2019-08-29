@@ -228,6 +228,6 @@ function Signaling(options) {
 	};
 	return self;
 }
-if (exports) {
+if (typeof exports !== 'undefined') {
 	exports.Signaling = Signaling;
 }

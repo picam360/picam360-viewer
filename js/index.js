@@ -58,6 +58,7 @@ var app = (function() {
 	var mjpeg_decoder;
 	var h264_decoder;
 	var h265_decoder;
+	var wrtcvideo_decoder;
 	var opus_decoder;
 	var audio_first_packet_s = 0;
 	// motion processer unit
@@ -588,6 +589,10 @@ var app = (function() {
 							h265_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
 						}
+						if (wrtcvideo_decoder) {
+							wrtcvideo_decoder.decode(packet.GetPayload(), packet
+								.GetPayloadLength());
+						}
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
 							.decode(new Uint8Array(packet.GetPayload()));
@@ -847,9 +852,11 @@ var app = (function() {
 					h264_decoder = H264Decoder();
 					mjpeg_decoder = MjpegDecoder();
 					h265_decoder = H265Decoder();
+					wrtcvideo_decoder = WRTCVideoDecoder();
 					h264_decoder.set_frame_callback(self.handle_frame);
 					mjpeg_decoder.set_frame_callback(self.handle_frame);
 					h265_decoder.set_frame_callback(self.handle_frame);
+					wrtcvideo_decoder.set_frame_callback(self.handle_frame);
 
 					// opus_decoder = OpusDecoder();
 					// opus_decoder.set_frame_callback(self.handle_audio_frame);
@@ -1072,8 +1079,18 @@ var app = (function() {
 						var dc = ev.channel;
 						dc.onopen = function() {
 							console.log("p2p connection established as downstream.");
-							const stream = new MediaStream(m_pc.getReceivers().map(receiver => receiver.track));
-							m_audio_handler.loadAudio(stream);
+							for(var receiver of m_pc.getReceivers()){
+								switch(receiver.track.kind){
+									case 'audio':
+										var stream = new MediaStream([receiver.track]);
+										m_audio_handler.loadAudio(stream);
+										break;
+									case 'video':
+										var stream = new MediaStream([receiver.track]);
+										wrtcvideo_decoder.set_stream(stream, receiver);
+										break;
+								}
+							}
 							class DataChannel extends EventEmitter {
 							    constructor() {
 							    	super();

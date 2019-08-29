@@ -355,6 +355,10 @@
 					// console.log(m_target_texture.src + " : " + blob.size
 					// + " : " + m_active_frame.length);
 					blob = null;
+				} else if (type == "video") {
+					m_texture_width = width;
+					m_texture_height = height;
+					m_omvr.setVideoTexture(vertex_type, data, m_tex_quat, m_texture_fov);
 				} else if (type == "yuv") {
 					m_texture_width = width;
 					m_texture_height = height;
@@ -370,6 +374,20 @@
 						}, [data]);
 					}else{
 						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov);
+					}
+				} else if (data instanceof ImageBitmap) {
+					m_texture_width = width;
+					m_texture_height = height;
+					if(m_worker){
+						m_worker.postMessage({
+							type : 'setTextureImageBitmap',
+							vertex_type, 
+							data,
+							quat : m_tex_quat,
+							fov : m_texture_fov,
+						}, [data]);
+					}else{
+						m_omvr.setTextureImageBitmap(vertex_type, data, m_tex_quat, m_texture_fov);
 					}
 				} else if (type == "blob") {
 					self.setModel(vertex_type, "rgb");
