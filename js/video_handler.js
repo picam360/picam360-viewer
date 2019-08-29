@@ -422,7 +422,7 @@
 				self.updateCanvasSize();
 				window.addEventListener('resize', self.updateCanvasSize, false);
 
-				if (options.offscreen && 'transferControlToOffscreen' in m_canvas) {
+				if (!m_vr_display && options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
 					m_canvas_act = m_canvas.transferControlToOffscreen();
 					m_worker = new Worker(m_base_path
