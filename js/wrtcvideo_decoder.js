@@ -36,9 +36,12 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler : function (imageBitmap, drop){		
-			m_decoded_frame_num = m_video.webkitDecodedFrameCount;
-			//m_decoded_frame_num = m_packet_frame_num - drop - 1;
+		new_image_handler : function (imageBitmap, drop){
+			if(m_video.webkitDecodedFrameCount !== undefined){
+				m_decoded_frame_num = m_video.webkitDecodedFrameCount;
+			}else{
+				m_decoded_frame_num = m_packet_frame_num - drop - 1;
+			}
 			// console.log("m_decoded_frame_num:" +
 			// m_decoded_frame_num);
 			if (m_decoded_frame_num > m_packet_frame_num) {
@@ -94,12 +97,16 @@ function WRTCVideoDecoder(callback) {
 					setInterval(function(){
 						var currentTime = m_video.currentTime;
 						if(last_currentTime != currentTime){
-							//console.log("changed : " + m_video.webkitDecodedFrameCount + ":" + count + ":" + (currentTime - last_currentTime));
+							// console.log("changed : " +
+							// m_video.webkitDecodedFrameCount + ":" + count +
+							// ":" + (currentTime - last_currentTime));
 							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
 							window.createImageBitmap(m_videoImage).then(imageBitmap =>{
 								self.new_image_handler(imageBitmap, 0);
 							});
-							//var apx = m_videoImageContext.getImageData(m_videoImage.width/2-w/2, m_videoImage.height-w/2, w, w);
+							// var apx =
+							// m_videoImageContext.getImageData(m_videoImage.width/2-w/2,
+							// m_videoImage.height-w/2, w, w);
 						}
 						last_currentTime = currentTime;
 					}, 10);
