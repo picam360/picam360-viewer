@@ -35,7 +35,6 @@ var app = (function() {
 	var tilt = 0;
 	var socket;
 	var m_view_fov = 120;
-	var m_skip_frame = 2;
 	var auto_scroll = false;
 	var view_offset_lock = false;
 	var m_afov = false;
@@ -854,37 +853,41 @@ var app = (function() {
 							.conjugate());
 				}
 			}, 100);
-			m_video_handler
-				.init({canvas, offscreen : parseBoolean(query['offscreen'] || 'true')}, function() {
-					if (default_image_url) {
-						m_frame_active = true;
-						m_video_handler.setModel("equirectangular", "rgb");
-						m_video_handler.loadTexture(default_image_url);
-					} else {
-						m_video_handler.setModel("window", "rgb");
-					}
-					m_video_handler.vertex_type_forcibly = m_vertex_type;
+			m_video_handler.init({
+				canvas,
+				offscreen : parseBoolean(query['offscreen'] || 'true'),
+				skip_frame : parseFloat(query['skip-frame'] || '2'),
+				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
+			}, function() {
+				if (default_image_url) {
+					m_frame_active = true;
+					m_video_handler.setModel("equirectangular", "rgb");
+					m_video_handler.loadTexture(default_image_url);
+				} else {
+					m_video_handler.setModel("window", "rgb");
+				}
+				m_video_handler.vertex_type_forcibly = m_vertex_type;
 
-					// video decoder
-					h264_decoder = H264Decoder();
-					mjpeg_decoder = MjpegDecoder();
-					h265_decoder = H265Decoder();
-					wrtcvideo_decoder = WRTCVideoDecoder();
-					h264_decoder.set_frame_callback(self.handle_frame);
-					mjpeg_decoder.set_frame_callback(self.handle_frame);
-					h265_decoder.set_frame_callback(self.handle_frame);
-					wrtcvideo_decoder.set_frame_callback(self.handle_frame);
+				// video decoder
+				h264_decoder = H264Decoder();
+				mjpeg_decoder = MjpegDecoder();
+				h265_decoder = H265Decoder();
+				wrtcvideo_decoder = WRTCVideoDecoder();
+				h264_decoder.set_frame_callback(self.handle_frame);
+				mjpeg_decoder.set_frame_callback(self.handle_frame);
+				h265_decoder.set_frame_callback(self.handle_frame);
+				wrtcvideo_decoder.set_frame_callback(self.handle_frame);
 
-					// opus_decoder = OpusDecoder();
-					// opus_decoder.set_frame_callback(self.handle_audio_frame);
+				// opus_decoder = OpusDecoder();
+				// opus_decoder.set_frame_callback(self.handle_audio_frame);
 
-					// motion processer unit
-					mpu = MPU(self.plugin_host);
-					mpu.init();
+				// motion processer unit
+				mpu = MPU(self.plugin_host);
+				mpu.init();
 
-					// animate
-					self.start_animate();
-				});
+				// animate
+				self.start_animate();
+			});
 		},
 
 		init_watch: function() {
@@ -989,9 +992,6 @@ var app = (function() {
 				m_vertex_type = query['vertex-type'];
 			}
 
-			if (query['skip-frame']) {
-				m_skip_frame = parseFloat(query['skip-frame']);
-			}
 			if (query['auto-scroll']) {
 				auto_scroll = parseBoolean(query['auto-scroll']);
 			}
@@ -1199,9 +1199,6 @@ var app = (function() {
 				try{
 					frame_count++;
 					if (!m_frame_active) {
-						return;
-					}
-					if (!m_video_handler.get_vr_mode() && (frame_count % (m_skip_frame + 1)) != 0) {
 						return;
 					}
 					if ((frame_count % 30) == 0) {

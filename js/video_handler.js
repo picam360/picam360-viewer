@@ -54,6 +54,7 @@
 		var m_texture_tmp_num = 0;
 		
 		var m_animate_fps = 0;
+		var m_animate_called_num = 0;
 		var m_animate_num = 0;
 		var m_animate_tmp_time = 0;
 		var m_animate_tmp_num = 0;
@@ -163,6 +164,7 @@
 			vertex_type : "",
 			vertex_type_forcibly : "",
 			fragment_type : "",
+			skip_frame : 0,
 
 			get_info : function() {
 				var rtt = m_texture_latency - m_texture_processed
@@ -439,6 +441,8 @@
 								callback();
 							}
 						});
+
+					self.skip_frame = options.offscreen_skip_frame || 0;
 				} else {
 					m_canvas_act = m_canvas;
 					
@@ -450,6 +454,8 @@
 					script.src = m_base_path + '../lib/omvr/omvr.js';
 
 					document.head.appendChild(script);
+
+					self.skip_frame = options.skip_frame || 0;
 				}
 			},
 
@@ -497,6 +503,10 @@
 			},
 
 			animate : function(fov) {
+				m_animate_called_num++;
+				if (!self.get_vr_mode() && (m_animate_called_num % (self.skip_frame + 1)) != 0) {
+					return;
+				}
 				m_animate_num++;
 				{// fps
 					var now = new Date().getTime();
