@@ -81,15 +81,6 @@
 		
 		// webvr
 		var m_vr_display = null;
-		if (navigator.getVRDisplays) {
-			console.log('WebVR 1.1 supported');
-			navigator.getVRDisplays().then(function(displays) {
-				if (displays.length > 0) {
-					console.log("vr display found");
-					m_vr_display = displays[0];
-				}
-			});
-		}
 
 		var self = {
 			updateCanvasSize : function() {
@@ -416,12 +407,20 @@
 				}
 			},
 
-			init : function(options, callback) {
+			init : async function(options, callback) {
 				m_canvas = options.canvas;
 
 				self.updateCanvasSize();
 				window.addEventListener('resize', self.updateCanvasSize, false);
 
+				if (navigator.getVRDisplays) {
+					console.log('WebVR 1.1 supported');
+					var displays = await navigator.getVRDisplays();
+					if (displays.length > 0) {
+						console.log("vr display found");
+						m_vr_display = displays[0];
+					}
+				}
 				if (!m_vr_display && options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
 					m_canvas_act = m_canvas.transferControlToOffscreen();

@@ -31,7 +31,8 @@ function WRTCVideoDecoder(callback) {
 	}
 	var query = GetQueryString();
 
-	var is_init = false;
+	var m_is_init = false;
+	var m_first_frame = false;
 	var info = {};
 	var packet_pool = [];
 
@@ -78,10 +79,9 @@ function WRTCVideoDecoder(callback) {
 			// m_packet_frame_num);
 			// }
 		},
-		init_state : 0,
 		init : function(){
-			self.init_state++;
-			if(self.init_state == 2){
+			if(!m_is_init && m_first_frame && m_video){
+				m_is_init = true;
 				function on_play(e){
 					m_video.play();
 					m_video.play_called = true;
@@ -156,10 +156,6 @@ function WRTCVideoDecoder(callback) {
 		},
 		// @data : Uint8Array
 		decode : function(data) {
-			if (!is_init) {
-				is_init = true;
-				self.init();
-			}
 			if (!m_active_frame) {
 				if (data[0] == 0x49 && data[1] == 0x34) { // SOI
 					if (data.length > 2) {
@@ -199,7 +195,10 @@ function WRTCVideoDecoder(callback) {
 							info : str,
 							time : new Date().getTime()
 						};
-						self.init();
+						if(!m_first_frame){
+							m_first_frame = true;
+							self.init();
+						}
 							// console.log("packet_frame_num:" +
 							// m_packet_frame_num
 							// + ":" + str);
