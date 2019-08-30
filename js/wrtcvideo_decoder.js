@@ -37,14 +37,8 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler : function (imageBitmap, drop){
-			if(m_video.webkitDecodedFrameCount !== undefined){
-				m_decoded_frame_num = m_video.webkitDecodedFrameCount;
-			}else{
-				m_decoded_frame_num = m_packet_frame_num - drop - 1;
-			}
-			// console.log("m_decoded_frame_num:" +
-			// m_decoded_frame_num);
+		new_image_handler: function(imageBitmap, frame_num) {
+			m_decoded_frame_num = frame_num;
 			if (m_decoded_frame_num > m_packet_frame_num) {
 				console.log("something wrong");
 				m_decoded_frame_num--; // fail safe
@@ -54,9 +48,9 @@ function WRTCVideoDecoder(callback) {
 			if (m_frame_callback) {
 				var info = m_frame_info[m_decoded_frame_num];
 				if (!info) {
-					console.log("no view quat info:"
-						+ m_decoded_frame_num + ":"
-						+ m_frame_info.length);
+					console.log("no view quat info:" +
+						m_decoded_frame_num + ":" +
+						m_frame_info.length);
 				} else {
 					m_frame_callback("ImageBitmap", imageBitmap, imageBitmap.width, imageBitmap.height,
 						info.info, info.time);
@@ -79,22 +73,23 @@ function WRTCVideoDecoder(callback) {
 			// m_packet_frame_num);
 			// }
 		},
-		init : function(){
-			if(!m_is_init && m_first_frame && m_video){
+		init: function() {
+			if (!m_is_init && m_first_frame && m_video) {
 				m_is_init = true;
-				function createButton(text, context, func) {
-				    var button = document.createElement("input");
-				    button.type = "button";
-				    button.value = text;
-				    button.style.position = 'absolute'; 
-				    button.style.left = window.innerWidth/2 +'px'; 
-				    button.style.top  = window.innerHeight/2 +'px'; 
 
-				    button.onclick = func;
-				    context.appendChild(button);
+				function createButton(text, x, y, context, func) {
+					var button = document.createElement("input");
+					button.type = "button";
+					button.value = text;
+					button.style.position = 'absolute';
+					button.style.left = window.innerWidth * x + 'px';
+					button.style.top = window.innerHeight * y + 'px';
+
+					button.onclick = func;
+					context.appendChild(button);
 				}
-				createButton('video start', document.body, (e) => {
-					m_video.play().catch((err)=>{
+				createButton('video start', 0.5, 0.5, document.body, (e) => {
+					m_video.play().catch((err) => {
 						console.log(err);
 					});
 
@@ -105,29 +100,72 @@ function WRTCVideoDecoder(callback) {
 					m_videoImageContext.fillStyle = '#000000';
 					m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 
-					if(m_video.webkitDecodedFrameCount !== undefined){
+					var drop = 0;
+					var drop_min = Number.MAX_SAFE_INTEGER;
+					var drop_watch = new Date().getTime();
+					var reciever_stats = null;
+					setInterval(function() {
+						m_receiver.getStats().then(stats => {
+							stats.forEach(function(item, prop) {
+								if (prop.startsWith('RTCMediaStreamTrack_receiver_')) {
+									reciever_stats = item;
+									_drop = m_packet_frame_num - reciever_stats.framesReceived;
+									//_drop = m_packet_frame_num - reciever_stats.framesDecoded;
+									if(_drop < drop_min){
+										drop_min = _drop;
+									}
+									var now = new Date().getTime();
+									if(now - drop_watch > 2000){
+										drop = drop_min;
+										drop_watch = now;
+										drop_min = Number.MAX_SAFE_INTEGER;
+									}
+								}
+							});
+						});
+					}, 100);
+//					createButton('-', 0.1, 0.45, document.body, (e) => {
+//						drop--;
+//					});
+//					createButton('+', 0.1, 0.55, document.body, (e) => {
+//						drop++;
+//					});
+					if (m_video.webkitDecodedFrameCount !== undefined) {
+						var last_watch = new Date().getTime();
 						var last_sample = m_video.webkitDecodedFrameCount;
-						setInterval(function(){
+						var last_currentTime = m_video.currentTime;
+						setInterval(function() {
+							var watch = new Date().getTime();
 							var sample = m_video.webkitDecodedFrameCount;
-							if(last_sample != sample){
+							var currentTime = m_video.currentTime;
+							if (last_sample != sample) {
+								var frame_num = m_video.webkitDecodedFrameCount;
+								if(reciever_stats){
+//									console.log("d,p:" + frame_num + ":" + m_packet_frame_num + ":"+drop+":"+drop_min+";"+
+//											(watch-last_watch)+":"+(currentTime-last_currentTime));
+									frame_num += drop;
+								}
 								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-								window.createImageBitmap(m_videoImage).then(imageBitmap =>{
-									self.new_image_handler(imageBitmap, 0);
+								window.createImageBitmap(m_videoImage).then(imageBitmap => {
+									self.new_image_handler(imageBitmap, frame_num);
 								});
+								last_watch = watch;
+								last_sample = sample;
+								last_currentTime = currentTime;
 							}
-							last_sample = sample;
-						}, 10);						
+						}, 10);
 					} else {
 						var last_currentTime = m_video.currentTime;
-						setInterval(function(){
+						setInterval(function() {
 							var currentTime = m_video.currentTime;
-							if(last_currentTime != currentTime){
+							if (last_currentTime != currentTime) {
 								// console.log("changed : " +
-								// m_video.webkitDecodedFrameCount + ":" + count +
+								// m_video.webkitDecodedFrameCount + ":" + count
+								// +
 								// ":" + (currentTime - last_currentTime));
 								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-								window.createImageBitmap(m_videoImage).then(imageBitmap =>{
-									self.new_image_handler(imageBitmap, 0);
+								window.createImageBitmap(m_videoImage).then(imageBitmap => {
+									self.new_image_handler(imageBitmap, m_packet_frame_num - 1);
 								});
 								// var apx =
 								// m_videoImageContext.getImageData(m_videoImage.width/2-w/2,
@@ -140,44 +178,20 @@ function WRTCVideoDecoder(callback) {
 				});
 			}
 		},
-		set_stream : function(obj, receiver) {
+		set_stream: function(obj, receiver) {
 			m_receiver = receiver;
 			m_video = document.createElement('video');
 			m_video.crossOrigin = "*";
 			m_video.srcObject = obj;
 			m_video.load();
-			
+
 			self.init();
-// var last_timeStamp = 0;
-// var frame_num=0;
-// var reciever_stats = null;
-// setInterval(function(){
-// receiver.getStats().then(stats => {
-// stats.forEach(function(item, prop) {
-// if(prop.startsWith('RTCMediaStreamTrack_receiver_')){
-// console.log(m_video.webkitDecodedFrameCount + ":"+item.framesDecoded+
-// ":"+item.framesDropped);
-// reciever_stats = item;
-// }
-// });
-// });
-// }, 100);
-// setInterval(function(){
-// console.log(m_video.webkitDecodedFrameCount + ":"+m_video.currentTime);
-// },50);
-// m_video.addEventListener('timeupdate', (event) => {
-// frame_num++;
-// console.log('video:'+frame_num+':'+(event.timeStamp-last_timeStamp));
-// last_timeStamp = event.timeStamp;
-// });
-// var container = document.getElementById("container");
-// container.appendChild(m_video);
 		},
-		set_frame_callback : function(callback) {
+		set_frame_callback: function(callback) {
 			m_frame_callback = callback;
 		},
 		// @data : Uint8Array
-		decode : function(data) {
+		decode: function(data) {
 			if (!m_active_frame) {
 				if (data[0] == 0x49 && data[1] == 0x34) { // SOI
 					if (data.length > 2) {
@@ -191,13 +205,13 @@ function WRTCVideoDecoder(callback) {
 					m_active_frame.push(data);
 				}
 			}
-			if (m_active_frame
-				&& (data[data.length - 2] == 0x32 && data[data.length - 1] == 0x30)) {// EOI
+			if (m_active_frame &&
+				(data[data.length - 2] == 0x32 && data[data.length - 1] == 0x30)) { // EOI
 				try {
 					var nal_type = 0;
 					var nal_len = 0;
 					var _nal_len = 0;
-					if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) {// sei
+					if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) { // sei
 						var str = String.fromCharCode.apply("", m_active_frame[0]
 							.subarray(4), 0);
 						var split = str.split(' ');
@@ -214,16 +228,16 @@ function WRTCVideoDecoder(callback) {
 						}
 						m_packet_frame_num++;
 						m_frame_info[m_packet_frame_num] = {
-							info : str,
-							time : new Date().getTime()
+							info: str,
+							time: new Date().getTime()
 						};
-						if(!m_first_frame){
+						if (!m_first_frame) {
 							m_first_frame = true;
 							self.init();
 						}
-							// console.log("packet_frame_num:" +
-							// m_packet_frame_num
-							// + ":" + str);
+						// console.log("packet_frame_num:" +
+						// m_packet_frame_num
+						// + ":" + str);
 					}
 				} finally {
 					m_active_frame = null;
