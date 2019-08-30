@@ -492,7 +492,8 @@
 			
 			view_quat : new THREE.Quaternion(),
 			get_view_quaternion : function(){
-				return self.view_quat;
+				//console.log(self.view_quat._x+":"+self.view_quat._y+":"+self.view_quat._z+";");
+				return self.view_quat.clone();//clone() necessary no to be changed
 			},
 
 			animate : function(fov) {
