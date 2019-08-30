@@ -105,30 +105,6 @@ function WRTCVideoDecoder(callback) {
 					m_videoImageContext.fillStyle = '#000000';
 					m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 
-					var drop = 0;
-					var drop_min = Number.MAX_SAFE_INTEGER;
-					var drop_watch = new Date().getTime();
-					var reciever_stats = null;
-					setInterval(function() {
-						m_receiver.getStats().then(stats => {
-							stats.forEach(function(item, prop) {
-								if (prop.startsWith('RTCMediaStreamTrack_receiver_')) {
-									reciever_stats = item;
-									_drop = m_packet_frame_num - reciever_stats.framesReceived;
-									//_drop = m_packet_frame_num - reciever_stats.framesDecoded;
-									if(_drop < drop_min){
-										drop_min = _drop;
-									}
-									var now = new Date().getTime();
-									if(now - drop_watch > 2000){
-										drop = drop_min;
-										drop_watch = now;
-										drop_min = Number.MAX_SAFE_INTEGER;
-									}
-								}
-							});
-						});
-					}, 100);
 					var last_currentTime = m_video.currentTime;
 					setInterval(function() {
 						var currentTime = m_video.currentTime;
