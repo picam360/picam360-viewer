@@ -11,7 +11,15 @@ function WRTCVideoDecoder(callback) {
 	var m_videoImage = null;
 	var m_videoImageContext = null;
 	var m_receiver = null;
-
+	
+	function uuid_dif(uuid1, uuid2){
+		var sum = 0;
+		for(var i=0;i<uuid1.length;i++){
+			sum += Math.abs(uuid1[i]-uuid2[i]);
+		}
+		return sum;
+	}
+	
 	function GetQueryString() {
 		var result = {};
 		if (1 < window.location.search.length) {
@@ -37,13 +45,17 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler: function(imageBitmap, frame_num) {
-			m_decoded_frame_num = frame_num;
-			if (m_decoded_frame_num > m_packet_frame_num) {
-				console.log("something wrong");
-				m_decoded_frame_num--; // fail safe
-				return;
+		new_image_handler: function(imageBitmap, uuid) {
+			var min_i = m_decoded_frame_num;
+			var min_dif = Number.MAX_SAFE_INTEGER;
+			for(var i in m_frame_info){
+				var dif = uuid_dif(m_frame_info[i].uuid, uuid);
+				if(dif < min_dif){
+					min_dif = dif;
+					min_i = i;
+				}
 			}
+			m_decoded_frame_num = parseInt(min_i);
 
 			if (m_frame_callback) {
 				var info = m_frame_info[m_decoded_frame_num];
@@ -65,13 +77,6 @@ function WRTCVideoDecoder(callback) {
 				}
 			}
 			m_frame_info = frame_info;
-			// if (m_decoded_frame_num !=
-			// m_packet_frame_num) {
-			// console.log("packet & decode are not
-			// synchronized:"
-			// + m_decoded_frame_num + "-" +
-			// m_packet_frame_num);
-			// }
 		},
 		init: function() {
 			if (!m_is_init && m_first_frame && m_video) {
@@ -124,56 +129,22 @@ function WRTCVideoDecoder(callback) {
 							});
 						});
 					}, 100);
-//					createButton('-', 0.1, 0.45, document.body, (e) => {
-//						drop--;
-//					});
-//					createButton('+', 0.1, 0.55, document.body, (e) => {
-//						drop++;
-//					});
-					if (m_video.webkitDecodedFrameCount !== undefined) {
-						var last_watch = new Date().getTime();
-						var last_sample = m_video.webkitDecodedFrameCount;
-						var last_currentTime = m_video.currentTime;
-						setInterval(function() {
-							var watch = new Date().getTime();
-							var sample = m_video.webkitDecodedFrameCount;
-							var currentTime = m_video.currentTime;
-							if (last_sample != sample) {
-								var frame_num = m_video.webkitDecodedFrameCount;
-								if(reciever_stats){
-//									console.log("d,p:" + frame_num + ":" + m_packet_frame_num + ":"+drop+":"+drop_min+";"+
-//											(watch-last_watch)+":"+(currentTime-last_currentTime));
-									frame_num += drop;
-								}
-								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-								window.createImageBitmap(m_videoImage).then(imageBitmap => {
-									self.new_image_handler(imageBitmap, frame_num);
-								});
-								last_watch = watch;
-								last_sample = sample;
-								last_currentTime = currentTime;
+					var last_currentTime = m_video.currentTime;
+					setInterval(function() {
+						var currentTime = m_video.currentTime;
+						if (last_currentTime != currentTime) {
+							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
+							var uuid = new Uint8Array(16);
+							var apx = m_videoImageContext.getImageData(0,0, 16, 1);
+							for(var i=0;i<16;i++){
+								uuid[i] = 0.299*apx.data[i*4+0]+0.587*apx.data[i*4+1]+0.114*apx.data[i*4+2];
 							}
-						}, 10);
-					} else {
-						var last_currentTime = m_video.currentTime;
-						setInterval(function() {
-							var currentTime = m_video.currentTime;
-							if (last_currentTime != currentTime) {
-								// console.log("changed : " +
-								// m_video.webkitDecodedFrameCount + ":" + count
-								// +
-								// ":" + (currentTime - last_currentTime));
-								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-								window.createImageBitmap(m_videoImage).then(imageBitmap => {
-									self.new_image_handler(imageBitmap, m_packet_frame_num - 1);
-								});
-								// var apx =
-								// m_videoImageContext.getImageData(m_videoImage.width/2-w/2,
-								// m_videoImage.height-w/2, w, w);
-							}
+							window.createImageBitmap(m_videoImage).then(imageBitmap => {
+								self.new_image_handler(imageBitmap, uuid);
+							});
 							last_currentTime = currentTime;
-						}, 10);
-					}
+						}
+					}, 10);
 					document.body.removeChild(e.srcElement);
 				});
 			}
@@ -215,21 +186,22 @@ function WRTCVideoDecoder(callback) {
 						var str = String.fromCharCode.apply("", m_active_frame[0]
 							.subarray(4), 0);
 						var split = str.split(' ');
-						var mode = null;
+						var uuid = null;
 						for (var i = 0; i < split.length; i++) {
 							var separator = (/[=,\"]/);
 							var _split = split[i].split(separator);
-							if (_split[0] == "mode") {
-								mode = _split[2];
+							if (_split[0] == "uuid") {
+								uuid = _split[2];
 							}
 						}
-						if (!mode) {
+						if (!uuid) {
 							return;
 						}
 						m_packet_frame_num++;
 						m_frame_info[m_packet_frame_num] = {
 							info: str,
-							time: new Date().getTime()
+							time: new Date().getTime(),
+							uuid: uuidParse.parse(uuid),
 						};
 						if (!m_first_frame) {
 							m_first_frame = true;
