@@ -82,9 +82,21 @@ function WRTCVideoDecoder(callback) {
 		init : function(){
 			if(!m_is_init && m_first_frame && m_video){
 				m_is_init = true;
-				function on_play(e){
-					m_video.play();
-					m_video.play_called = true;
+				function createButton(text, context, func) {
+				    var button = document.createElement("input");
+				    button.type = "button";
+				    button.value = text;
+				    button.style.position = 'absolute'; 
+				    button.style.left = window.innerWidth/2 +'px'; 
+				    button.style.top  = window.innerHeight/2 +'px'; 
+
+				    button.onclick = func;
+				    context.appendChild(button);
+				}
+				createButton('video start', document.body, (e) => {
+					m_video.play().catch((err)=>{
+						console.log(err);
+					});
 
 					m_videoImage = document.createElement('canvas');
 					m_videoImage.width = m_video.videoWidth;
@@ -93,29 +105,39 @@ function WRTCVideoDecoder(callback) {
 					m_videoImageContext.fillStyle = '#000000';
 					m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 
-					var last_currentTime = m_video.currentTime;
-					setInterval(function(){
-						var currentTime = m_video.currentTime;
-						if(last_currentTime != currentTime){
-							// console.log("changed : " +
-							// m_video.webkitDecodedFrameCount + ":" + count +
-							// ":" + (currentTime - last_currentTime));
-							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-							window.createImageBitmap(m_videoImage).then(imageBitmap =>{
-								self.new_image_handler(imageBitmap, 0);
-							});
-							// var apx =
-							// m_videoImageContext.getImageData(m_videoImage.width/2-w/2,
-							// m_videoImage.height-w/2, w, w);
-						}
-						last_currentTime = currentTime;
-					}, 10);
-					
-					document.removeEventListener('touchstart', on_play);
-					document.removeEventListener('mousedown', on_play);
-				}
-				document.addEventListener("touchstart", on_play);
-				document.addEventListener("mousedown", on_play);
+					if(m_video.webkitDecodedFrameCount !== undefined){
+						var last_sample = m_video.webkitDecodedFrameCount;
+						setInterval(function(){
+							var sample = m_video.webkitDecodedFrameCount;
+							if(last_sample != sample){
+								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
+								window.createImageBitmap(m_videoImage).then(imageBitmap =>{
+									self.new_image_handler(imageBitmap, 0);
+								});
+							}
+							last_sample = sample;
+						}, 10);						
+					} else {
+						var last_currentTime = m_video.currentTime;
+						setInterval(function(){
+							var currentTime = m_video.currentTime;
+							if(last_currentTime != currentTime){
+								// console.log("changed : " +
+								// m_video.webkitDecodedFrameCount + ":" + count +
+								// ":" + (currentTime - last_currentTime));
+								m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
+								window.createImageBitmap(m_videoImage).then(imageBitmap =>{
+									self.new_image_handler(imageBitmap, 0);
+								});
+								// var apx =
+								// m_videoImageContext.getImageData(m_videoImage.width/2-w/2,
+								// m_videoImage.height-w/2, w, w);
+							}
+							last_currentTime = currentTime;
+						}, 10);
+					}
+					document.body.removeChild(e.srcElement);
+				});
 			}
 		},
 		set_stream : function(obj, receiver) {
