@@ -5,6 +5,7 @@ function WRTCVideoDecoder(callback) {
 	var m_packet_frame_num = 0;
 	var m_decoded_frame_num = 0;
 	var m_frame_info = {};
+	var m_delay_img = null;
 
 	var m_image_capture = null;
 	var m_video = null;
@@ -66,11 +67,15 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler: function(image_data, uuid) {
+		new_image_handler: function(image_data) {
+			if(!Object.keys(m_frame_info).length){
+				m_delay_img = image_data;
+				return;
+			}
 			var max_i = m_decoded_frame_num;
 			var max_ncc = 0;
 			for(var i in m_frame_info){
-				var ncc = uuid_ncc(m_frame_info[i].uuid, uuid);
+				var ncc = uuid_ncc(m_frame_info[i].uuid, image_data.uuid);
 				if(ncc > max_ncc){
 					max_ncc = ncc;
 					max_i = i;
@@ -111,24 +116,33 @@ function WRTCVideoDecoder(callback) {
 				m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 
 				function start_video_poling(){
+					var last_currentTime = m_video.currentTime;
 					var last_uuid = new Uint8Array(16);
 					setInterval(function() {
-						m_video.currentTime += 33/1000;
+						var currentTime = m_video.currentTime;
+						if(currentTime == last_currentTime){
+							return;
+						}else{
+							last_currentTime = currentTime;
+						}
 						m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
 						var uuid = get_uuid_from_video(m_video, m_videoImageContext);
 						if (uuid_abs(last_uuid, uuid) == 0) {
 							return;
+						}else{
+							last_uuid = uuid;
 						}
 						if(window.createImageBitmap) {
 							window.createImageBitmap(m_videoImage).then(imageBitmap => {
-								self.new_image_handler(imageBitmap, uuid);
+								imageBitmap.uuid = uuid;
+								self.new_image_handler(imageBitmap);
 							});
 						} else { // imagedata not work in offscreen
 							var image_data = m_videoImageContext.getImageData(0, 0, m_videoImage.width, m_videoImage.height);
-							self.new_image_handler(image_data, uuid);
+							image_data.uuid = uuid;
+							self.new_image_handler(image_data);
 						}
-						last_uuid = uuid;
-					}, 33); // 30hz
+					}, 10); // 100hz
 				}
 
 				var uuid_zero = new Uint8Array(16);
@@ -227,6 +241,10 @@ function WRTCVideoDecoder(callback) {
 						if (!m_first_frame) {
 							m_first_frame = true;
 							self.init();
+						}
+						if(m_delay_img){
+							self.new_image_handler(m_delay_img);
+							m_delay_img = null;
 						}
 						// console.log("packet_frame_num:" +
 						// m_packet_frame_num
