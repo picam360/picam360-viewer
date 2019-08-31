@@ -66,7 +66,7 @@ function WRTCVideoDecoder(callback) {
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler: function(imageBitmap, uuid) {
+		new_image_handler: function(image_data, uuid) {
 			var max_i = m_decoded_frame_num;
 			var max_ncc = 0;
 			for(var i in m_frame_info){
@@ -85,7 +85,7 @@ function WRTCVideoDecoder(callback) {
 						m_decoded_frame_num + ":" +
 						m_frame_info.length);
 				} else {
-					m_frame_callback("ImageBitmap", imageBitmap, imageBitmap.width, imageBitmap.height,
+					m_frame_callback("image", image_data, image_data.width, image_data.height,
 						info.info, info.time);
 				}
 			}
@@ -119,9 +119,14 @@ function WRTCVideoDecoder(callback) {
 						if (uuid_abs(last_uuid, uuid) == 0) {
 							return;
 						}
-						window.createImageBitmap(m_videoImage).then(imageBitmap => {
-							self.new_image_handler(imageBitmap, uuid);
-						});
+						if(window.createImageBitmap) {
+							window.createImageBitmap(m_videoImage).then(imageBitmap => {
+								self.new_image_handler(imageBitmap, uuid);
+							});
+						} else { // imagedata not work in offscreen
+							var image_data = m_videoImageContext.getImageData(0, 0, m_videoImage.width, m_videoImage.height);
+							self.new_image_handler(image_data, uuid);
+						}
 						last_uuid = uuid;
 					}, 33); // 30hz
 				}
@@ -158,12 +163,19 @@ function WRTCVideoDecoder(callback) {
 			m_video = document.createElement('video');
 			m_video.crossOrigin = "*";
 			m_video.srcObject = obj;
+			m_video.muted = true;
+			m_video.playsInline = true;
 			m_video.load();
 
 			m_video.addEventListener("canplay", function() {
 				console.log("video canplay!");
-				m_can_play = true;
-				self.init();
+				m_video.play().then(()=>{
+				}).catch((err) =>{
+					console.log(err);
+				}).finally(() =>{
+					m_can_play = true;
+					self.init();
+				});
 				m_video.removeEventListener("canplay", arguments.callee, false);
 			});
 		},

@@ -375,19 +375,33 @@
 					}else{
 						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov);
 					}
-				} else if (data instanceof ImageBitmap) {
+				} else if (type == "rgb") {
 					m_texture_width = width;
 					m_texture_height = height;
 					if(m_worker){
 						m_worker.postMessage({
-							type : 'setTextureImageBitmap',
+							type : 'setTextureRawRgb',
 							vertex_type, 
 							data,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 						}, [data]);
 					}else{
-						m_omvr.setTextureImageBitmap(vertex_type, data, m_tex_quat, m_texture_fov);
+						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov);
+					}
+				} else if (type == "image") {
+					m_texture_width = width;
+					m_texture_height = height;
+					if(m_worker){
+						m_worker.postMessage({
+							type : 'setTextureImage',
+							vertex_type, 
+							data,
+							quat : m_tex_quat,
+							fov : m_texture_fov,
+						}, [data]);
+					}else{
+						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov);
 					}
 				} else if (type == "blob") {
 					self.setModel(vertex_type, "rgb");
