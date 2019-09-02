@@ -8,9 +8,8 @@ uniform float pixel_size_y;
 //angular map params
 uniform float r_table[STEPNUM];
 uniform float pitch_table[STEPNUM];
-//lens distortion
-uniform float lens_r_table[STEPNUM];
-uniform float lens_pitch_table[STEPNUM];
+//vr_mode
+uniform bool vr_mode;
 
 uniform mat4 unif_matrix;
 
@@ -85,10 +84,10 @@ void main(void) {
 		float x = (pos.x / pos.z);
 		float y = (pos.y / pos.z);
 		//lens distortion
-		if(true){
+		if(vr_mode){
 			float r = sqrt(x*x + y*y);
 			float theta = atan(tan(M_PI * 60.0 / 180.0 / 2.0)*r);
-			float r_ratio = sin(theta*0.75) / r * 3.0;
+			float r_ratio = sin(theta) / r * 1.5;
 			x *= r_ratio;
 			y *= r_ratio;
 		}
