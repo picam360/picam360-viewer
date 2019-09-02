@@ -1078,7 +1078,15 @@ var app = (function() {
 						return pc.createAnswer();
 					}).then(function(sdp) {
 						console.log('Created answer.');
-						sdp.sdp = sdp.sdp.replace(/a=fmtp:111/, 'a=fmtp:111 stereo=1\r\na=fmtp:111');
+						//stereo
+						sdp.sdp = sdp.sdp.replace(
+							/a=fmtp:111/,
+							'a=fmtp:111 stereo=1\r\na=fmtp:111');
+						//vp9
+						sdp.sdp = sdp.sdp.replace(
+							'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
+							'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127');
+						
 						pc.setLocalDescription(sdp);
 						sig.answer(offer.src, sdp);
 					}).catch(function(err) {
