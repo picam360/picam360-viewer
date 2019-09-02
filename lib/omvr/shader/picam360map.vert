@@ -8,6 +8,9 @@ uniform float pixel_size_y;
 //angular map params
 uniform float r_table[STEPNUM];
 uniform float pitch_table[STEPNUM];
+//lens distortion
+uniform float lens_r_table[STEPNUM];
+uniform float lens_pitch_table[STEPNUM];
 
 uniform mat4 unif_matrix;
 
@@ -79,8 +82,16 @@ void main(void) {
 
 	vec4 pos = unif_matrix * vec4(x, y, z, 1.0);
 	if (pos.z > 0.0) {
-		float x = pos.x / pos.z;
-		float y = pos.y / pos.z;
+		float x = (pos.x / pos.z);
+		float y = (pos.y / pos.z);
+		//lens distortion
+		if(true){
+			float r = sqrt(x*x + y*y);
+			float theta = atan(tan(M_PI * 60.0 / 180.0 / 2.0)*r);
+			float r_ratio = sin(theta*0.75) / r * 3.0;
+			x *= r_ratio;
+			y *= r_ratio;
+		}
 		gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
 	} else {
 		gl_Position = vec4(0, 0, 2.0, 1.0);
