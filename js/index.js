@@ -1085,7 +1085,7 @@ var app = (function() {
 						//vp9
 						sdp.sdp = sdp.sdp.replace(
 							'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
-							'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127');
+							'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127\r\nb=AS:10000');
 						
 						pc.setLocalDescription(sdp);
 						sig.answer(offer.src, sdp);
