@@ -83,15 +83,16 @@ void main(void) {
 	if (pos.z > 0.0) {
 		float x = (pos.x / pos.z);
 		float y = (pos.y / pos.z);
+		gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
 		//lens distortion
 		if(vr_mode){
 			float r = sqrt(x*x + y*y);
-			float theta = atan(tan(M_PI * 60.0 / 180.0 / 2.0)*r);
-			float r_ratio = sin(theta) / r * 1.5;
+			float theta = atan(tan(M_PI * 60.0 / 180.0 / 2.0)*r)*0.2;
+			float r_ratio = sin(theta) / r / sin(M_PI / 2.0 * 0.2) * 3.0;
 			x *= r_ratio;
 			y *= r_ratio;
+			gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
 		}
-		gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
 	} else {
 		gl_Position = vec4(0, 0, 2.0, 1.0);
 	}
