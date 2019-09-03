@@ -32,7 +32,7 @@ function WRTCVideoDecoder(callback) {
 		return sum12 / Math.sqrt(sum1*sum2);
 	}
 	
-	function get_uuid_from_video(video, ctx){
+	function get_uuid_from_canvas(ctx){
 		var uuid = new Uint8Array(16);
 		var apx = ctx.getImageData(0,0, 16, 1);
 		for(var i=0;i<16;i++){
@@ -119,35 +119,40 @@ function WRTCVideoDecoder(callback) {
 					var last_currentTime = m_video.currentTime;
 					var last_uuid = new Uint8Array(16);
 					setInterval(function() {
+						//var st = new Date().getTime();
 						var currentTime = m_video.currentTime;
 						if(currentTime == last_currentTime){
 							return;
 						}else{
 							last_currentTime = currentTime;
 						}
-						m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-						var uuid = get_uuid_from_video(m_video, m_videoImageContext);
-						if (uuid_abs(last_uuid, uuid) == 0) {
-							return;
-						}else{
-							last_uuid = uuid;
-						}
 						if(window.createImageBitmap) {
-							window.createImageBitmap(m_videoImage).then(imageBitmap => {
+							window.createImageBitmap(m_video).then(imageBitmap => {
+								m_videoImageContext.drawImage(imageBitmap, 0, 0, 16, 1, 0, 0, 16, 1);
+								var uuid = get_uuid_from_canvas(m_videoImageContext);
 								imageBitmap.uuid = uuid;
 								self.new_image_handler(imageBitmap);
 							});
 						} else { // imagedata not work in offscreen
+							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
+							var uuid = get_uuid_from_canvas(m_videoImageContext);
+							if (uuid_abs(last_uuid, uuid) == 0) {
+								return;
+							}else{
+								last_uuid = uuid;
+							}
 							var image_data = m_videoImageContext.getImageData(0, 0, m_videoImage.width, m_videoImage.height);
 							image_data.uuid = uuid;
 							self.new_image_handler(image_data);
 						}
+						//var et = new Date().getTime();
+						//console.log("time:"+(et-st));
 					}, 10); // 100hz
 				}
 
 				var uuid_zero = new Uint8Array(16);
-				m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
-				var uuid = get_uuid_from_video(m_video, m_videoImageContext);
+				m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
+				var uuid = get_uuid_from_canvas(m_videoImageContext);
 				if (uuid_abs(uuid_zero, uuid) == 0) {//need to play
 					function createButton(text, x, y, context, func) {
 						var button = document.createElement("input");
