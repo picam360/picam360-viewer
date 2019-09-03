@@ -877,7 +877,12 @@ var app = (function() {
 				h264_decoder.set_frame_callback(self.handle_frame);
 				mjpeg_decoder.set_frame_callback(self.handle_frame);
 				h265_decoder.set_frame_callback(self.handle_frame);
-				wrtcvideo_decoder.set_frame_callback(self.handle_frame);
+				wrtcvideo_decoder.set_frame_callback(() => {
+					if(!query['skip-frame']){
+						m_video_handler.skip_frame=0;
+					}
+					wrtcvideo_decoder.set_frame_callback(self.handle_frame);
+				});
 
 				// opus_decoder = OpusDecoder();
 				// opus_decoder.set_frame_callback(self.handle_audio_frame);
