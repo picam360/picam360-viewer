@@ -105,6 +105,8 @@
 				}else if(m_omvr){
 					m_omvr.setCanvasSize(w, h);
 				}
+
+				console.log("updateCanvasSize : " + w + "," + h);
 	
 				gotoTop();
 			},
@@ -426,8 +428,11 @@
 			init : async function(options, callback) {
 				m_canvas = options.canvas;
 
-				self.updateCanvasSize();
-				window.addEventListener('resize', self.updateCanvasSize, false);
+				function _callback() {
+					self.updateCanvasSize();
+					window.addEventListener('resize', self.updateCanvasSize, false);
+					callback();
+				}
 
 				if (navigator.getVRDisplays) {
 					console.log('WebVR 1.1 supported');
@@ -452,7 +457,7 @@
 							if (e.data.type == 'init_done') {
 								m_worker
 									.removeEventListener('message', arguments.callee);
-								callback();
+								_callback();
 							}
 						});
 
@@ -463,7 +468,7 @@
 					var script = document.createElement('script');
 					script.onload = function() {
 						m_omvr = new OMVR();
-						m_omvr.init(m_canvas_act, window.devicePixelRatio, callback);
+						m_omvr.init(m_canvas_act, window.devicePixelRatio, _callback);
 					};
 					script.src = m_base_path + '../lib/omvr/omvr.js';
 
