@@ -2,9 +2,8 @@ function WRTCVideoDecoder(callback) {
 	var m_active_frame = null;
 	var m_frame_callback = null;
 
-	var m_packet_frame_num = 0;
-	var m_frame_info = {};
-	var m_delay_img = null;
+	var m_frame_info_ary = [];
+	var m_frame_ary = [];
 
 	var m_image_capture = null;
 	var m_video = null;
@@ -60,50 +59,70 @@ function WRTCVideoDecoder(callback) {
 	var query = GetQueryString();
 
 	var m_is_init = false;
-	var m_first_frame = false;
+	var m_first_frame_info = false;
 	var m_can_play = false;
 	var info = {};
 	var packet_pool = [];
 
 	var self = {
-		new_image_handler: function(image_data) {
-			var frame_num = 0;
-			for(var i in m_frame_info){
-				var ncc = uuid_ncc(m_frame_info[i].uuid, image_data.uuid);
-				if(ncc > 0.95){
-					frame_num = parseInt(i);
-					break;
+		new_frame_handler: function(frame) {
+			var ary = m_frame_info_ary;
+			var uuid = frame.uuid;
+			var cur = 0;
+			var max_ncc = 0;
+			for(var i=0;i<ary.length;i++){
+				var ncc = uuid_ncc(ary[i].uuid, uuid);
+				if(ncc > max_ncc){
+					max_ncc = ncc;
+					cur = i;
 				}
 			}
-			if(frame_num == 0){
-				m_frame_info = {};
-				m_delay_img = image_data;
+			if(max_ncc < 0.9){
+				m_frame_info_ary = [];
+				m_frame_ary.push(frame);
+				console.log("frame delay : "+max_ncc)
 				return;
 			}
 
 			if (m_frame_callback) {
-				var info = m_frame_info[frame_num];
-				if (!info) {
-					console.log("no view quat info:" +
-							frame_num + ":" +
-						m_frame_info.length);
-				} else {
-					m_frame_callback("image", image_data, image_data.width, image_data.height,
-						info.info, info.time);
+				var info = m_frame_info_ary[cur];
+				m_frame_callback("image", frame, frame.width, frame.height,
+					info.info, info.time);
+			}
+			if(m_frame_info_ary.length > 10){
+				m_frame_info_ary = m_frame_info_ary.slice(m_frame_info_ary.length - 10);
+			}
+		},
+		new_frame_info_handler: function(frame_info) {
+			var ary = m_frame_ary;
+			var uuid = frame_info.uuid;
+			var cur = 0;
+			var max_ncc = 0;
+			for(var i=0;i<m_frame_ary.length;i++){
+				var ncc = uuid_ncc(ary[i].uuid, uuid);
+				if(ncc > max_ncc){
+					max_ncc = ncc;
+					cur = i;
 				}
 			}
-			var frame_info = {};
-			for (var i = frame_num + 1; i <= m_packet_frame_num; i++) {
-				if (m_frame_info[i]) {
-					frame_info[i] = m_frame_info[i];
-				} else {
-					console.log("no view quat info:" + i);
-				}
+			if(max_ncc < 0.9){
+				m_frame_ary = [];
+				m_frame_info_ary.push(frame_info);
+				console.log("frame_info delay : "+max_ncc)
+				return;
 			}
-			m_frame_info = frame_info;
+
+			if (m_frame_callback) {
+				var frame = m_frame_ary[cur];
+				m_frame_callback("image", frame, frame.width, frame.height,
+					frame_info.info, frame_info.time);
+			}
+			if(m_frame_ary.length > 10){
+				m_frame_ary = m_frame_ary.slice(m_frame_ary.length - 10);
+			}
 		},
 		init: function() {
-			if (!m_is_init && m_first_frame && m_can_play) {
+			if (!m_is_init && m_first_frame_info && m_can_play) {
 				m_is_init = true;
 
 				m_videoImage = document.createElement('canvas');
@@ -134,7 +153,7 @@ function WRTCVideoDecoder(callback) {
 									last_uuid = uuid;
 								}
 								imageBitmap.uuid = uuid;
-								self.new_image_handler(imageBitmap);
+								self.new_frame_handler(imageBitmap);
 							});
 						} else { // imagedata not work in offscreen
 							m_videoImageContext.drawImage(m_video, 0, 0, m_videoImage.width, m_videoImage.height);
@@ -146,7 +165,7 @@ function WRTCVideoDecoder(callback) {
 							}
 							var image_data = m_videoImageContext.getImageData(0, 0, m_videoImage.width, m_videoImage.height);
 							image_data.uuid = uuid;
-							self.new_image_handler(image_data);
+							self.new_frame_handler(image_data);
 						}
 						//var et = new Date().getTime();
 						//console.log("time:"+(et-st));
@@ -240,23 +259,15 @@ function WRTCVideoDecoder(callback) {
 						if (!uuid) {
 							return;
 						}
-						m_packet_frame_num++;
-						m_frame_info[m_packet_frame_num] = {
+						self.new_frame_info_handler({
 							info: str,
 							time: new Date().getTime(),
 							uuid: uuidParse.parse(uuid),
-						};
-						if (!m_first_frame) {
-							m_first_frame = true;
+						});
+						if (!m_first_frame_info) {
+							m_first_frame_info = true;
 							self.init();
 						}
-						if(m_delay_img){
-							self.new_image_handler(m_delay_img);
-							m_delay_img = null;
-						}
-						// console.log("packet_frame_num:" +
-						// m_packet_frame_num
-						// + ":" + str);
 					}
 				} finally {
 					m_active_frame = null;
