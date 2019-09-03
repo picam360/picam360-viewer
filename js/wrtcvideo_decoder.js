@@ -3,7 +3,6 @@ function WRTCVideoDecoder(callback) {
 	var m_frame_callback = null;
 
 	var m_packet_frame_num = 0;
-	var m_decoded_frame_num = 0;
 	var m_frame_info = {};
 	var m_delay_img = null;
 
@@ -68,26 +67,25 @@ function WRTCVideoDecoder(callback) {
 
 	var self = {
 		new_image_handler: function(image_data) {
-			if(!Object.keys(m_frame_info).length){
+			var frame_num = 0;
+			for(var i in m_frame_info){
+				var ncc = uuid_ncc(m_frame_info[i].uuid, image_data.uuid);
+				if(ncc > 0.95){
+					frame_num = parseInt(i);
+					break;
+				}
+			}
+			if(frame_num == 0){
+				m_frame_info = {};
 				m_delay_img = image_data;
 				return;
 			}
-			var max_i = m_decoded_frame_num;
-			var max_ncc = 0;
-			for(var i in m_frame_info){
-				var ncc = uuid_ncc(m_frame_info[i].uuid, image_data.uuid);
-				if(ncc > max_ncc){
-					max_ncc = ncc;
-					max_i = i;
-				}
-			}
-			m_decoded_frame_num = parseInt(max_i);
 
 			if (m_frame_callback) {
-				var info = m_frame_info[m_decoded_frame_num];
+				var info = m_frame_info[frame_num];
 				if (!info) {
 					console.log("no view quat info:" +
-						m_decoded_frame_num + ":" +
+							frame_num + ":" +
 						m_frame_info.length);
 				} else {
 					m_frame_callback("image", image_data, image_data.width, image_data.height,
@@ -95,7 +93,7 @@ function WRTCVideoDecoder(callback) {
 				}
 			}
 			var frame_info = {};
-			for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
+			for (var i = frame_num + 1; i <= m_packet_frame_num; i++) {
 				if (m_frame_info[i]) {
 					frame_info[i] = m_frame_info[i];
 				} else {
@@ -130,6 +128,11 @@ function WRTCVideoDecoder(callback) {
 							window.createImageBitmap(m_video).then(imageBitmap => {
 								m_videoImageContext.drawImage(imageBitmap, 0, 0, 16, 1, 0, 0, 16, 1);
 								var uuid = get_uuid_from_canvas(m_videoImageContext);
+								if (uuid_abs(last_uuid, uuid) == 0) {
+									return;
+								}else{
+									last_uuid = uuid;
+								}
 								imageBitmap.uuid = uuid;
 								self.new_image_handler(imageBitmap);
 							});

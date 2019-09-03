@@ -832,6 +832,12 @@ var app = (function() {
 		},
 
 		init_webgl: function() {
+			// video decoder
+			h264_decoder = H264Decoder();
+			mjpeg_decoder = MjpegDecoder();
+			h265_decoder = H265Decoder();
+			wrtcvideo_decoder = WRTCVideoDecoder();
+			
 			m_audio_handler = new AudioHandler();
 			// webgl handling
 			m_video_handler = new VideoHandler();
@@ -868,11 +874,6 @@ var app = (function() {
 				}
 				m_video_handler.vertex_type_forcibly = m_vertex_type;
 
-				// video decoder
-				h264_decoder = H264Decoder();
-				mjpeg_decoder = MjpegDecoder();
-				h265_decoder = H265Decoder();
-				wrtcvideo_decoder = WRTCVideoDecoder();
 				h264_decoder.set_frame_callback(self.handle_frame);
 				mjpeg_decoder.set_frame_callback(self.handle_frame);
 				h265_decoder.set_frame_callback(self.handle_frame);
