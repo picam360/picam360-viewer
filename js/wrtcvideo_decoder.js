@@ -10,6 +10,7 @@ function WRTCVideoDecoder(callback) {
 	var m_videoImage = null;
 	var m_videoImageContext = null;
 	var m_receiver = null;
+	var m_need_to_push = null;
 	
 	function uuid_abs(uuid1, uuid2){
 		var sum = 0;
@@ -172,10 +173,19 @@ function WRTCVideoDecoder(callback) {
 					}, 10); // 100hz
 				}
 
-				var uuid_zero = new Uint8Array(16);
-				m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
-				var uuid = get_uuid_from_canvas(m_videoImageContext);
-				if (uuid_abs(uuid_zero, uuid) == 0) {//need to play
+				if(!m_need_to_push){
+					try{
+						var uuid_zero = new Uint8Array(16);
+						m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
+						var uuid = get_uuid_from_canvas(m_videoImageContext);
+						if (uuid_abs(uuid_zero, uuid) == 0){
+							m_need_to_push = true;
+						}
+					}catch{
+						m_need_to_push = true;
+					}
+				}
+				if (m_need_to_push) {//need to play
 					function createButton(text, x, y, context, func) {
 						var button = document.createElement("input");
 						button.type = "button";
@@ -203,13 +213,9 @@ function WRTCVideoDecoder(callback) {
 			m_receiver = receiver;
 			m_video = document.createElement('video');
 			m_video.crossOrigin = "*";
-			m_video.srcObject = obj;
 			m_video.muted = true;
 			m_video.playsInline = true;
-			m_video.load();
-
-			m_video.addEventListener("canplay", function() {
-				console.log("video canplay!");
+			function try_play() {
 				m_video.play().then(()=>{
 				}).catch((err) =>{
 					console.log(err);
@@ -217,8 +223,24 @@ function WRTCVideoDecoder(callback) {
 					m_can_play = true;
 					self.init();
 				});
-				m_video.removeEventListener("canplay", arguments.callee, false);
+			}
+			var timeout = setTimeout(function(){
+				console.log("video play event timeout!");
+				m_need_to_push = true;
+				timeout = null;
+				try_play();
+			}, 2000);
+			m_video.addEventListener("canplay", function(){
+				if(timeout){
+					console.log("video canplay!");
+					clearTimeout(timeout);
+					timeout = null;
+					try_play();
+					m_video.removeEventListener("canplay", arguments.callee, false);
+				}
 			});
+			m_video.srcObject = obj;
+			m_video.load();
 		},
 		set_frame_callback: function(callback) {
 			m_frame_callback = callback;
