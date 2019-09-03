@@ -93,8 +93,6 @@
 // : window.innerWidth;
 				var w = window.innerWidth;
 				var h = window.innerHeight;
-				m_canvas.width = w;
-				m_canvas.height = h;
 
 				if(m_worker){
 					m_worker.postMessage({
@@ -610,6 +608,7 @@
 			},
 
 			setStereoEnabled : function(value) {
+				self.updateCanvasSize();
 				self.setVRMode(value);
 				if (m_worker) {
 					m_worker.postMessage({
