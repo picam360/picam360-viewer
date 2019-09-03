@@ -80,7 +80,7 @@ function WRTCVideoDecoder(callback) {
 			if(max_ncc < 0.9){
 				m_frame_info_ary = [];
 				m_frame_ary.push(frame);
-				console.log("frame delay : "+max_ncc)
+				//console.log("frame delay : "+max_ncc)
 				return;
 			}
 
@@ -108,7 +108,7 @@ function WRTCVideoDecoder(callback) {
 			if(max_ncc < 0.9){
 				m_frame_ary = [];
 				m_frame_info_ary.push(frame_info);
-				console.log("frame_info delay : "+max_ncc)
+				//console.log("frame_info delay : "+max_ncc)
 				return;
 			}
 
