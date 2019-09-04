@@ -574,11 +574,12 @@
 						source: m_canvas_act
 					}]).then(() => {
 						m_vr_mode = true;
-						// self.updateCanvasSize();//calling timing is not here
-						var w = m_canvas.width;
-						var h = m_canvas.height;
-						w = 2400;
-						h = 1353;
+						var w = Math.max(
+									m_vr_display.getEyeParameters("left").renderWidth,
+									m_vr_display.getEyeParameters("right").renderWidth) * 2;
+						var h = Math.max(
+									m_vr_display.getEyeParameters("left").renderHeight,
+									m_vr_display.getEyeParameters("right").renderHeight);
 						if(m_worker){
 							m_worker.postMessage({
 								type : 'setCanvasSize',
