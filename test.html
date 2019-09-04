@@ -1,0 +1,29 @@
+<html>
+  <head>
+  </head>
+  <body>
+    <script>
+    	function start(){
+// Obtain XR object
+const XR = navigator.xr
+
+// Request a new XRSession
+XR.requestSession("inline").then((xrSession) => {
+
+  xrSession.requestAnimationFrame((time, xrFrame) => {
+    let viewer = xrFrame.getViewerPose(xrReferenceSpace)
+
+    gl.bindFramebuffer(xrWebGLLayer.framebuffer)
+    for (xrView of viewer.views) {
+      let xrViewport = xrWebGLLayer.getViewport(xrView)
+      gl.viewport(xrViewport.x, xrViewport.y, xrViewport.width, xrViewport.height)
+
+    // WebGL draw calls will now be rendered into the appropriate viewport.
+    }
+  })
+})
+    	}
+    </script>
+  	<input type="button" onclick="start()" />
+  </body>
+</html>
