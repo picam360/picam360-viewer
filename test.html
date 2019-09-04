@@ -8,7 +8,7 @@
 const XR = navigator.xr
 
 // Request a new XRSession
-XR.requestSession("inline").then((xrSession) => {
+XR.requestSession({mode:"immersive-vr"}).then((xrSession) => {
 
   xrSession.requestAnimationFrame((time, xrFrame) => {
     let viewer = xrFrame.getViewerPose(xrReferenceSpace)
