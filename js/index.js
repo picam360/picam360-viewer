@@ -861,7 +861,7 @@ var app = (function() {
 			}, 100);
 			m_video_handler.init({
 				canvas,
-				offscreen : parseBoolean(query['offscreen'] || 'true'),
+				offscreen : parseBoolean(query['offscreen'] || 'false'),
 				skip_frame : parseFloat(query['skip-frame'] || '2'),
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 			}, function() {
@@ -1118,7 +1118,7 @@ var app = (function() {
 										break;
 									case 'video':
 										var stream = new MediaStream([receiver.track]);
-										wrtcvideo_decoder.set_stream(stream, receiver);
+										m_video_handler.set_stream(stream, receiver);
 										break;
 								}
 							}

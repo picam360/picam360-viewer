@@ -241,6 +241,7 @@
 				var now = new Date().getTime();
 				var tex_quat;
 				var vertex_type = self.vertex_type;
+				var uuid;
 				if (info) {
 					var map = [];
 					var split = info.split(' ');
@@ -286,6 +287,9 @@
 						m_texture_encoded = m_texture_encoded * 0.9 + value
 							* 0.1;
 
+					}
+					if (map["uuid"]) {
+						uuid = uuidParse.parse(map["uuid"][2]);
 					}
 					{// decoded
 						var decoded = (now - time) / 1000;
@@ -358,7 +362,7 @@
 				} else if (type == "video") {
 					m_texture_width = width;
 					m_texture_height = height;
-					m_omvr.setVideoTexture(vertex_type, data, m_tex_quat, m_texture_fov);
+					m_omvr.setVideoTexture(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
 				} else if (type == "yuv") {
 					m_texture_width = width;
 					m_texture_height = height;
@@ -371,9 +375,10 @@
 							height,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
+							uuid,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov);
+						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "rgb") {
 					m_texture_width = width;
@@ -385,9 +390,10 @@
 							data,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
+							uuid,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov);
+						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "image") {
 					m_texture_width = width;
@@ -399,9 +405,22 @@
 							data,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
+							uuid,
 						}, [data]);
 					}else{
-						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov);
+						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
+					}
+				} else if (type == "frame_info") {
+					if(m_worker){
+						m_worker.postMessage({
+							type : 'setFrameInfo',
+							vertex_type, 
+							quat : m_tex_quat,
+							fov : m_texture_fov,
+							uuid,
+						});
+					}else{
+						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "blob") {
 					self.setModel(vertex_type, "rgb");
@@ -473,6 +492,150 @@
 					document.head.appendChild(script);
 
 					self.skip_frame = options.skip_frame || 0;
+				}
+			},
+			
+			set_stream: function(obj, receiver) {
+				if (m_worker) {
+					if(!window.createImageBitmap) {
+						alert("The offscreen mode needs to support ImageBitmap");
+						return;
+					}
+					m_receiver = receiver;
+					m_video = document.createElement('video');
+					m_video.crossOrigin = "*";
+					m_video.muted = true;
+					m_video.playsInline = true;
+					
+					function uuid_abs(uuid1, uuid2){
+						var sum = 0;
+						for(var i=0;i<uuid1.length;i++){
+							sum += Math.abs(uuid1[i]-uuid2[i]);
+						}
+						return sum;
+					}
+					function uuid_ncc(uuid1, uuid2){
+						var sum1 = 0;
+						var sum2 = 0;
+						var sum12 = 0;
+						for(var i=0;i<uuid1.length;i++){
+							sum1 += uuid1[i]*uuid1[i];
+							sum2 += uuid2[i]*uuid2[i];
+							sum12 += uuid1[i]*uuid2[i];
+						}
+						return sum12 / Math.sqrt(sum1*sum2);
+					}
+					
+					function get_uuid_from_canvas(ctx){
+						var uuid = new Uint8Array(16);
+						var apx = ctx.getImageData(0,0, 16, 1);
+						for(var i=0;i<16;i++){
+							uuid[i] = 0.299*apx.data[i*4+0]+0.587*apx.data[i*4+1]+0.114*apx.data[i*4+2];
+						}
+						return uuid;
+					}
+					function start_video_poling(){
+						var last_currentTime = m_video.currentTime;
+						var last_uuid = new Uint8Array(16);
+						setInterval(function() {
+							//var st = new Date().getTime();
+							var currentTime = m_video.currentTime;
+							if(currentTime == last_currentTime){
+								return;
+							}else{
+								last_currentTime = currentTime;
+							}
+							if(!m_videoImage){
+								m_videoImage = document.createElement('canvas');
+								m_videoImage.width = m_video.videoWidth;
+								m_videoImage.height = m_video.videoHeight;
+								m_videoImageContext = m_videoImage.getContext('2d');
+								m_videoImageContext.fillStyle = '#000000';
+								m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
+							}
+							window.createImageBitmap(m_video).then(imageBitmap => {
+								m_videoImageContext.drawImage(imageBitmap, 0, 0, 16, 1, 0, 0, 16, 1);
+								var uuid = get_uuid_from_canvas(m_videoImageContext);
+								if (uuid_abs(last_uuid, uuid) == 0) {
+									return;
+								}else{
+									last_uuid = uuid;
+								}
+								//console.log("img:"+uuid);
+								m_worker.postMessage({
+									type : 'setFrameImage',
+									img : imageBitmap,
+									uuid,
+								}, [imageBitmap]);
+							});
+							//var et = new Date().getTime();
+							//console.log("time:"+(et-st));
+						}, 10); // 100hz
+					}
+//					function init_video(){
+//						if(!m_need_to_push){
+//							try{
+//								var uuid_zero = new Uint8Array(16);
+//								m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
+//								var uuid = get_uuid_from_canvas(m_videoImageContext);
+//								if (uuid_abs(uuid_zero, uuid) == 0){
+//									m_need_to_push = true;
+//								}
+//							}catch{
+//								m_need_to_push = true;
+//							}
+//						}
+//						if (m_need_to_push) {//need to play
+//							function createButton(text, x, y, context, func) {
+//								var button = document.createElement("input");
+//								button.type = "button";
+//								button.value = text;
+//								button.style.position = 'absolute';
+//								button.style.left = window.innerWidth * x + 'px';
+//								button.style.top = window.innerHeight * y + 'px';
+//			
+//								button.onclick = func;
+//								context.appendChild(button);
+//							}
+//							createButton('video start', 0.5, 0.5, document.body, (e) => {
+//								m_video.play().catch((err) => {
+//									console.log(err);
+//								});
+//								start_video_poling();
+//								document.body.removeChild(e.srcElement);
+//							});
+//						} else {
+//							start_video_poling();
+//						}
+//					}
+					function try_play() {
+						m_video.play().then(()=>{
+						}).catch((err) =>{
+							console.log(err);
+						}).finally(() =>{
+							m_can_play = true;
+							start_video_poling();
+						});
+					}
+					var timeout = setTimeout(function(){
+						console.log("video play event timeout!");
+						m_need_to_push = true;
+						timeout = null;
+						try_play();
+					}, 2000);
+					m_video.addEventListener("canplay", function(){
+						if(timeout){
+							console.log("video canplay!");
+							clearTimeout(timeout);
+							timeout = null;
+							try_play();
+							m_video.removeEventListener("canplay", arguments.callee, false);
+						}
+					});
+					m_video.srcObject = obj;
+					m_video.load();
+				} else {
+					m_omvr.set_stream(obj, receiver);
 				}
 			},
 
