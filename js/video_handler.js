@@ -76,7 +76,6 @@
 
 		// params
 		var stereoEnabled = false;
-		var m_limit_fov = 180;
 		var m_vr_mode = false;
 		var m_requestAnimationFrame_target = window;
 		
@@ -328,12 +327,6 @@
 				} else {
 					console.log("no view quat info");
 					m_tex_quat = m_view_quat.clone();
-				}
-				if (vertex_type == "window") {
-					m_limit_fov = m_view_fov;
-				} else if (vertex_type == "picam360map"
-					|| vertex_type == "picam360map3d") {
-					m_limit_fov = 180;
 				}
 				if (type == "raw_bmp") {
 					self.setModel(vertex_type, "rgb");
