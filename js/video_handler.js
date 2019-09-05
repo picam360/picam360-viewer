@@ -528,9 +528,17 @@
 					
 					function get_uuid_from_canvas(ctx){
 						var uuid = new Uint8Array(16);
-						var apx = ctx.getImageData(0,0, 16, 1);
-						for(var i=0;i<16;i++){
-							uuid[i] = 0.299*apx.data[i*4+0]+0.587*apx.data[i*4+1]+0.114*apx.data[i*4+2];
+						var pixels = ctx.getImageData(0,0, 32, 2).data;
+						var uuid = new Uint8Array(16);
+						for(var k=0;k<16;k++){
+							var val = 0;
+							for(var i=0;i<2;i++){
+								for(var j=0;j<2;j++){
+									var idx = (32*i + k*2 + j)*4;
+									val += 0.299*pixels[idx+0]+0.587*pixels[idx+1]+0.114*pixels[idx+2];
+								}
+							}
+							uuid[k] = val / 4;
 						}
 						return uuid;
 					}
@@ -554,7 +562,7 @@
 								m_videoImageContext.fillRect(0, 0, m_videoImage.width, m_videoImage.height);
 							}
 							window.createImageBitmap(m_video).then(imageBitmap => {
-								m_videoImageContext.drawImage(imageBitmap, 0, 0, 16, 1, 0, 0, 16, 1);
+								m_videoImageContext.drawImage(imageBitmap, 0, 0, 32, 2, 0, 0, 32, 2);
 								var uuid = get_uuid_from_canvas(m_videoImageContext);
 								if (uuid_abs(last_uuid, uuid) == 0) {
 									return;

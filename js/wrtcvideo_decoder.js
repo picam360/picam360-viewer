@@ -81,15 +81,6 @@ function WRTCVideoDecoder(callback) {
 							m_frame_callback("frame_info", null, 0, 0,
 								str, new Date().getTime());
 						}
-//						self.new_frame_info_handler({
-//							info: str,
-//							time: new Date().getTime(),
-//							uuid: uuidParse.parse(uuid),
-//						});
-//						if (!m_first_frame_info) {
-//							m_first_frame_info = true;
-//							self.init();
-//						}
 					}
 				} finally {
 					m_active_frame = null;
