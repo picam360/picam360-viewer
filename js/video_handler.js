@@ -157,6 +157,16 @@
 // }
 // return fov;
 // },
+			 horizon_opt_view_quaternion : function(view_quat) {
+				 if(self.vertex_type.startsWith("picam360map")){
+					 var euler = new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
+							 .degToRad(45), THREE.Math.degToRad(0), "YXZ");
+					 var quat = new THREE.Quaternion().setFromEuler(euler);
+					 return view_quat.clone().multiply(quat);
+				 }else{
+					 return view_quat;
+				 }
+			},
 
 			fps : 0,
 			checkImageDelay : 1000,
@@ -311,6 +321,8 @@
 				if (self.vertex_type_forcibly) {
 					vertex_type = self.vertex_type_forcibly;
 				}
+				self.vertex_type = vertex_type;
+				
 				{// fps
 					if (m_texture_tmp_time == 0) {
 						m_texture_tmp_time = now;

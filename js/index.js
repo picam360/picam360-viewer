@@ -805,11 +805,7 @@ var app = (function() {
 					view_quat = m_video_handler.predict_view_quaternion();
 				}
 				if (parseBoolean(query['horizon-opt'] || 'true')) {
-					var euler = new THREE.Euler(THREE.Math.degToRad(0), THREE.Math
-						.degToRad(45), THREE.Math.degToRad(0), "YXZ");
-
-					var quat = new THREE.Quaternion().setFromEuler(euler);
-					view_quat = view_quat.multiply(quat);
+					view_quat = m_video_handler.horizon_opt_view_quaternion(view_quat);
 				}
 				var cmd = UPSTREAM_DOMAIN;
 				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
