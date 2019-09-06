@@ -474,7 +474,8 @@
 						options : {
 							canvas : m_canvas_act,
 							devicePixelRatio : window.devicePixelRatio,
-							fxaa_enabled : options.fxaa_enabled || false,
+							antialias : options.antialias || true,
+							fxaa_enabled : options.fxaa_enabled || true,
 						},
 					}, [m_canvas_act]);
 					m_worker
@@ -496,7 +497,8 @@
 						m_omvr.init({
 							canvas : m_canvas_act,
 							devicePixelRatio : window.devicePixelRatio,
-							fxaa_enabled : options.fxaa_enabled || false,
+							antialias : options.antialias || true,
+							fxaa_enabled : options.fxaa_enabled || true,
 							callback : _callback,
 						});
 					};
