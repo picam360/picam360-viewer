@@ -471,8 +471,11 @@
 						+ '../lib/omvr/omvr_worker.js');
 					m_worker.postMessage({
 						type : 'init',
-						canvas : m_canvas_act,
-						devicePixelRatio : window.devicePixelRatio
+						options : {
+							canvas : m_canvas_act,
+							devicePixelRatio : window.devicePixelRatio,
+							fxaa_enabled : options.fxaa_enabled || false,
+						},
 					}, [m_canvas_act]);
 					m_worker
 						.addEventListener('message', function(e) {
@@ -490,7 +493,12 @@
 					var script = document.createElement('script');
 					script.onload = function() {
 						m_omvr = new OMVR();
-						m_omvr.init(m_canvas_act, window.devicePixelRatio, _callback);
+						m_omvr.init({
+							canvas : m_canvas_act,
+							devicePixelRatio : window.devicePixelRatio,
+							fxaa_enabled : options.fxaa_enabled || false,
+							callback : _callback,
+						});
 					};
 					script.src = m_base_path + '../lib/omvr/omvr.js';
 

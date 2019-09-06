@@ -860,6 +860,7 @@ var app = (function() {
 				offscreen : parseBoolean(query['offscreen'] || 'false'),
 				skip_frame : parseFloat(query['skip-frame'] || '2'),
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
+				fxaa_enabled : parseBoolean(query['fxaa'] || 'false'),
 			}, function() {
 				if (default_image_url) {
 					m_frame_active = true;
