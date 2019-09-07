@@ -80,6 +80,7 @@ void main(void) {
 	}
 
 	vec4 pos = unif_matrix * vec4(x, y, z, 1.0);
+	pos /= sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
 	if (pos.z > 0.0) {
 		float x = (pos.x / pos.z);
 		float y = (pos.y / pos.z);
