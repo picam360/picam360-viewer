@@ -862,6 +862,7 @@ var app = (function() {
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 				antialias : parseBoolean(query['antialias'] || 'true'),
 				fxaa_enabled : parseBoolean(query['fxaa'] || 'true'),
+				mesh_resolution : parseFloat(query['mesh-resolution'] || '64'),
 			}, function() {
 				if (default_image_url) {
 					m_frame_active = true;

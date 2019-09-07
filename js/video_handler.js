@@ -476,6 +476,7 @@
 							devicePixelRatio : window.devicePixelRatio,
 							antialias : options.antialias,
 							fxaa_enabled : options.fxaa_enabled,
+							mesh_resolution : options.mesh_resolution,
 						},
 					}, [m_canvas_act]);
 					m_worker
@@ -499,6 +500,7 @@
 							devicePixelRatio : window.devicePixelRatio,
 							antialias : options.antialias,
 							fxaa_enabled : options.fxaa_enabled,
+							mesh_resolution : options.mesh_resolution,
 							callback : _callback,
 						});
 					};
