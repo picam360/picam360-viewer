@@ -464,12 +464,11 @@
 						var displays = await navigator.getVRDisplays();
 						if (displays.length > 0) {
 							console.log("vr display found");
-							return displays[0];
+							m_vr_display = displays[0];
 						}
 					}
-					return null;
 				}
-				m_vr_display = get_vr_display();
+				get_vr_display();
 				var options = {
 					devicePixelRatio : window.devicePixelRatio,
 					antialias : options.antialias,
