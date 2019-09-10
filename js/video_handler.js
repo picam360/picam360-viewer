@@ -464,20 +464,23 @@
 						m_vr_display = displays[0];
 					}
 				}
+				var options = {
+					devicePixelRatio : window.devicePixelRatio,
+					antialias : options.antialias,
+					fxaa_enabled : options.fxaa_enabled,
+					mesh_resolution : options.mesh_resolution,
+					vr_margin : options.vr_margin,
+				};
 				if (!m_vr_display && options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
 					m_canvas_act = m_canvas.transferControlToOffscreen();
+					options.canvas = m_canvas_act;
+					
 					m_worker = new Worker(m_base_path
 						+ '../lib/omvr/omvr_worker.js');
 					m_worker.postMessage({
 						type : 'init',
-						options : {
-							canvas : m_canvas_act,
-							devicePixelRatio : window.devicePixelRatio,
-							antialias : options.antialias,
-							fxaa_enabled : options.fxaa_enabled,
-							mesh_resolution : options.mesh_resolution,
-						},
+						options,
 					}, [m_canvas_act]);
 					m_worker
 						.addEventListener('message', function(e) {
@@ -491,18 +494,13 @@
 					self.skip_frame = options.offscreen_skip_frame || 0;
 				} else {
 					m_canvas_act = m_canvas;
+					options.canvas = m_canvas_act;
+					options.callback = _callback;
 					
 					var script = document.createElement('script');
 					script.onload = function() {
 						m_omvr = new OMVR();
-						m_omvr.init({
-							canvas : m_canvas_act,
-							devicePixelRatio : window.devicePixelRatio,
-							antialias : options.antialias,
-							fxaa_enabled : options.fxaa_enabled,
-							mesh_resolution : options.mesh_resolution,
-							callback : _callback,
-						});
+						m_omvr.init(options);
 					};
 					script.src = m_base_path + '../lib/omvr/omvr.js';
 
