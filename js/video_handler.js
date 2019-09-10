@@ -186,6 +186,8 @@
 					processed : m_texture_processed,
 					encoded : m_texture_encoded,
 					decoded : m_texture_decoded,
+					codec : self.codec,
+					bitrate : self.bitrate,
 					rtt : rtt,
 					offscreen : (m_worker != null),
 				};
@@ -447,7 +449,7 @@
 				}
 			},
 
-			init : async function(options, callback) {
+			init : function(options, callback) {
 				m_canvas = options.canvas;
 
 				function _callback() {
@@ -456,14 +458,18 @@
 					callback();
 				}
 
-				if (navigator.getVRDisplays) {
-					console.log('WebVR 1.1 supported');
-					var displays = await navigator.getVRDisplays();
-					if (displays.length > 0) {
-						console.log("vr display found");
-						m_vr_display = displays[0];
+				async function get_vr_display(){
+					if (navigator.getVRDisplays) {
+						console.log('WebVR 1.1 supported');
+						var displays = await navigator.getVRDisplays();
+						if (displays.length > 0) {
+							console.log("vr display found");
+							return displays[0];
+						}
+						return null;
 					}
 				}
+				m_vr_display = get_vr_display();
 				var options = {
 					devicePixelRatio : window.devicePixelRatio,
 					antialias : options.antialias,
@@ -509,8 +515,31 @@
 					self.skip_frame = options.skip_frame || 0;
 				}
 			},
-			
+
+			codec : '',
+			bitrate : 0,
 			set_stream: function(obj, receiver) {
+				{//stats
+					var last_timestamp = 0;
+					var last_bytesReceived = 0;
+					setInterval(() => {
+						var items = [];
+						receiver.getStats().then(stats =>{
+							stats.forEach(function(r) {
+								items.push(r);
+								if(r.id.startsWith('RTCCodec')){
+									self.codec = r.mimeType;
+								}
+								if(r.id.startsWith('RTCTransport')){
+									var bitrate = 8*(r.bytesReceived - last_bytesReceived) / (r.timestamp - last_timestamp) * 1000;
+									last_timestamp = r.timestamp;
+									last_bytesReceived = r.bytesReceived;
+									self.bitrate = self.bitrate * 0.9 + 0.1 * bitrate;
+								}
+							});
+						});
+					},1000);
+				}
 				if (m_worker) {
 					if(!window.createImageBitmap) {
 						alert("The offscreen mode needs to support ImageBitmap");

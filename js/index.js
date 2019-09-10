@@ -70,9 +70,7 @@ var app = (function() {
 	var statuses = [];
 	var is_recording = false;
 	var view_offset = new THREE.Quaternion();
-	var peer = null;
 	var p2p_num_of_members = 0;
-	var peer_conn = null;
 	var peer_call = null;
 	var p2p_uuid_call = "";
 	var default_image_url = null;
@@ -338,7 +336,7 @@ var app = (function() {
 				}
 			},
 			refresh_app_menu: function() {
-				if (peer && p2p_num_of_members >= 2) {
+				if (p2p_num_of_members >= 2) {
 					document.getElementById("uiCall").style.display = "block";
 				} else {
 					document.getElementById("uiCall").style.display = "none";
@@ -1151,7 +1149,7 @@ var app = (function() {
 						if (err.type == "peer-unavailable") {
 							self.plugin_host.set_info("error : Could not connect " +
 								p2p_uuid);
-							peer = null;
+							m_pc = null;
 							err_callback();
 						}
 					};
@@ -1163,7 +1161,7 @@ var app = (function() {
 			});
 		},
 		stop_p2p: function() {
-			peer = null;
+			m_pc = null;
 		},
 		start_call: function() {
 			p2p_uuid_call = uuid();
@@ -1204,7 +1202,7 @@ var app = (function() {
 		},
 		stop_call: function() {},
 		connected: function() {
-			return (socket != null || peer != null);
+			return (socket != null || m_pc != null);
 		},
 		start_animate: function() {
 			var frame_count = 0;
@@ -1243,10 +1241,16 @@ var app = (function() {
 								status += "rtt:" +
 									(texture_info.rtt * 1000).toFixed(0) +
 									"ms<br/>";
+								status += "codec:" + texture_info.codec + "<br/>";
 								status += "<br/>";
 							}
 	
-							{
+							if(m_pc){
+								status += "packet<br/>";
+								status += "bitrate:" + (texture_info.bitrate / 1e6).toFixed(3) +
+									"Mbit/s<br/>";
+								status += "<br/>";
+							}else{
 								var rtp_info = rtp.get_info();
 								status += "packet<br/>";
 								status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
