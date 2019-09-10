@@ -1078,6 +1078,14 @@ var app = (function() {
 				m_pc = pc;
 
 				sig.onoffer = function(offer) {
+					var bitrate = 0;
+					var lines = offer.payload.sdp.sdp.split('\r\n');
+					for(var i=0;i<lines.length;i++){
+						//vp9
+						if(lines[i].startsWith('b=AS:')){
+							bitrate = parseInt(lines[i].replace('b=AS:', ''));
+						}
+					}
 					pc.setRemoteDescription(offer.payload.sdp).then(function() {
 						return pc.createAnswer();
 					}).then(function(sdp) {
@@ -1095,7 +1103,13 @@ var app = (function() {
 								lines[i] = lines[i].replace(
 										'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
 										'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127');
-								lines[i] = lines[i] + '\r\nb=AS:20000';
+							}
+							//bitrate
+							if(lines[i].startsWith('m=video 9')){
+								if (bitrate) {
+									lines[i] = lines[i] + '\r\n' +
+											'b=AS:' + bitrate;
+								}
 							}
 						}
 						sdp.sdp = lines.join('\r\n');
