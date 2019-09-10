@@ -466,8 +466,8 @@
 							console.log("vr display found");
 							return displays[0];
 						}
-						return null;
 					}
+					return null;
 				}
 				m_vr_display = get_vr_display();
 				var options = {
@@ -534,11 +534,11 @@
 									var bitrate = 8*(r.bytesReceived - last_bytesReceived) / (r.timestamp - last_timestamp) * 1000;
 									last_timestamp = r.timestamp;
 									last_bytesReceived = r.bytesReceived;
-									self.bitrate = self.bitrate * 0.9 + 0.1 * bitrate;
+									self.bitrate = self.bitrate * 0.8 + 0.2 * bitrate;
 								}
 							});
 						});
-					},1000);
+					},500);
 				}
 				if (m_worker) {
 					if(!window.createImageBitmap) {
