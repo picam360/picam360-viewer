@@ -1082,14 +1082,23 @@ var app = (function() {
 						return pc.createAnswer();
 					}).then(function(sdp) {
 						console.log('Created answer.');
-						//stereo
-						sdp.sdp = sdp.sdp.replace(
-							/a=fmtp:111/,
-							'a=fmtp:111 stereo=1\r\na=fmtp:111');
-						//vp9
-						sdp.sdp = sdp.sdp.replace(
-							'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
-							'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127\r\nb=AS:20000');
+						var lines = sdp.sdp.split('\r\n');
+						for(var i=0;i<lines.length;i++){
+							//stereo
+							if(lines[i].startsWith('a=fmtp:111')){
+								lines[i] = lines[i].replace(
+									/a=fmtp:111/,
+									'a=fmtp:111 stereo=1\r\na=fmtp:111');
+							}
+							//vp9
+							if(lines[i].startsWith('m=video 9')){
+								lines[i] = lines[i].replace(
+										'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
+										'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127');
+								lines[i] = lines[i] + '\r\nb=AS:20000';
+							}
+						}
+						sdp.sdp = lines.join('\r\n');
 						
 						pc.setLocalDescription(sdp);
 						sig.answer(offer.src, sdp);
