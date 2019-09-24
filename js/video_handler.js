@@ -475,6 +475,7 @@
 					fxaa_enabled : options.fxaa_enabled,
 					mesh_resolution : options.mesh_resolution,
 					vr_margin : options.vr_margin,
+					eye_offset : options.eye_offset,
 				};
 				if (!m_vr_display && options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');

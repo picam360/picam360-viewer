@@ -862,6 +862,7 @@ var app = (function() {
 				fxaa_enabled : parseBoolean(query['fxaa'] || 'true'),
 				mesh_resolution : parseFloat(query['mesh-resolution'] || '64'),
 				vr_margin : parseFloat(query['vr-margin'] || '0'),
+				eye_offset : parseFloat(query['eye-offset'] || '0'),
 			}, function() {
 				if (default_image_url) {
 					m_frame_active = true;

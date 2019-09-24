@@ -1,6 +1,7 @@
 //position is windowed sphere
 const int STEPNUM = 32;
 
+uniform float eye_offset;
 uniform float frame_scalex;
 uniform float frame_scaley;
 uniform float pixel_size_x;
@@ -96,7 +97,7 @@ void main(void) {
 			float r_ratio = sin(theta) / r / sin(M_PI / 2.0 * 0.2) * 3.5;
 			x *= r_ratio;
 			y *= r_ratio;
-			gl_Position = vec4(x * frame_scalex, y * frame_scaley, 1.0, 1.0);
+			gl_Position = vec4(x * frame_scalex + eye_offset, y * frame_scaley, 1.0, 1.0);
 		}
 	} else {
 		gl_Position = vec4(0, 0, 2.0, 1.0);
