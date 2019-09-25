@@ -466,6 +466,7 @@
 							console.log("vr display found");
 							m_vr_display = displays[0];
 						}
+						navigator.xr = null;//for avoid confilict
 					}
 				}
 				get_vr_display();
