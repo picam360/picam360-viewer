@@ -756,7 +756,13 @@ var app = (function() {
 							    };
 							    fr.readAsArrayBuffer(data);
 							}else{
-								handle_data(data);
+								if (Array.isArray(data)) {
+									for(_data of data){
+										handle_data(_data);
+									}
+								}else{
+									handle_data(data);
+								}
 							}
 						}
 					});
