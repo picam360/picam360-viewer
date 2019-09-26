@@ -704,68 +704,70 @@ var app = (function() {
 					var pack = rtcp.buildpacket(cmd, PT_CMD);
 				}
 				rtcp.sendpacket(conn, pack);
-				conn
-					.on('data', function(data) {
-						if (!is_init) {
-							function handle_data(data){
-								var pack = PacketHeader(data);
-								if (pack.GetPayloadType() == PT_STATUS) {
-									var str = (new TextDecoder)
-										.decode(new Uint8Array(pack.GetPayload()));
-									var split = str.split('"');
-									var name = split[1];
-									var value = split[3].split(' ');
-									if (name == "pong") {
-										ping_cnt++;
-										var now = new Date().getTime();
-										var rtt = now - parseInt(value[0]);
-										var timediff = value[1] - (now - rtt / 2);
-										if (min_rtt == 0 || rtt < min_rtt) {
-											min_rtt = rtt;
-											valid_timediff = timediff;
-										}
-										console.log(name + ":" + value + ":rtt=" +
-											rtt);
-										if (ping_cnt < 10) {
-											var cmd = "<picam360:command id=\"0\" value=\"ping " +
-												new Date().getTime() + "\" />"
-											var pack = rtcp
-												.buildpacket(cmd, PT_CMD);
-											rtcp.sendpacket(conn, pack);
-											return;
-										} else {
-											var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
-												valid_timediff + "\" />";
-											var pack = rtcp
-												.buildpacket(cmd, PT_CMD);
-											rtcp.sendpacket(conn, pack);
+				conn.addEventListener('message', function(data){
+					if(data instanceof MessageEvent){
+						data = data.data;
+					}
+					if (!is_init) {
+						function handle_data(data){
+							var pack = PacketHeader(data);
+							if (pack.GetPayloadType() == PT_STATUS) {
+								var str = (new TextDecoder)
+									.decode(new Uint8Array(pack.GetPayload()));
+								var split = str.split('"');
+								var name = split[1];
+								var value = split[3].split(' ');
+								if (name == "pong") {
+									ping_cnt++;
+									var now = new Date().getTime();
+									var rtt = now - parseInt(value[0]);
+									var timediff = value[1] - (now - rtt / 2);
+									if (min_rtt == 0 || rtt < min_rtt) {
+										min_rtt = rtt;
+										valid_timediff = timediff;
+									}
+									console.log(name + ":" + value + ":rtt=" +
+										rtt);
+									if (ping_cnt < 10) {
+										var cmd = "<picam360:command id=\"0\" value=\"ping " +
+											new Date().getTime() + "\" />"
+										var pack = rtcp
+											.buildpacket(cmd, PT_CMD);
+										rtcp.sendpacket(conn, pack);
+										return;
+									} else {
+										var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
+											valid_timediff + "\" />";
+										var pack = rtcp
+											.buildpacket(cmd, PT_CMD);
+										rtcp.sendpacket(conn, pack);
 
-											console.log("min_rtt=" + min_rtt +
-												":valid_timediff:" +
-												valid_timediff);
-											self.valid_timediff = valid_timediff;
-										}
+										console.log("min_rtt=" + min_rtt +
+											":valid_timediff:" +
+											valid_timediff);
+										self.valid_timediff = valid_timediff;
 									}
 								}
-								init_con();
 							}
-							if(data instanceof Blob) {
-							    var fr = new FileReader();
-							    fr.onload = function(evt) {
-							      handle_data(evt.target.result);
-							    };
-							    fr.readAsArrayBuffer(data);
-							}else{
-								if (Array.isArray(data)) {
-									for(_data of data){
-										handle_data(_data);
-									}
-								}else{
-									handle_data(data);
+							init_con();
+						}
+						if(data instanceof Blob) {
+						    var fr = new FileReader();
+						    fr.onload = function(evt) {
+						      handle_data(evt.target.result);
+						    };
+						    fr.readAsArrayBuffer(data);
+						}else{
+							if (Array.isArray(data)) {
+								for(_data of data){
+									handle_data(_data);
 								}
+							}else{
+								handle_data(data);
 							}
 						}
-					});
+					}
+				});
 			};
 			if (query['p2p-uuid']) {
 				self.plugin_host.set_info("connecting via webrtc...");
@@ -1035,26 +1037,16 @@ var app = (function() {
 		},
 		start_ws: function(callback, err_callback) {
 			// websocket
-			jQuery.getScript(server_url + 'socket.io/socket.io.js')
-				.done(function(script, textStatus) {
-					// connect websocket
-					socket = io.connect(server_url);
-
-					socket.on("connect", function() {
-						console.log("connected : " + socket.id);
-
-						callback(socket);
-					});
-					socket.on("disconnect", function() {
-						self.plugin_host
-							.set_info("websocket connection closed");
-						self.plugin_host.set_menu_visible(true);
-						m_frame_active = false;
-					});
-				}).fail(function(jqxhr, settings, exception) {
-					self.plugin_host.set_info("error : Could not connect");
-					err_callback();
-				});
+			var ws_url = "ws://" + server_url.slice(server_url.indexOf("://")+3);
+			var socket = new WebSocket(ws_url);
+			//socket.binaryType = 'arraybuffer';//blob is faster?
+			socket.addEventListener('open', function (event) {
+				callback(socket);
+			});
+			socket.addEventListener('error', function (event) {
+				self.plugin_host.set_info("error : Could not connect : " + event);
+				err_callback();
+			});
 		},
 		start_p2p: function(p2p_uuid, callback, err_callback) {
 			var options = {
@@ -1150,24 +1142,10 @@ var app = (function() {
 										break;
 								}
 							}
-							class DataChannel extends EventEmitter {
-							    constructor() {
-							    	super();
-							        var self = this;
-									this.peerConnection = pc;
-							    	dc.addEventListener('message', function(data){
-							    		self.emit('data', data.data);
-							    	});
-								}
-								send(data){
-									dc.send(data);
-								}
-								close(){
-									pc.close();
-								}
-							}
-							var conn = new DataChannel();
-							callback(conn);
+							dc.addEventListener('close', function(data){
+								pc.close();
+							});
+							callback(dc);
 						};
 						dc.onclose = function() {
 							self.plugin_host.set_info("p2p connection closed");

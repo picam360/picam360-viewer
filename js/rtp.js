@@ -89,16 +89,19 @@ function Rtp() {
 			if (!m_conn) {
 				return;
 			}
-			conn.on('data', function(data) {
+			conn.addEventListener('message', function(data){
 				if (conn != m_conn) {
 					return;
 				}
+				if(data instanceof MessageEvent){
+					data = data.data;
+				}
 				if(data instanceof Blob) {
-				    var fr = new FileReader();
-				    fr.onload = function(evt) {
+					var fr = new FileReader();
+					fr.onload = function(evt) {
 						self.packet_handler(evt.target.result);
-				    };
-				    fr.readAsArrayBuffer(data);
+					};
+					fr.readAsArrayBuffer(data);
 				}else{
 					self.packet_handler(data);
 				}

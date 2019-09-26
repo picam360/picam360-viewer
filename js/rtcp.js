@@ -67,11 +67,7 @@ function Rtcp() {
 			if (!conn) {
 				return;
 			}
-			if (conn.peerConnection) { // webrtc
-				conn.send(pack);
-			} else {
-				conn.emit('data', pack);
-			}
+			conn.send(pack);
 		},
 		// @data : ArrayBuffer
 		buildpacket : function(data, pt) {
