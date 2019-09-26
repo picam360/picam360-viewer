@@ -57,7 +57,7 @@ var app = (function() {
 	var mjpeg_decoder;
 	var h264_decoder;
 	var h265_decoder;
-	var wrtcvideo_decoder;
+	var i420_decoder;
 	var opus_decoder;
 	var audio_first_packet_s = 0;
 	// motion processer unit
@@ -589,8 +589,8 @@ var app = (function() {
 							h265_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
 						}
-						if (wrtcvideo_decoder) {
-							wrtcvideo_decoder.decode(packet.GetPayload(), packet
+						if (i420_decoder) {
+							i420_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
 						}
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
@@ -830,7 +830,7 @@ var app = (function() {
 			h264_decoder = H264Decoder();
 			mjpeg_decoder = MjpegDecoder();
 			h265_decoder = H265Decoder();
-			wrtcvideo_decoder = WRTCVideoDecoder();
+			i420_decoder = I420Decoder();
 			
 			m_audio_handler = new AudioHandler();
 			// webgl handling
@@ -876,11 +876,11 @@ var app = (function() {
 				h264_decoder.set_frame_callback(self.handle_frame);
 				mjpeg_decoder.set_frame_callback(self.handle_frame);
 				h265_decoder.set_frame_callback(self.handle_frame);
-				wrtcvideo_decoder.set_frame_callback(() => {
+				i420_decoder.set_frame_callback((type) => {
 					if(!query['skip-frame']){
 						m_video_handler.skip_frame=0;
 					}
-					wrtcvideo_decoder.set_frame_callback(self.handle_frame);
+					i420_decoder.set_frame_callback(self.handle_frame);
 				});
 
 				// opus_decoder = OpusDecoder();

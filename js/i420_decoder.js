@@ -1,4 +1,4 @@
-function WRTCVideoDecoder(callback) {
+function I420Decoder(callback) {
 	var m_active_frame = null;
 	var m_frame_callback = null;
 
@@ -67,19 +67,37 @@ function WRTCVideoDecoder(callback) {
 							.subarray(4), 0);
 						var split = str.split(' ');
 						var uuid = null;
+						var width = 1024;
+						var height = 512;
 						for (var i = 0; i < split.length; i++) {
 							var separator = (/[=,\"]/);
 							var _split = split[i].split(separator);
 							if (_split[0] == "uuid") {
 								uuid = _split[2];
 							}
+							if (_split[0] == "frame_width") {
+								width = parseInt(_split[2]);
+							}
+							if (_split[0] == "frame_height") {
+								height = parseInt(_split[2]);
+							}
 						}
 						if (!uuid) {
 							return;
 						}
 						if (m_frame_callback) {
-							m_frame_callback("frame_info", null, 0, 0,
-								str, new Date().getTime());
+							if(m_active_frame.length == 1){
+								m_frame_callback("frame_info", null, 0, 0,
+										str, new Date().getTime());//for webrtc
+							}else{
+								var image = new Uint8Array(width*height*1.5);
+								var cur = 0;
+								for (var i = 1; i < m_active_frame.length; i++) {
+									image.set(m_active_frame[i], cur);
+									cur += m_active_frame[i].length;
+								}
+								m_frame_callback("yuv", image, width, height, str, new Date().getTime());
+							}
 						}
 					}
 				} finally {
