@@ -71,8 +71,6 @@
 
 		// texture info
 		var m_texture_fov = 90;
-		var m_texture_width = 512;
-		var m_texture_height = 512;
 
 		// params
 		var stereoEnabled = false;
@@ -343,8 +341,6 @@
 					m_tex_quat = m_view_quat.clone();
 				}
 				if (type == "raw_bmp") {
-					self.setModel(vertex_type, "rgb");
-
 					var img = new Image();
 					var header = get_bmp_header(width, height, 32);
 					var raw_data = new Uint8Array(data);
@@ -357,9 +353,6 @@
 					}
 					img.src = url.createObjectURL(blob);
 					img.onload = function(ev) {
-						m_texture_width = img.width;
-						m_texture_height = img.height;
-
 						m_texture.image = img;
 						m_texture.needsUpdate = true;
 					};
@@ -367,12 +360,8 @@
 					// + " : " + m_active_frame.length);
 					blob = null;
 				} else if (type == "video") {
-					m_texture_width = width;
-					m_texture_height = height;
 					m_omvr.setVideoTexture(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
 				} else if (type == "yuv") {
-					m_texture_width = width;
-					m_texture_height = height;
 					if(m_worker){
 						m_worker.postMessage({
 							type : 'setTextureRawYuv',
@@ -388,8 +377,6 @@
 						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "rgb") {
-					m_texture_width = width;
-					m_texture_height = height;
 					if(m_worker){
 						m_worker.postMessage({
 							type : 'setTextureRawRgb',
@@ -403,8 +390,6 @@
 						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "image") {
-					m_texture_width = width;
-					m_texture_height = height;
 					if(m_worker){
 						m_worker.postMessage({
 							type : 'setTextureImage',
@@ -430,8 +415,6 @@
 						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, uuid);
 					}
 				} else if (type == "blob") {
-					self.setModel(vertex_type, "rgb");
-
 					var img = new Image();
 					var url = window.URL || window.webkitURL;
 					if (img.src && img.src.indexOf("blob") == 0) {
@@ -439,11 +422,18 @@
 					}
 					img.src = url.createObjectURL(data);
 					img.onload = function(ev) {
-						m_texture_width = img.width;
-						m_texture_height = img.height;
-
-						m_texture.image = img;
-						m_texture.needsUpdate = true;
+						if(m_worker){
+							m_worker.postMessage({
+								type : 'setTextureImage',
+								vertex_type, 
+								img,
+								quat : m_tex_quat,
+								fov : m_texture_fov,
+								uuid,
+							}, [img]);
+						}else{
+							m_omvr.setTextureImage(vertex_type, img, m_tex_quat, m_texture_fov, uuid);
+						}
 					};
 					// console.log(img.src + " : " + blob.size);
 				}

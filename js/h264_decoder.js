@@ -134,7 +134,7 @@ function H264Decoder(callback) {
 				var _nal_len = 0;
 				if ((m_active_frame[0][4] & 0x1f) == 6) {// sei
 					var str = String.fromCharCode.apply("", m_active_frame[0]
-						.subarray(4), 0);
+						.subarray(5), 0);
 					m_frame_info[(m_packet_frame_num + 1)] = {
 						info : str,
 						time : new Date().getTime()

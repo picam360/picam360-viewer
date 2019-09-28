@@ -64,7 +64,7 @@ function I420Decoder(callback) {
 					var _nal_len = 0;
 					if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) { // sei
 						var str = String.fromCharCode.apply("", m_active_frame[0]
-							.subarray(4), 0);
+							.subarray(5), 0);
 						var split = str.split(' ');
 						var uuid = null;
 						var width = 1024;
