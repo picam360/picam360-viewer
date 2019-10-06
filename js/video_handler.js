@@ -421,20 +421,34 @@
 						url.revokeObjectURL(img.src);
 					}
 					img.src = url.createObjectURL(data);
-					img.onload = function(ev) {
+					var img_hander = function(value){
 						if(m_worker){
 							m_worker.postMessage({
 								type : 'setTextureImage',
 								vertex_type, 
-								img,
+								value,
 								quat : m_tex_quat,
 								fov : m_texture_fov,
 								uuid,
 							}, [img]);
 						}else{
-							m_omvr.setTextureImage(vertex_type, img, m_tex_quat, m_texture_fov, uuid);
+							m_omvr.setTextureImage(vertex_type, value, m_tex_quat, m_texture_fov, uuid);
 						}
-					};
+					}
+					if(0){
+						img.onload = function(ev) {
+							img_hander(img);
+						};
+					}else{
+						img.decode().then((ev) => {
+							img_hander(img);
+							setTimeout(function(){
+								url.revokeObjectURL(img.src);
+							},1000);
+						}).catch((err) => {
+							console.log(err);
+						});
+					}
 					// console.log(img.src + " : " + blob.size);
 				}
 			},

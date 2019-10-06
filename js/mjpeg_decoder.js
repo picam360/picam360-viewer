@@ -19,6 +19,7 @@ function MjpegDecoder() {
 					var frame_info = "";
 					if (m_active_frame[0][2] == 0xFF && m_active_frame[0][3] == 0xE1) { // xmp
 						frame_info = String.fromCharCode.apply("", m_active_frame[0].subarray(6), 0);
+						m_active_frame[0] = m_active_frame[0].subarray(0, 2);
 					}
 					if (m_frame_callback) {
 						var blob = new Blob(m_active_frame, {
