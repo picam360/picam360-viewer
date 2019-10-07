@@ -64,6 +64,7 @@
 		var m_videoImageContext;
 		var m_video;
 		var m_videoStart = 0;
+		var m_image_decode_blocking = false;
 
 		// omvr vars
 		var m_worker = null;
@@ -435,7 +436,7 @@
 							m_omvr.setTextureImage(vertex_type, value, m_tex_quat, m_texture_fov, uuid);
 						}
 					}
-					if(0){
+					if(m_image_decode_blocking){
 						img.onload = function(ev) {
 							img_hander(img);
 						};
