@@ -577,10 +577,6 @@ var app = (function() {
 							console.log("seq:" + packet.GetSequenceNumber() +
 								":latency:" + latency);
 						}
-						if (mjpeg_decoder) {
-							mjpeg_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
 						if (h264_decoder) {
 							h264_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
@@ -591,6 +587,10 @@ var app = (function() {
 						}
 						if (i420_decoder) {
 							i420_decoder.decode(packet.GetPayload(), packet
+								.GetPayloadLength());
+						}
+						if (mjpeg_decoder) {
+							mjpeg_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
 						}
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
