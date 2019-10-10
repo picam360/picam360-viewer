@@ -7,6 +7,7 @@ function MjpegDecoder() {
 
 	var worker = createWorker(() => {
 		var m_active_frame = null;
+		var m_active_frame_st = 0;
 		var SOIMARKER = new Uint8Array(2);
 		SOIMARKER[0] = 0xFF;
 		SOIMARKER[1] = 0xD8;
@@ -17,6 +18,7 @@ function MjpegDecoder() {
 			if (!m_active_frame) {
 				if (data[0] == 0xFF && data[1] == 0xD8) { // SOI
 					m_active_frame = [];
+					m_active_frame_st = new Date().getTime();
 				}
 			}
 			if (m_active_frame) {
@@ -28,12 +30,11 @@ function MjpegDecoder() {
 						m_active_frame[0] = SOIMARKER;
 					}
 
-					var st = new Date().getTime();
 					var blob = new Blob(m_active_frame, {
 						type : "image/jpeg"
 					});
 					createImageBitmap(blob).then(image => {
-						var decode_time = new Date().getTime() - st;
+						var decode_time = new Date().getTime() - m_active_frame_st;
 						if(m_frame_num == 0){
 							m_decode_time = decode_time;
 						}else{

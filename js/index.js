@@ -555,6 +555,15 @@ var app = (function() {
 			// set rtp callback
 			rtp
 				.set_callback(function(packet) {
+					var sequencenumber = packet.GetSequenceNumber();
+					if ((sequencenumber % 100) == 0) {
+						var latency = new Date().getTime() /
+							1000 -
+							(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
+							self.valid_timediff / 1000;
+						console.log("packet latency : seq=" + sequencenumber +
+							", latency=" + latency + "sec");
+					}
 					if (packet.GetPayloadType() == PT_AUDIO_BASE) { // audio
 						if (opus_decoder) {
 							opus_decoder.decode(packet.GetPayload());
@@ -569,14 +578,6 @@ var app = (function() {
 							}
 						}
 					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
-						if (query['rtp-debug']) {
-							var latency = new Date().getTime() /
-								1000 -
-								(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
-								self.valid_timediff / 1000;
-							console.log("seq:" + packet.GetSequenceNumber() +
-								":latency:" + latency);
-						}
 						if (h264_decoder) {
 							h264_decoder.decode(packet.GetPayload(), packet
 								.GetPayloadLength());
