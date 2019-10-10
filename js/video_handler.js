@@ -399,9 +399,10 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							uuid,
+							time,
 						}, [data]);
 					}else{
-						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
+						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid, time);
 					}
 				} else if (type == "frame_info") {
 					if(m_worker){

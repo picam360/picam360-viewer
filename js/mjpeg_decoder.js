@@ -7,23 +7,34 @@ function MjpegDecoder() {
 
 	var worker = createWorker(() => {
 		var m_active_frame = null;
-		var m_active_frame_st = 0;
+		var m_active_frame_st = {};
 		var SOIMARKER = new Uint8Array(2);
 		SOIMARKER[0] = 0xFF;
 		SOIMARKER[1] = 0xD8;
-		var m_decode_time = 0;
+		var m_pre_decode_time = 0;
+		var m_post_decode_time = 0;
 		var m_frame_num = 0;
 		self.addEventListener('message', e => {
 			var data = e.data;
 			if (!m_active_frame) {
 				if (data[0] == 0xFF && data[1] == 0xD8) { // SOI
 					m_active_frame = [];
-					m_active_frame_st = new Date().getTime();
+					m_active_frame_st[m_frame_num] = new Date().getTime();
 				}
 			}
 			if (m_active_frame) {
 				m_active_frame.push(data);
 				if (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9) { // EOI
+					var pre_decode_time = new Date().getTime() - m_active_frame_st[m_frame_num];
+					if(m_frame_num == 0){
+						m_pre_decode_time = pre_decode_time;
+					}else{
+						m_pre_decode_time = m_pre_decode_time*0.9 + pre_decode_time*0.1;
+					}
+					if((m_frame_num % 100) == 0){
+						console.log("MJPEG pre dcode time : " + m_pre_decode_time + "ms");
+					}
+					
 					var frame_info = "";
 					if (m_active_frame[0][2] == 0xFF && m_active_frame[0][3] == 0xE1) { // xmp
 						frame_info = String.fromCharCode.apply("", m_active_frame[0].subarray(6), 0);
@@ -34,17 +45,20 @@ function MjpegDecoder() {
 						type : "image/jpeg"
 					});
 					createImageBitmap(blob).then(image => {
-						var decode_time = new Date().getTime() - m_active_frame_st;
+						var post_decode_time = new Date().getTime() - m_active_frame_st[m_frame_num];
 						if(m_frame_num == 0){
-							m_decode_time = decode_time;
+							m_post_decode_time = post_decode_time;
 						}else{
-							m_decode_time = m_decode_time*0.9 + decode_time*0.1;
+							m_post_decode_time = m_post_decode_time*0.9 + post_decode_time*0.1;
 						}
 						if((m_frame_num % 100) == 0){
-							console.log("MJPEG dcode time : " + m_decode_time + "ms");
+							console.log("MJPEG post dcode time : " + m_post_decode_time + "ms");
 						}
+						
+						self.postMessage({ type:'image', frame_info, image, time : m_active_frame_st[m_frame_num] }, [image]);
+
 						m_frame_num++;
-						self.postMessage({ type:'image', frame_info, image }, [image]);
+						delete m_active_frame_st[m_frame_num];
 					});
 
 					m_active_frame = null;
@@ -55,7 +69,7 @@ function MjpegDecoder() {
 	
 	worker.addEventListener('message', res =>{
 		if (m_frame_callback) {
-			m_frame_callback("image", res.data.image, 0, 0, res.data.frame_info, new Date().getTime());
+			m_frame_callback("image", res.data.image, 0, 0, res.data.frame_info, res.data.time);
 		}
 	});
 	var m_mjpeg = false;
