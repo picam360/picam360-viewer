@@ -7,7 +7,7 @@ function MjpegDecoder() {
 
 	var worker = createWorker(() => {
 		var m_active_frame = null;
-		var m_active_frame_st = {};
+		var m_active_frame_st = 0;
 		var SOIMARKER = new Uint8Array(2);
 		SOIMARKER[0] = 0xFF;
 		SOIMARKER[1] = 0xD8;
@@ -19,14 +19,14 @@ function MjpegDecoder() {
 			if (!m_active_frame) {
 				if (data[0] == 0xFF && data[1] == 0xD8) { // SOI
 					m_active_frame = [];
-					m_active_frame_st[m_frame_num] = new Date().getTime();
+					m_active_frame_st = new Date().getTime();
 				}
 			}
 			if (m_active_frame) {
 				m_active_frame.push(data);
 				if (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9) { // EOI
-					var pre_decode_time = new Date().getTime() - m_active_frame_st[m_frame_num];
-					if(m_frame_num == 0){
+					var pre_decode_time = new Date().getTime() - m_active_frame_st;
+					if(m_pre_decode_time == 0){
 						m_pre_decode_time = pre_decode_time;
 					}else{
 						m_pre_decode_time = m_pre_decode_time*0.9 + pre_decode_time*0.1;
@@ -44,9 +44,10 @@ function MjpegDecoder() {
 					var blob = new Blob(m_active_frame, {
 						type : "image/jpeg"
 					});
+					var active_frame_st = m_active_frame_st;
 					createImageBitmap(blob).then(image => {
-						var post_decode_time = new Date().getTime() - m_active_frame_st[m_frame_num];
-						if(m_frame_num == 0){
+						var post_decode_time = new Date().getTime() - active_frame_st;
+						if(m_post_decode_time == 0){
 							m_post_decode_time = post_decode_time;
 						}else{
 							m_post_decode_time = m_post_decode_time*0.9 + post_decode_time*0.1;
@@ -54,11 +55,9 @@ function MjpegDecoder() {
 						if((m_frame_num % 100) == 0){
 							console.log("MJPEG post dcode time : " + m_post_decode_time + "ms");
 						}
-						
-						self.postMessage({ type:'image', frame_info, image, time : m_active_frame_st[m_frame_num] }, [image]);
-
 						m_frame_num++;
-						delete m_active_frame_st[m_frame_num];
+						
+						self.postMessage({ type:'image', frame_info, image, time : active_frame_st }, [image]);
 					});
 
 					m_active_frame = null;
