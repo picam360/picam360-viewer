@@ -330,7 +330,11 @@
 					} else if (now - m_texture_tmp_time > 200) {
 						var value = (m_texture_num - m_texture_tmp_num) * 1000
 							/ (now - m_texture_tmp_time);
-						m_texture_fps = m_texture_fps * 0.9 + value * 0.1;
+						if(m_texture_fps == 0){
+							m_texture_fps = value;
+						}else{
+							m_texture_fps = m_texture_fps * 0.9 + value * 0.1;
+						}
 						m_texture_tmp_num = m_texture_num;
 						m_texture_tmp_time = now;
 					}
