@@ -455,8 +455,8 @@
 				}
 			},
 
-			init : function(options, callback) {
-				m_canvas = options.canvas;
+			init : function(_options, callback) {
+				m_canvas = _options.canvas;
 
 				function _callback() {
 					self.updateCanvasSize();
@@ -477,13 +477,13 @@
 				get_vr_display();
 				var options = {
 					devicePixelRatio : window.devicePixelRatio,
-					antialias : options.antialias,
-					fxaa_enabled : options.fxaa_enabled,
-					mesh_resolution : options.mesh_resolution,
-					vr_margin : options.vr_margin,
-					eye_offset : options.eye_offset,
+					antialias : _options.antialias,
+					fxaa_enabled : _options.fxaa_enabled,
+					mesh_resolution : _options.mesh_resolution,
+					vr_margin : _options.vr_margin,
+					eye_offset : _options.eye_offset,
 				};
-				if (!m_vr_display && options.offscreen && 'transferControlToOffscreen' in m_canvas) {
+				if (!m_vr_display && _options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
 					m_canvas_act = m_canvas.transferControlToOffscreen();
 					options.canvas = m_canvas_act;
@@ -503,7 +503,7 @@
 							}
 						});
 
-					self.skip_frame = options.offscreen_skip_frame || 0;
+					self.skip_frame = _options.offscreen_skip_frame || 0;
 				} else {
 					m_canvas_act = m_canvas;
 					options.canvas = m_canvas_act;
@@ -518,7 +518,7 @@
 
 					document.head.appendChild(script);
 
-					self.skip_frame = options.skip_frame || 0;
+					self.skip_frame = _options.skip_frame || 0;
 				}
 			},
 

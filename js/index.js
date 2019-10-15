@@ -191,17 +191,28 @@ var app = (function() {
 				}
 				return null;
 			},
-			send_command: function(cmd) {
+			send_command: function(cmd, update) {
 				if (cmd.indexOf(UPSTREAM_DOMAIN) == 0) {
-					cmd2upstream_list.push(cmd.substr(UPSTREAM_DOMAIN.length));
+					cmd = cmd.substr(UPSTREAM_DOMAIN.length);
+					if(update){
+						for (var i = 0; i < cmd2upstream_list.length; i++) {
+							var cmd_s1 = cmd.split(' ')[0];
+							var cmd_s2 = cmd2upstream_list[i].split(' ')[0];
+							if(cmd_s1 == cmd_s2){
+								cmd2upstream_list[i] = cmd;
+								return;
+							}
+						}
+					}
+					cmd2upstream_list.push(cmd);
 					return;
 				}
 				for (var i = 0; i < plugins.length; i++) {
 					if (plugins[i].command_handler) {
-						plugins[i].command_handler(cmd);
+						plugins[i].command_handler(cmd, update);
 					}
 				}
-				handle_command(cmd);
+				handle_command(cmd, update);
 			},
 			send_event: function(sender, event) {
 				for (var i = 0; i < plugins.length; i++) {
@@ -651,7 +662,7 @@ var app = (function() {
 					"\" value=\"" + value + "\" />"
 				rtcp.sendpacket(rtcp.buildpacket(cmd, PT_CMD));
 				app.rtcp_command_id++;
-			}, 20); // 50hz
+			}, 33); // 30hz
 			var connection_callback = function(conn) {
 				var is_init = false;
 				var init_con = function() {
@@ -818,7 +829,7 @@ var app = (function() {
 				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
 				cmd += sprintf(" fov=%.3f client_key=%s server_key=%s", fov
 					.toFixed(0), client_key, server_key);
-				self.plugin_host.send_command(cmd);
+				self.plugin_host.send_command(cmd, true);
 			}
 
 			m_video_handler.handle_frame(type, data, width, height, info, time);
