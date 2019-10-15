@@ -1051,7 +1051,7 @@ var app = (function() {
 			// websocket
 			var ws_url = "ws://" + server_url.slice(server_url.indexOf("://")+3);
 			var socket = new WebSocket(ws_url);
-			//socket.binaryType = 'arraybuffer';//blob is faster?
+			socket.binaryType = 'arraybuffer';//blob or arraybuffer
 			socket.addEventListener('open', function (event) {
 				callback(socket);
 			});
