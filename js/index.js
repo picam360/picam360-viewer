@@ -54,10 +54,7 @@ var app = (function() {
 	var rtp;
 	var rtcp;
 	// video decoder
-	var mjpeg_decoder;
-	var h264_decoder;
-	var h265_decoder;
-	var i420_decoder;
+	var m_video_decoders = [];
 	var opus_decoder;
 	var audio_first_packet_s = 0;
 	// motion processer unit
@@ -183,6 +180,9 @@ var app = (function() {
 		}
 
 		var self = {
+			get_timediff_ms: function() {
+				return core.timediff_ms;
+			},
 			get_plugin: function(name) {
 				for (var i = 0; i < plugins.length; i++) {
 					if (name == plugins[i].name) {
@@ -254,7 +254,7 @@ var app = (function() {
 					"STEREO_DISABLED");
 
 				var cmd = UPSTREAM_DOMAIN;
-				cmd += "set_stereo " + (value ? 1 : 0);
+				cmd += "set_vostream_param stereo=" + (value ? 1 : 0);
 				self.send_command(cmd);
 			},
 			set_audio: function(value) {
@@ -571,7 +571,7 @@ var app = (function() {
 						var latency = new Date().getTime() /
 							1000 -
 							(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
-							self.valid_timediff / 1000;
+							self.timediff_ms / 1000;
 						console.log("packet latency : seq=" + sequencenumber +
 							", latency=" + latency + "sec");
 					}
@@ -582,28 +582,16 @@ var app = (function() {
 								var latency = new Date().getTime() /
 									1000 -
 									(packet.GetTimestamp() + packet.GetSsrc() / 1E6) +
-									self.valid_timediff / 1000;
+									self.timediff_ms / 1000;
 								console.log("audio_first_packet:latency:" +
 									latency);
 								audio_first_packet_s = new Date().getTime() / 1000;
 							}
 						}
 					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
-						if (h264_decoder) {
-							h264_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
-						if (h265_decoder) {
-							h265_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
-						if (i420_decoder) {
-							i420_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
-						}
-						if (mjpeg_decoder) {
-							mjpeg_decoder.decode(packet.GetPayload(), packet
-								.GetPayloadLength());
+						for(var decoder of m_video_decoders) {
+							decoder.decode(packet.GetPayload(), packet
+									.GetPayloadLength());
 						}
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
@@ -672,7 +660,7 @@ var app = (function() {
 					rtcp.set_connection(conn);
 					callback();
 				}
-				var valid_timediff = 0;
+				var timediff_ms = 0;
 				var min_rtt = 0;
 				var ping_cnt = 0;
 				if (query['frame-mode']) {
@@ -733,10 +721,10 @@ var app = (function() {
 									ping_cnt++;
 									var now = new Date().getTime();
 									var rtt = now - parseInt(value[0]);
-									var timediff = value[1] - (now - rtt / 2);
+									var _timediff_ms = value[1] - (now - rtt / 2);
 									if (min_rtt == 0 || rtt < min_rtt) {
 										min_rtt = rtt;
-										valid_timediff = timediff;
+										timediff_ms = _timediff_ms;
 									}
 									console.log(name + ":" + value + ":rtt=" +
 										rtt);
@@ -748,16 +736,16 @@ var app = (function() {
 										rtcp.sendpacket(conn, pack);
 										return;
 									} else {
-										var cmd = "<picam360:command id=\"0\" value=\"set_timediff " +
-											valid_timediff + "\" />";
+										var cmd = "<picam360:command id=\"0\" value=\"set_timediff_ms " +
+											timediff_ms + "\" />";
 										var pack = rtcp
 											.buildpacket(cmd, PT_CMD);
 										rtcp.sendpacket(conn, pack);
 
 										console.log("min_rtt=" + min_rtt +
-											":valid_timediff:" +
-											valid_timediff);
-										self.valid_timediff = valid_timediff;
+											":timediff_ms:" +
+											timediff_ms);
+										self.timediff_ms = timediff_ms;
 									}
 								}
 							}
@@ -795,24 +783,12 @@ var app = (function() {
 			}
 		},
 
-		handle_frame: function(type, data, width, height, info, time) {
+		handle_frame: function(type, data, width, height, info, time_ms) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
 				m_frame_active = true;
-			} {
-				var server_key = "";
-				if (info) {
-					var split = info.split(' ');
-					for (var i = 0; i < split.length; i++) {
-						var separator = (/[=,\"]/);
-						var _split = split[i].split(separator);
-						if (_split[0] == "server_key") {
-							server_key = _split[2];
-						}
-					}
-				}
-				var client_key = new Date().getTime().toString();
+			} {				
 				var fov = m_view_fov;
 				var view_quat = m_video_handler.get_view_quaternion();
 				if (m_afov) {
@@ -826,13 +802,13 @@ var app = (function() {
 					view_quat = m_video_handler.horizon_opt_view_quaternion(view_quat);
 				}
 				var cmd = UPSTREAM_DOMAIN;
-				cmd += sprintf("set_view_quaternion quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
-				cmd += sprintf(" fov=%.3f client_key=%s server_key=%s", fov
-					.toFixed(0), client_key, server_key);
+				cmd += sprintf("set_vostream_param view_quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
+				cmd += sprintf(" fov=%.3f", fov.toFixed(0));
 				self.plugin_host.send_command(cmd, true);
 			}
 
-			m_video_handler.handle_frame(type, data, width, height, info, time);
+			time_ms -= self.timediff_ms;
+			m_video_handler.handle_frame(type, data, width, height, info, time_ms);
 		},
 
 		handle_audio_frame: function(left, right) {
@@ -845,13 +821,7 @@ var app = (function() {
 			m_audio_handler.pushAudioStream(left, right);
 		},
 
-		init_webgl: function() {
-			// video decoder
-			h264_decoder = H264Decoder();
-			mjpeg_decoder = MjpegDecoder();
-			h265_decoder = H265Decoder();
-			i420_decoder = I420Decoder();
-			
+		init_webgl: function() {			
 			m_audio_handler = new AudioHandler();
 			// webgl handling
 			m_video_handler = new VideoHandler();
@@ -893,15 +863,36 @@ var app = (function() {
 				}
 				m_video_handler.vertex_type_forcibly = m_vertex_type;
 
-				h264_decoder.set_frame_callback(self.handle_frame);
-				mjpeg_decoder.set_frame_callback(self.handle_frame);
-				h265_decoder.set_frame_callback(self.handle_frame);
+				// video decoder
+				var h264_decoder = H264Decoder();
+				var mjpeg_decoder = MjpegDecoder();
+				var h265_decoder = H265Decoder();
+				var i420_decoder = I420Decoder();
+				
+				h264_decoder.set_frame_callback((type) => {
+					h264_decoder.set_frame_callback(self.handle_frame);
+					m_video_decoders = [h264_decoder];
+				});
+				mjpeg_decoder.set_frame_callback((type) => {
+					mjpeg_decoder.set_frame_callback(self.handle_frame);
+					m_video_decoders = [mjpeg_decoder];
+				});
+				h265_decoder.set_frame_callback((type) => {
+					h265_decoder.set_frame_callback(self.handle_frame);
+					m_video_decoders = [h265_decoder];
+				});
 				i420_decoder.set_frame_callback((type) => {
 					if(!query['skip-frame']){
 						m_video_handler.skip_frame=0;
 					}
 					i420_decoder.set_frame_callback(self.handle_frame);
+					m_video_decoders = [i420_decoder];
 				});
+				
+				m_video_decoders.push(h264_decoder);
+				m_video_decoders.push(mjpeg_decoder);
+				m_video_decoders.push(h265_decoder);
+				m_video_decoders.push(i420_decoder);
 
 				// opus_decoder = OpusDecoder();
 				// opus_decoder.set_frame_callback(self.handle_audio_frame);
@@ -1248,18 +1239,6 @@ var app = (function() {
 									"<br/>";
 								status += "latency:" +
 									(texture_info.latency * 1000).toFixed(0) +
-									"ms<br/>";
-								status += "processed:" +
-									(texture_info.processed * 1000).toFixed(0) +
-									"ms<br/>";
-								status += "encoded:" +
-									(texture_info.encoded * 1000).toFixed(0) +
-									"ms<br/>";
-								status += "decoded:" +
-									(texture_info.decoded * 1000).toFixed(0) +
-									"ms<br/>";
-								status += "rtt:" +
-									(texture_info.rtt * 1000).toFixed(0) +
 									"ms<br/>";
 								status += "codec:" + texture_info.codec + "<br/>";
 								status += "<br/>";

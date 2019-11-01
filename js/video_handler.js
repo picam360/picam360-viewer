@@ -30,6 +30,7 @@
 	function VideoHandler() {
 		var m_canvas;
 		var m_canvas_act;
+		var m_latency = 0;
 
 		// focal point tune
 		var m_view_quat = new THREE.Quaternion();
@@ -43,13 +44,8 @@
 // var m_view_av_n = new THREE.Vector3(0, 0, 1);
 
 		// diagnotics
-		var m_texture_latency = 0;
 		var m_texture_fps = 0;
 		var m_texture_num = 0;
-		var m_texture_idle_time = 0;
-		var m_texture_processed = 0;
-		var m_texture_encoded = 0;
-		var m_texture_decoded = 0;
 		var m_texture_tmp_time = 0;
 		var m_texture_tmp_num = 0;
 		
@@ -175,19 +171,15 @@
 			skip_frame : 0,
 
 			get_info : function() {
-				var rtt = m_texture_latency - m_texture_processed
-					- m_texture_encoded - m_texture_decoded;
+				if(m_omvr) {
+					m_latency = m_omvr.get_latency();
+				}
 				var info = {
-					latency : m_texture_latency,
+					latency : m_latency,
 					video_fps : m_texture_fps,
 					animate_fps : m_animate_fps,
-					idle_time : m_texture_idle_time,
-					processed : m_texture_processed,
-					encoded : m_texture_encoded,
-					decoded : m_texture_decoded,
 					codec : self.codec,
 					bitrate : self.bitrate,
-					rtt : rtt,
 					offscreen : (m_worker != null),
 				};
 				return info;
@@ -270,41 +262,11 @@
 					if (map["fov"]) {
 						m_texture_fov = parseFloat(map["fov"][2]);
 					}
-					if (map["client_key"]) { // latency
-						var idle_time = 0;
-						if (map["idle_time"]) {
-							idle_time = parseFloat(map["idle_time"][2]);
-						}
-						var value = (now - parseFloat(map["client_key"][2]))
-							/ 1000 - idle_time;
-						if (!isNaN(value)) {
-							m_texture_latency = m_texture_latency * 0.9 + value
-								* 0.1;
-						}
-					}
-					if (map["idle_time"]) {
-						var value = parseFloat(map["idle_time"][2]);
-						m_texture_idle_time = m_texture_idle_time * 0.9 + value
-							* 0.1;
-					}
-					if (map["frame_processed"]) {
-						var value = parseFloat(map["frame_processed"][2]);
-						m_texture_processed = m_texture_processed * 0.9 + value
-							* 0.1;
-					}
-					if (map["encoded"]) {
-						var value = parseFloat(map["encoded"][2]);
-						m_texture_encoded = m_texture_encoded * 0.9 + value
-							* 0.1;
-
-					}
 					if (map["uuid"]) {
 						uuid = uuidParse.parse(map["uuid"][2]);
-					}
-					{// decoded
-						var decoded = (now - time) / 1000;
-						m_texture_decoded = m_texture_decoded * 0.9 + decoded
-							* 0.1;
+					}					
+					if(map["codec"]){
+						self.codec = map["codec"][2];
 					}
 					if (map["mode"]) {
 						switch (map["mode"][2]) {
@@ -529,7 +491,7 @@
 			codec : '',
 			bitrate : 0,
 			set_stream: function(obj, receiver) {
-				{//stats
+				{// stats
 					var last_timestamp = 0;
 					var last_bytesReceived = 0;
 					setInterval(() => {
@@ -600,7 +562,7 @@
 						var last_currentTime = m_video.currentTime;
 						var last_uuid = new Uint8Array(16);
 						setInterval(function() {
-							//var st = new Date().getTime();
+							// var st = new Date().getTime();
 							var currentTime = m_video.currentTime;
 							if(currentTime == last_currentTime){
 								return;
@@ -623,53 +585,53 @@
 								}else{
 									last_uuid = uuid;
 								}
-								//console.log("img:"+uuid);
+								// console.log("img:"+uuid);
 								m_worker.postMessage({
 									type : 'setFrameImage',
 									img : imageBitmap,
 									uuid,
 								}, [imageBitmap]);
 							});
-							//var et = new Date().getTime();
-							//console.log("time:"+(et-st));
+							// var et = new Date().getTime();
+							// console.log("time:"+(et-st));
 						}, 10); // 100hz
 					}
-//					function init_video(){
-//						if(!m_need_to_push){
-//							try{
-//								var uuid_zero = new Uint8Array(16);
-//								m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
-//								var uuid = get_uuid_from_canvas(m_videoImageContext);
-//								if (uuid_abs(uuid_zero, uuid) == 0){
-//									m_need_to_push = true;
-//								}
-//							}catch{
-//								m_need_to_push = true;
-//							}
-//						}
-//						if (m_need_to_push) {//need to play
-//							function createButton(text, x, y, context, func) {
-//								var button = document.createElement("input");
-//								button.type = "button";
-//								button.value = text;
-//								button.style.position = 'absolute';
-//								button.style.left = window.innerWidth * x + 'px';
-//								button.style.top = window.innerHeight * y + 'px';
+// function init_video(){
+// if(!m_need_to_push){
+// try{
+// var uuid_zero = new Uint8Array(16);
+// m_videoImageContext.drawImage(m_video, 0, 0, 16, 1, 0, 0, 16, 1);
+// var uuid = get_uuid_from_canvas(m_videoImageContext);
+// if (uuid_abs(uuid_zero, uuid) == 0){
+// m_need_to_push = true;
+// }
+// }catch{
+// m_need_to_push = true;
+// }
+// }
+// if (m_need_to_push) {//need to play
+// function createButton(text, x, y, context, func) {
+// var button = document.createElement("input");
+// button.type = "button";
+// button.value = text;
+// button.style.position = 'absolute';
+// button.style.left = window.innerWidth * x + 'px';
+// button.style.top = window.innerHeight * y + 'px';
 //			
-//								button.onclick = func;
-//								context.appendChild(button);
-//							}
-//							createButton('video start', 0.5, 0.5, document.body, (e) => {
-//								m_video.play().catch((err) => {
-//									console.log(err);
-//								});
-//								start_video_poling();
-//								document.body.removeChild(e.srcElement);
-//							});
-//						} else {
-//							start_video_poling();
-//						}
-//					}
+// button.onclick = func;
+// context.appendChild(button);
+// }
+// createButton('video start', 0.5, 0.5, document.body, (e) => {
+// m_video.play().catch((err) => {
+// console.log(err);
+// });
+// start_video_poling();
+// document.body.removeChild(e.srcElement);
+// });
+// } else {
+// start_video_poling();
+// }
+// }
 					function try_play() {
 						m_video.play().then(()=>{
 						}).catch((err) =>{
@@ -740,8 +702,9 @@
 			
 			view_quat : new THREE.Quaternion(),
 			get_view_quaternion : function(){
-				//console.log(self.view_quat._x+":"+self.view_quat._y+":"+self.view_quat._z+";");
-				return self.view_quat.clone();//clone() necessary no to be changed
+				// console.log(self.view_quat._x+":"+self.view_quat._y+":"+self.view_quat._z+";");
+				return self.view_quat.clone();// clone() necessary no to be
+												// changed
 			},
 
 			animate : function(fov) {
