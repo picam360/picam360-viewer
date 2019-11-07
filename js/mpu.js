@@ -130,7 +130,7 @@ function MPU(plugin_host) {
 							}
 						}
 					});
-			}
+			});
 		}
 	};
 	return self;
