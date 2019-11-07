@@ -163,17 +163,33 @@ function H264Decoder(callback) {
 					}
 					m_active_frame.shift();
 				}
-				for (var i = 0; i < m_active_frame.length; i++) {
-					if (worker) {
-						worker.postMessage({
-							buf : m_active_frame[i],
-							offset : 0,
-							length : m_active_frame[i].length,
-							info : null
-						}, [m_active_frame[i].buffer]); // Send data to our worker.
-					} else if (decoder) {
-						decoder.decode(m_active_frame[i], null);
+				
+				var nal_buffer;
+				if(m_active_frame.length == 0){
+					return;
+				} else if(m_active_frame.length == 1){
+					nal_buffer =  m_active_frame[0];
+				} else {
+					var len = 0;
+					for (var i = 0; i < m_active_frame.length; i++) {
+						len += m_active_frame[i].length;
 					}
+					nal_buffer = new Uint8Array(len);
+					var cur = 0;
+					for (var i = 0; i < m_active_frame.length; i++) {
+						nal_buffer.set(m_active_frame[i], cur);
+						cur += m_active_frame[i].length;
+					}
+				}
+				if (worker) {
+					worker.postMessage({
+						buf : nal_buffer,
+						offset : 0,
+						length : nal_buffer.length,
+						info : null
+					}, [nal_buffer.buffer]); // Send data to our worker.
+				} else if (decoder) {
+					decoder.decode(nal_buffer, null);
 				}
 
 				m_active_frame = null;
