@@ -252,14 +252,11 @@ var app = (function() {
 					if (DeviceMotionEvent 
 							&& DeviceMotionEvent.requestPermission
 							&& typeof DeviceMotionEvent.requestPermission === 'function') {
-						document.addEventListener("touchstart", (e) => {
-							document.removeEventListener("touchstart", arguments.callee, false);
-							DeviceMotionEvent.requestPermission().then(response => {
-								if (response === 'granted') {
-									console.log("ok");
-								}
-							}).catch(console.error);
-						});
+						DeviceMotionEvent.requestPermission().then(response => {
+							if (response === 'granted') {
+								console.log("ok");
+							}
+						}).catch(console.error);
 					}
 				} catch {}
 				
