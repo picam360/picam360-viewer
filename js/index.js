@@ -196,15 +196,17 @@ var app = (function() {
 					cmd = cmd.substr(UPSTREAM_DOMAIN.length);
 					if(update){
 						for (var i = 0; i < cmd2upstream_list.length; i++) {
-							var cmd_s1 = cmd.split(' ')[0];
-							var cmd_s2 = cmd2upstream_list[i].split(' ')[0];
-							if(cmd_s1 == cmd_s2){
-								cmd2upstream_list[i] = cmd;
-								return;
+							if(cmd2upstream_list[i].update){
+								var cmd_s1 = cmd.split(' ')[0];
+								var cmd_s2 = cmd2upstream_list[i].cmd.split(' ')[0];
+								if(cmd_s1 == cmd_s2){
+									cmd2upstream_list[i] = {cmd, update};
+									return;
+								}
 							}
 						}
 					}
-					cmd2upstream_list.push(cmd);
+					cmd2upstream_list.push({cmd, update});
 					return;
 				}
 				for (var i = 0; i < plugins.length; i++) {
@@ -645,10 +647,10 @@ var app = (function() {
 				if (!cmd2upstream_list.length) {
 					return;
 				}
-				var value = cmd2upstream_list.shift();
-				var cmd = "<picam360:command id=\"" + app.rtcp_command_id +
-					"\" value=\"" + value + "\" />"
-				rtcp.sendpacket(rtcp.buildpacket(cmd, PT_CMD));
+				var {cmd} = cmd2upstream_list.shift();
+				var xml = "<picam360:command id=\"" + app.rtcp_command_id +
+					"\" value=\"" + cmd + "\" />"
+				rtcp.sendpacket(rtcp.buildpacket(xml, PT_CMD));
 				app.rtcp_command_id++;
 			}, 33); // 30hz
 			var connection_callback = function(conn) {
@@ -1046,7 +1048,7 @@ var app = (function() {
 			// websocket
 			var ws_url = "ws://" + server_url.slice(server_url.indexOf("://")+3);
 			var socket = new WebSocket(ws_url);
-			socket.binaryType = 'arraybuffer';//blob or arraybuffer
+			socket.binaryType = 'arraybuffer';// blob or arraybuffer
 			socket.addEventListener('open', function (event) {
 				callback(socket);
 			});
@@ -1087,7 +1089,7 @@ var app = (function() {
 					var bitrate = 0;
 					var lines = offer.payload.sdp.sdp.split('\r\n');
 					for(var i=0;i<lines.length;i++){
-						//vp9
+						// vp9
 						if(lines[i].startsWith('b=AS:')){
 							bitrate = parseInt(lines[i].replace('b=AS:', ''));
 						}
@@ -1098,19 +1100,19 @@ var app = (function() {
 						console.log('Created answer.');
 						var lines = sdp.sdp.split('\r\n');
 						for(var i=0;i<lines.length;i++){
-							//stereo
+							// stereo
 							if(lines[i].startsWith('a=fmtp:111')){
 								lines[i] = lines[i].replace(
 									/a=fmtp:111/,
 									'a=fmtp:111 stereo=1\r\na=fmtp:111');
 							}
-							//vp9
+							// vp9
 							if(lines[i].startsWith('m=video 9')){
 								lines[i] = lines[i].replace(
 										'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 127',
 										'm=video 9 UDP/TLS/RTP/SAVPF 98 96 97 99 100 101 127');
 							}
-							//bitrate
+							// bitrate
 							if(lines[i].startsWith('m=video 9')){
 								if (bitrate) {
 									lines[i] = lines[i] + '\r\n' +
