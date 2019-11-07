@@ -75,62 +75,75 @@ function MPU(plugin_host) {
 			alert('Compass Error: ' + compassError.code);
 		},
 
+		_initDeviceOrientationEventLisener : function() {
+			window
+				.addEventListener('deviceorientation', function(attitude) {
+					if (attitude['detail']) {
+						attitude = attitude['detail'];
+					}
+					var time = Date.now();
+					if (attitude.alpha != null) {
+						var quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(attitude.beta), THREE.Math
+								.degToRad(attitude.alpha), THREE.Math
+								.degToRad(-attitude.gamma), "YXZ"));
+						var offset_quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(0), THREE.Math
+								.degToRad(-window.orientation), THREE.Math
+								.degToRad(0), "YXZ"));
+						quat = quat.multiply(offset_quat);
+
+						m_north = -attitude.webkitCompassHeading
+							- window.orientation;
+						var euler = new THREE.Euler()
+							.setFromQuaternion(quat, "YXZ");
+						if (Math.abs(euler.x * 180 / Math.PI) < 45
+							&& Math.abs(euler.z * 180 / Math.PI) < 45) {
+							m_north_diff = euler.y * 180 / Math.PI - m_north;
+						}
+						var north_diff_quat = new THREE.Quaternion()
+							.setFromEuler(new THREE.Euler(THREE.Math
+								.degToRad(0), THREE.Math
+								.degToRad(-m_north_diff), THREE.Math
+								.degToRad(0), "YXZ"));
+						quat = north_diff_quat.multiply(quat);
+
+						m_quat = quat;
+						if (time - m_debugoutput_time > 500) {
+							var euler = new THREE.Euler()
+								.setFromQuaternion(quat, "YXZ");
+							m_debugoutput_time = time;
+							// console.log(attitude);
+							m_plugin_host
+								.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", m_north, m_north_diff, euler.x
+									* 180 / Math.PI, euler.y * 180 / Math.PI, euler.z
+									* 180 / Math.PI), 5);
+						}
+					}
+				});
+		},
+
 		initDeviceOrientationEventLisener : function() {
-			document.addEventListener("touchstart", (e) => {
-				document.removeEventListener("touchstart", arguments.callee, false);
+			try{
 				if (DeviceMotionEvent 
 						&& DeviceMotionEvent.requestPermission
 						&& typeof DeviceMotionEvent.requestPermission === 'function') {
-					DeviceMotionEvent.requestPermission();
-				}
-				window
-					.addEventListener('deviceorientation', function(attitude) {
-						if (attitude['detail']) {
-							attitude = attitude['detail'];
-						}
-						var time = Date.now();
-						if (attitude.alpha != null) {
-							var quat = new THREE.Quaternion()
-								.setFromEuler(new THREE.Euler(THREE.Math
-									.degToRad(attitude.beta), THREE.Math
-									.degToRad(attitude.alpha), THREE.Math
-									.degToRad(-attitude.gamma), "YXZ"));
-							var offset_quat = new THREE.Quaternion()
-								.setFromEuler(new THREE.Euler(THREE.Math
-									.degToRad(0), THREE.Math
-									.degToRad(-window.orientation), THREE.Math
-									.degToRad(0), "YXZ"));
-							quat = quat.multiply(offset_quat);
-	
-							m_north = -attitude.webkitCompassHeading
-								- window.orientation;
-							var euler = new THREE.Euler()
-								.setFromQuaternion(quat, "YXZ");
-							if (Math.abs(euler.x * 180 / Math.PI) < 45
-								&& Math.abs(euler.z * 180 / Math.PI) < 45) {
-								m_north_diff = euler.y * 180 / Math.PI - m_north;
+					document.addEventListener("touchstart", (e) => {
+						document.removeEventListener("touchstart", arguments.callee, false);
+						DeviceMotionEvent.requestPermission().then(response => {
+							if (response === 'granted') {
+								self._initDeviceOrientationEventLisener();
 							}
-							var north_diff_quat = new THREE.Quaternion()
-								.setFromEuler(new THREE.Euler(THREE.Math
-									.degToRad(0), THREE.Math
-									.degToRad(-m_north_diff), THREE.Math
-									.degToRad(0), "YXZ"));
-							quat = north_diff_quat.multiply(quat);
-	
-							m_quat = quat;
-							if (time - m_debugoutput_time > 500) {
-								var euler = new THREE.Euler()
-									.setFromQuaternion(quat, "YXZ");
-								m_debugoutput_time = time;
-								// console.log(attitude);
-								m_plugin_host
-									.log(sprintf("north=%.3f, diff=%.3f, x=%.3f, y=%.3f, z=%.3f", m_north, m_north_diff, euler.x
-										* 180 / Math.PI, euler.y * 180 / Math.PI, euler.z
-										* 180 / Math.PI), 5);
-							}
-						}
+						}).catch(console.error);
 					});
-			});
+				} else {
+					self._initDeviceOrientationEventLisener();
+				}
+			} catch {
+				self._initDeviceOrientationEventLisener();
+			}
 		}
 	};
 	return self;
