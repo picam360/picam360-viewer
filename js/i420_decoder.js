@@ -63,24 +63,30 @@ function I420Decoder(callback) {
 					var nal_len = 0;
 					var _nal_len = 0;
 					if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) { // sei
-						var str = String.fromCharCode.apply("", m_active_frame[0]
+						var frame_info = String.fromCharCode.apply("", m_active_frame[0]
 							.subarray(5), 0);
-						var split = str.split(' ');
 						var uuid = null;
 						var width = 1024;
 						var height = 512;
+						var timestamp = 0;
+						var map = [];
+						var split = frame_info.split(' ');
 						for (var i = 0; i < split.length; i++) {
 							var separator = (/[=,\"]/);
 							var _split = split[i].split(separator);
-							if (_split[0] == "uuid") {
-								uuid = _split[2];
-							}
-							if (_split[0] == "frame_width") {
-								width = parseInt(_split[2]);
-							}
-							if (_split[0] == "frame_height") {
-								height = parseInt(_split[2]);
-							}
+							map[_split[0]] = _split;
+						}
+						if (map['uuid']) {
+							uuid = map['uuid'][2];
+						}
+						if (map['frame_width']) {
+							width = parseInt(map['frame_width'][2]);
+						}
+						if (map['frame_height']) {
+							height = parseInt(map['frame_height'][2]);
+						}
+						if(map['timestamp']){
+							timestamp = parseInt(map['timestamp'][2])*1000 + parseInt(map['timestamp'][3])/1000;
 						}
 						if (!uuid) {
 							return;
@@ -88,7 +94,7 @@ function I420Decoder(callback) {
 						if (m_frame_callback) {
 							if(m_active_frame.length == 1){
 								m_frame_callback("frame_info", null, 0, 0,
-										str, new Date().getTime());//for webrtc
+										frame_info, timestamp);//for webrtc
 							}else{
 								var image = new Uint8Array(width*height*1.5);
 								var cur = 0;
@@ -96,7 +102,7 @@ function I420Decoder(callback) {
 									image.set(m_active_frame[i], cur);
 									cur += m_active_frame[i].length;
 								}
-								m_frame_callback("yuv", image, width, height, str, new Date().getTime());
+								m_frame_callback("yuv", image, width, height, frame_info, timestamp);
 							}
 						}
 					}

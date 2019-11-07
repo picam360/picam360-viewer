@@ -783,7 +783,7 @@ var app = (function() {
 			}
 		},
 
-		handle_frame: function(type, data, width, height, info, time_ms) {
+		handle_frame: function(type, data, width, height, info, timestamp) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
@@ -807,8 +807,8 @@ var app = (function() {
 				self.plugin_host.send_command(cmd, true);
 			}
 
-			time_ms -= self.timediff_ms;
-			m_video_handler.handle_frame(type, data, width, height, info, time_ms);
+			timestamp -= self.timediff_ms;
+			m_video_handler.handle_frame(type, data, width, height, info, timestamp);
 		},
 
 		handle_audio_frame: function(left, right) {
@@ -872,14 +872,17 @@ var app = (function() {
 				h264_decoder.set_frame_callback((type) => {
 					h264_decoder.set_frame_callback(self.handle_frame);
 					m_video_decoders = [h264_decoder];
+					m_video_handler.codec = "h264";
 				});
 				mjpeg_decoder.set_frame_callback((type) => {
 					mjpeg_decoder.set_frame_callback(self.handle_frame);
 					m_video_decoders = [mjpeg_decoder];
+					m_video_handler.codec = "mjpeg";
 				});
 				h265_decoder.set_frame_callback((type) => {
 					h265_decoder.set_frame_callback(self.handle_frame);
 					m_video_decoders = [h265_decoder];
+					m_video_handler.codec = "h265";
 				});
 				i420_decoder.set_frame_callback((type) => {
 					if(!query['skip-frame']){
@@ -887,6 +890,7 @@ var app = (function() {
 					}
 					i420_decoder.set_frame_callback(self.handle_frame);
 					m_video_decoders = [i420_decoder];
+					m_video_handler.codec = "i420";
 				});
 				
 				m_video_decoders.push(h264_decoder);
@@ -1238,7 +1242,7 @@ var app = (function() {
 								status += "r-fps:" + texture_info.animate_fps.toFixed(3) +
 									"<br/>";
 								status += "latency:" +
-									(texture_info.latency * 1000).toFixed(0) +
+									texture_info.latency_msec.toFixed(0) +
 									"ms<br/>";
 								status += "codec:" + texture_info.codec + "<br/>";
 								status += "<br/>";

@@ -58,8 +58,6 @@ function MjpegDecoder() {
 					});
 					var active_frame_st = m_active_frame_st;
 					createImageBitmap(blob).then(image => {
-						image.codec = 'jpeg';
-						
 						var post_decode_time = new Date().getTime() - active_frame_st;
 						if(m_post_decode_time == 0){
 							m_post_decode_time = post_decode_time;

@@ -60,7 +60,7 @@ function H265Decoder(callback) {
 					}
 					m_frame_callback("yuv", data.buf, data.width, data.height, info
 						? info.info
-						: null, info ? info.time : 0);
+						: null, info ? info.timestamp : 0);
 				}
 				var frame_info = {};
 				for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
@@ -104,7 +104,7 @@ function H265Decoder(callback) {
 						m_frame_callback("yuv", image.get_yuv(), image
 							.get_width(), image.get_height(), info
 							? info.info
-							: null, info ? info.time : 0);
+							: null, info ? info.timestamp : 0);
 					}
 					var frame_info = {};
 					for (var i = m_decoded_frame_num + 1; i <= m_packet_frame_num; i++) {
@@ -178,66 +178,7 @@ function H265Decoder(callback) {
 			}
 			if (m_active_frame
 				&& (data[data.length - 2] == 0x56 && data[data.length - 1] == 0x43)) {// EOI
-				var nal_type = 0;
-				var nal_len = 0;
-				var _nal_len = 0;
-				if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) {// sei
-					var str = String.fromCharCode.apply("", m_active_frame[0]
-						.subarray(5), 0);
-					var split = str.split(' ');
-					var mode = null;
-					for (var i = 0; i < split.length; i++) {
-						var separator = (/[=,\"]/);
-						var _split = split[i].split(separator);
-						if (_split[0] == "mode") {
-							mode = _split[2];
-						}
-					}
-					if (m_frame_start && mode) { // avoid other than picam360 sei
-						m_packet_frame_num++;
-						m_frame_info[m_packet_frame_num] = {
-							info : str,
-							time : new Date().getTime()
-						};
-						// console.log("packet_frame_num:" +
-						// m_packet_frame_num
-						// + ":" + str);
-					}
-					m_active_frame.shift();
-				}
-				for (var i = 0; i < m_active_frame.length; i++) {
-					if (i == 0) {
-						nal_len = m_active_frame[i][0] << 24
-							| m_active_frame[i][1] << 16
-							| m_active_frame[i][2] << 8 | m_active_frame[i][3];
-						_nal_len += m_active_frame[i].length - 4;
-
-						// nal header 1byte
-						nal_type = (m_active_frame[i][4] & 0x7e) >> 1;
-					} else {
-						_nal_len += m_active_frame[i].length;
-					}
-				}
-				if (query['debug'] == 'stream') {
-					console.log("nal_len:" + nal_len + "," + _nal_len
-						+ ":nal_type:" + nal_type);
-				}
-				if (nal_len != _nal_len) {
-					console.log("error : " + nal_len + "!=" + _nal_len);
-					m_active_frame = null;
-					return;
-				}
-				var nal_buffer = new Uint8Array(nal_len);
-				_nal_len = 0;
-				for (var i = 0; i < m_active_frame.length; i++) {
-					if (i == 0) {
-						nal_buffer.set(m_active_frame[i].subarray(4), 0);
-						_nal_len += m_active_frame[i].length - 4;
-					} else {
-						nal_buffer.set(m_active_frame[i], _nal_len);
-						_nal_len += m_active_frame[i].length;
-					}
-				}
+				var nal_type = (m_active_frame[1][4] & 0x7e) >> 1;
 
 				if (!m_frame_start) {
 					if (nal_type == 32) {// vps
@@ -247,33 +188,55 @@ function H265Decoder(callback) {
 						return;
 					}
 				}
+				
+				if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) {// sei
+					var frame_info = String.fromCharCode.apply("", m_active_frame[0]
+						.subarray(5), 0);
+					var timestamp = 0;
+					var map = [];
+					var split = frame_info.split(' ');
+					for (var i = 0; i < split.length; i++) {
+						var separator = (/[=,\"]/);
+						var _split = split[i].split(separator);
+						map[_split[0]] = _split;
+					}
+					if(map['timestamp']){
+						timestamp = parseInt(map['timestamp'][2])*1000 + parseInt(map['timestamp'][3])/1000;
+					}
+					if (m_frame_start && timestamp) { // avoid other than picam360 sei
+						m_packet_frame_num++;
+						m_frame_info[m_packet_frame_num] = {
+							info : frame_info,
+							timestamp
+						};
+					}
+					m_active_frame.shift();
+				}
 
-				if (worker) {
-					worker.postMessage({
-						buf : nal_buffer.buffer,
-						offset : 0,
-						length : nal_len,
-						type : nal_type,
-						info : null
-					}, [nal_buffer.buffer]); // Send data to our worker.
-				} else {
-					decoder.push_data(annexb_sc);
-					decoder.push_data(nal_buffer);
-					decoder.flush();
-					decoder.decode(function(err) {
-						switch (err) {
-							case libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA :
-								console.log("waiting");
-								return;
-
-							default :
-								if (!libde265.de265_isOK(err)) {
-									console.log(libde265
-										.de265_get_error_text(err));
+				for (var i = 0; i < m_active_frame.length; i++) {
+					if (worker) {
+						worker.postMessage({
+							buf : m_active_frame[i],
+						}, [m_active_frame[i].buffer]); // Send data to our worker.
+					} else {
+						//decoder.push_data(annexb_sc);
+						decoder.push_data(m_active_frame[i]);
+						decoder.flush();
+						decoder.decode(function(err) {
+							switch (err) {
+								case libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA :
+									console.log("waiting");
 									return;
-								}
-						}
-					});
+
+								default :
+									if (!libde265.de265_isOK(err)) {
+										console.log(libde265
+											.de265_get_error_text(err));
+										return;
+									}
+							}
+						});
+					}
 				}
 
 				m_active_frame = null;

@@ -30,7 +30,7 @@
 	function VideoHandler() {
 		var m_canvas;
 		var m_canvas_act;
-		var m_latency = 0;
+		var m_latency_msec = 0;
 
 		// focal point tune
 		var m_view_quat = new THREE.Quaternion();
@@ -172,10 +172,10 @@
 
 			get_info : function() {
 				if(m_omvr) {
-					m_latency = m_omvr.get_latency();
+					m_latency_msec = m_omvr.get_latency_msec();
 				}
 				var info = {
-					latency : m_latency,
+					latency_msec : m_latency_msec,
 					video_fps : m_texture_fps,
 					animate_fps : m_animate_fps,
 					codec : self.codec,
@@ -237,7 +237,7 @@
 				}
 			},
 
-			handle_frame : function(type, data, width, height, info, time) {
+			handle_frame : function(type, data, width, height, info, timestamp) {
 				m_texture_num++;
 
 				var now = new Date().getTime();
@@ -264,9 +264,6 @@
 					}
 					if (map["uuid"]) {
 						uuid = uuidParse.parse(map["uuid"][2]);
-					}					
-					if(map["codec"]){
-						self.codec = map["codec"][2];
 					}
 					if (map["mode"]) {
 						switch (map["mode"][2]) {
@@ -339,9 +336,10 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							uuid,
+							timestamp,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, uuid);
+						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, uuid, timestamp);
 					}
 				} else if (type == "rgb") {
 					if(m_worker){
@@ -352,9 +350,10 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							uuid,
+							timestamp,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
+						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, uuid, timestamp);
 					}
 				} else if (type == "image") {
 					if(m_worker){
@@ -365,10 +364,10 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							uuid,
-							time,
+							timestamp,
 						}, [data]);
 					}else{
-						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid, time);
+						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid, timestamp);
 					}
 				} else if (type == "frame_info") {
 					if(m_worker){
@@ -378,9 +377,10 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							uuid,
+							timestamp,
 						});
 					}else{
-						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, uuid);
+						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, uuid, timestamp);
 					}
 				} else if (type == "blob") {
 					var img = new Image();
@@ -398,9 +398,10 @@
 								quat : m_tex_quat,
 								fov : m_texture_fov,
 								uuid,
+								timestamp,
 							}, [img]);
 						}else{
-							m_omvr.setTextureImage(vertex_type, value, m_tex_quat, m_texture_fov, uuid);
+							m_omvr.setTextureImage(vertex_type, value, m_tex_quat, m_texture_fov, uuid, timestamp);
 						}
 					}
 					if(m_image_decode_blocking){

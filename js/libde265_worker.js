@@ -23,7 +23,7 @@ decoder.set_image_callback(function(image) {
 });
 self.addEventListener('message', function(e) {
 	var nal_buffer = new Uint8Array(e.data.buf);
-	decoder.push_data(annexb_sc);
+	//decoder.push_data(annexb_sc);
 	decoder.push_data(nal_buffer);
 	decoder.flush();
 	decoder.decode(function(err) {
