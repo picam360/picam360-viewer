@@ -126,24 +126,24 @@ function MPU(plugin_host) {
 		},
 
 		initDeviceOrientationEventLisener : function() {
-			try{
-				if (DeviceMotionEvent 
-						&& DeviceMotionEvent.requestPermission
-						&& typeof DeviceMotionEvent.requestPermission === 'function') {
-					document.addEventListener("touchstart", (e) => {
-						document.removeEventListener("touchstart", arguments.callee, false);
-						DeviceMotionEvent.requestPermission().then(response => {
-							if (response === 'granted') {
-								self._initDeviceOrientationEventLisener();
-							}
-						}).catch(console.error);
-					});
-				} else {
-					self._initDeviceOrientationEventLisener();
-				}
-			} catch {
+//			try{
+//				if (DeviceMotionEvent 
+//						&& DeviceMotionEvent.requestPermission
+//						&& typeof DeviceMotionEvent.requestPermission === 'function') {
+//					document.addEventListener("touchstart", (e) => {
+//						document.removeEventListener("touchstart", arguments.callee, false);
+//						DeviceMotionEvent.requestPermission().then(response => {
+//							if (response === 'granted') {
+//								self._initDeviceOrientationEventLisener();
+//							}
+//						}).catch(console.error);
+//					});
+//				} else {
+//					self._initDeviceOrientationEventLisener();
+//				}
+//			} catch {
 				self._initDeviceOrientationEventLisener();
-			}
+//			}
 		}
 	};
 	return self;

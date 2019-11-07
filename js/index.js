@@ -247,6 +247,22 @@ var app = (function() {
 				m_view_fov = value;
 			},
 			set_stereo: function(value) {
+
+				try{
+					if (DeviceMotionEvent 
+							&& DeviceMotionEvent.requestPermission
+							&& typeof DeviceMotionEvent.requestPermission === 'function') {
+						document.addEventListener("touchstart", (e) => {
+							document.removeEventListener("touchstart", arguments.callee, false);
+							DeviceMotionEvent.requestPermission().then(response => {
+								if (response === 'granted') {
+									console.log("ok");
+								}
+							}).catch(console.error);
+						});
+					}
+				} catch {}
+				
 				m_video_handler.setStereoEnabled(value);
 				if(m_video_handler.vr_supported()){
 					self.set_audio(value);
