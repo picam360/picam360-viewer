@@ -76,6 +76,11 @@ function MPU(plugin_host) {
 		},
 
 		initDeviceOrientationEventLisener : function() {
+			if (DeviceMotionEvent 
+					&& DeviceMotionEvent.requestPermission
+					&& typeof DeviceMotionEvent.requestPermission === 'function') {
+				DeviceMotionEvent.requestPermission();
+			}
 			window
 				.addEventListener('deviceorientation', function(attitude) {
 					if (attitude['detail']) {
