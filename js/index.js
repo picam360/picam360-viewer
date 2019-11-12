@@ -54,7 +54,7 @@ var app = (function() {
 	var rtp;
 	var rtcp;
 	// video decoder
-	var m_video_decoders = [];
+	var m_video_decoder = null;
 	var opus_decoder;
 	var audio_first_packet_s = 0;
 	// motion processer unit
@@ -604,10 +604,7 @@ var app = (function() {
 							}
 						}
 					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
-						for(var decoder of m_video_decoders) {
-							decoder.decode(packet.GetPayload(), packet
-									.GetPayloadLength());
-						}
+						m_video_decoder.decode(packet.GetPayload(), packet.GetPayloadLength());
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
 							.decode(new Uint8Array(packet.GetPayload()));
@@ -879,39 +876,8 @@ var app = (function() {
 				m_video_handler.vertex_type_forcibly = m_vertex_type;
 
 				// video decoder
-				var h264_decoder = H264Decoder();
-				var mjpeg_decoder = MjpegDecoder();
-				var h265_decoder = H265Decoder();
-				var i420_decoder = I420Decoder();
-				
-				h264_decoder.set_frame_callback((type) => {
-					h264_decoder.set_frame_callback(self.handle_frame);
-					m_video_decoders = [h264_decoder];
-					m_video_handler.codec = "h264";
-				});
-				mjpeg_decoder.set_frame_callback((type) => {
-					mjpeg_decoder.set_frame_callback(self.handle_frame);
-					m_video_decoders = [mjpeg_decoder];
-					m_video_handler.codec = "mjpeg";
-				});
-				h265_decoder.set_frame_callback((type) => {
-					h265_decoder.set_frame_callback(self.handle_frame);
-					m_video_decoders = [h265_decoder];
-					m_video_handler.codec = "h265";
-				});
-				i420_decoder.set_frame_callback((type) => {
-					if(!query['skip-frame']){
-						m_video_handler.skip_frame=0;
-					}
-					i420_decoder.set_frame_callback(self.handle_frame);
-					m_video_decoders = [i420_decoder];
-					m_video_handler.codec = "i420";
-				});
-				
-				m_video_decoders.push(h264_decoder);
-				m_video_decoders.push(mjpeg_decoder);
-				m_video_decoders.push(h265_decoder);
-				m_video_decoders.push(i420_decoder);
+				m_video_decoder = ImageDecoder();
+				m_video_decoder.set_frame_callback(self.handle_frame);
 
 				// opus_decoder = OpusDecoder();
 				// opus_decoder.set_frame_callback(self.handle_audio_frame);

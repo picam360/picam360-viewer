@@ -1,11 +1,7 @@
 function H264Decoder(callback) {
 	var m_active_frame = null;
 	var m_frame_callback = null;
-
 	var m_frame_start = false;
-	var m_packet_frame_num = 0;
-	var m_decoded_frame_num = 0;
-	var m_frame_info = {};
 
 	var decoder_file = "lib/Broadway/Decoder.js";
 	var options = {
@@ -42,43 +38,26 @@ function H264Decoder(callback) {
 				if (data.consoleLog) {
 					console.log(data.consoleLog);
 					return;
-				};
-
-				// console.log("frame");
-				m_decoded_frame_num++;
-				if (m_decoded_frame_num > m_packet_frame_num) {
-					console.log("something wrong");
 				}
 				if (m_frame_callback) {
-					var info = m_frame_info[m_decoded_frame_num];
-					if (!info) {
-						console.log("no view quat info:" + m_decoded_frame_num
-							+ ":" + m_frame_info);
-					}
-					m_frame_callback("yuv", data.buf, data.width, data.height, m_frame_info[m_decoded_frame_num].info, m_frame_info[m_decoded_frame_num].timestamp);
+					m_frame_callback({
+						pixels : data.buf,
+						width : data.width,
+						height : data.height,
+						});
 				}
-				var frame_info = {};
-				for (var i = m_decoded_frame_num; i <= m_packet_frame_num; i++) {
-					if (m_frame_info[i]) {
-						frame_info[i] = m_frame_info[i];
-					} else {
-						console.log("no view quat info:" + i);
-					}
-				}
-				m_frame_info = frame_info;
-				// if (m_decoded_frame_num != m_packet_frame_num) {
-				// console.log("packet & decode are not synchronized:"
-				// + m_decoded_frame_num + "-" + m_packet_frame_num);
-				// }
 			}, false);
 	} else {
 		var script = document.createElement('script');
 		script.onload = function() {
 			decoder = new Decoder(options);
 			decoder.onPictureDecoded = function(buffer, width, height, infos) {
-				// console.log("frame");
 				if (m_target_texture) {
-					m_frame_callback("yuv", buffer, width, height);
+					m_frame_callback({
+						pixels : buffer,
+						width,
+						height,
+						});
 				}
 			}
 		};
@@ -109,27 +88,20 @@ function H264Decoder(callback) {
 			}
 		},
 		// @data : Uint8Array
-		decode : function(data, data_len) {
+		decode : function(data, end_of_frame) {
 			if (!is_init) {
 				is_init = true;
 				self.init();
 			}
-			if (!m_active_frame) {
-				if (data[0] == 0x4E && data[1] == 0x41) { // SOI
-					if (data.length > 2) {
-						m_active_frame = [new Uint8Array(data.buffer, data.byteOffset + 2)];
-					} else {
-						m_active_frame = [];
-					}
-				}
-			} else {
-				if (data.length != 2) {
-					m_active_frame.push(data);
-				}
+			if (!m_active_frame && data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 1) {
+				m_active_frame = [];
 			}
-			if (m_active_frame
-				&& (data[data_len - 2] == 0x4C && data[data_len - 1] == 0x55)) { // EOI
-				var nal_type = m_active_frame[1][4] & 0x1f;
+			if (!m_active_frame){
+				return;
+			}
+			m_active_frame.push(data);
+			if (end_of_frame) {
+				var nal_type = m_active_frame[0][4] & 0x1f;
 
 				if (!m_frame_start) {
 					if (nal_type == 7) {// sps
@@ -139,33 +111,10 @@ function H264Decoder(callback) {
 						return;
 					}
 				}
-
-				if ((m_active_frame[0][4] & 0x1f) == 6) {// sei
-					var frame_info = String.fromCharCode.apply("", m_active_frame[0]
-						.subarray(5), 0);
-					var timestamp = 0;
-					var map = [];
-					var split = frame_info.split(' ');
-					for (var i = 0; i < split.length; i++) {
-						var separator = (/[=,\"]/);
-						var _split = split[i].split(separator);
-						map[_split[0]] = _split;
-					}
-					if(map['timestamp']){
-						timestamp = parseInt(map['timestamp'][2])*1000 + parseInt(map['timestamp'][3])/1000;
-					}
-					if (m_frame_start && timestamp) { // avoid other than picam360 sei
-						m_packet_frame_num++;
-						m_frame_info[m_packet_frame_num] = {
-							info : frame_info,
-							timestamp
-						};
-					}
-					m_active_frame.shift();
-				}
 				
 				var nal_buffer;
 				if(m_active_frame.length == 0){
+					m_active_frame = null;
 					return;
 				} else if(m_active_frame.length == 1){
 					nal_buffer =  m_active_frame[0];

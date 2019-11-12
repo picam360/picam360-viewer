@@ -42,74 +42,38 @@ function I420Decoder(callback) {
 			m_frame_callback = callback;
 		},
 		// @data : Uint8Array
-		decode: function(data) {
+		decode: function(data, end_of_frame, width, stride, height) {
 			if (!m_active_frame) {
-				if (data[0] == 0x49 && data[1] == 0x34) { // SOI
-					if (data.length > 2) {
-						m_active_frame = [new Uint8Array(data.buffer, data.byteOffset + 2)];
-					} else {
-						m_active_frame = [];
+				m_active_frame = [];
+			}
+			m_active_frame.push(data);
+			if (end_of_frame) {
+				var image;
+				if(m_active_frame.length == 0){
+					m_active_frame = null;
+					return;
+				} else if(m_active_frame.length == 1){
+					image =  m_active_frame[0];
+				} else {
+					var len = 0;
+					for (var i = 0; i < m_active_frame.length; i++) {
+						len += m_active_frame[i].length;
+					}
+					image = new Uint8Array(len);
+					var cur = 0;
+					for (var i = 0; i < m_active_frame.length; i++) {
+						image.set(m_active_frame[i], cur);
+						cur += m_active_frame[i].length;
 					}
 				}
-			} else {
-				if (data.length != 2) {
-					m_active_frame.push(data);
+				if (m_frame_callback) {
+					m_frame_callback({
+						pixels : image,
+						width : width[0],
+						height: height[0],
+						});
 				}
 			}
-			if (m_active_frame &&
-				(data[data.length - 2] == 0x32 && data[data.length - 1] == 0x30)) { // EOI
-				try {
-					var nal_type = 0;
-					var nal_len = 0;
-					var _nal_len = 0;
-					if (((m_active_frame[0][4] & 0x7e) >> 1) == 40) { // sei
-						var frame_info = String.fromCharCode.apply("", m_active_frame[0]
-							.subarray(5), 0);
-						var uuid = null;
-						var width = 1024;
-						var height = 512;
-						var timestamp = 0;
-						var map = [];
-						var split = frame_info.split(' ');
-						for (var i = 0; i < split.length; i++) {
-							var separator = (/[=,\"]/);
-							var _split = split[i].split(separator);
-							map[_split[0]] = _split;
-						}
-						if (map['uuid']) {
-							uuid = map['uuid'][2];
-						}
-						if (map['frame_width']) {
-							width = parseInt(map['frame_width'][2]);
-						}
-						if (map['frame_height']) {
-							height = parseInt(map['frame_height'][2]);
-						}
-						if(map['timestamp']){
-							timestamp = parseInt(map['timestamp'][2])*1000 + parseInt(map['timestamp'][3])/1000;
-						}
-						if (!uuid) {
-							return;
-						}
-						if (m_frame_callback) {
-							if(m_active_frame.length == 1){
-								m_frame_callback("frame_info", null, 0, 0,
-										frame_info, timestamp);//for webrtc
-							}else{
-								var image = new Uint8Array(width*height*1.5);
-								var cur = 0;
-								for (var i = 1; i < m_active_frame.length; i++) {
-									image.set(m_active_frame[i], cur);
-									cur += m_active_frame[i].length;
-								}
-								m_frame_callback("yuv", image, width, height, frame_info, timestamp);
-							}
-						}
-					}
-				} finally {
-					m_active_frame = null;
-				}
-			} // if
 		}, // decode
 	}; // self
 	return self;
