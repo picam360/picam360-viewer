@@ -1206,9 +1206,6 @@ var app = (function() {
 			function redraw() {
 				try{
 					frame_count++;
-					if (!m_frame_active) {
-						return;
-					}
 					if ((frame_count % 30) == 0) {
 						var divStatus = document.getElementById("divStatus");
 						if (divStatus) {
@@ -1250,6 +1247,8 @@ var app = (function() {
 	
 							divStatus.innerHTML = status;
 						}
+					}
+					if ((frame_count % 10) == 0) {
 						if (m_menu_visible) {
 							var info = ""; {
 								var defualt_color = "#ffffff";
@@ -1289,6 +1288,9 @@ var app = (function() {
 	
 							self.plugin_host.set_info(info);
 						}
+					}
+					if (!m_frame_active) {
+						return;
 					}
 					m_video_handler.animate(m_view_fov);
 				} finally {
