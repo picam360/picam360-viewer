@@ -88,6 +88,15 @@ function ImageDecoder(callback) {
 						map[_split[0]] = _split;
 					}
 					m_active_frame = map;
+					var width = m_active_frame.width.slice(2,5);
+					var stride = m_active_frame.stride.slice(2,5);
+					var height = m_active_frame.height.slice(2,5);
+					var image_size = 0;
+					for(var i=0;i<3;i++){
+						image_size += parseInt(stride[i]) * parseInt(height[i]);
+					}
+					m_active_frame['image_size'] = image_size;
+					
 					data = data.subarray(4 + len);
 					if (data.length == 0) {
 						return;
@@ -112,24 +121,21 @@ function ImageDecoder(callback) {
 					return;
 				}
 				m_active_frame['pixels_cur'] = 0;
+				
 				data = data.subarray(meta_size);
 				if (data.length == 0) {
 					return;
 				}
 			}
 			if(m_active_frame){
-				var width = m_active_frame.width.slice(2,5);
-				var stride = m_active_frame.stride.slice(2,5);
-				var height = m_active_frame.height.slice(2,5);
-				var target_size = stride[0] * height[0] + stride[1] * height[1] + stride[2] * height[2];
-				if(m_active_frame['pixels_cur'] + data.length > target_size) {
+				if(m_active_frame['pixels_cur'] + data.length > m_active_frame['image_size']) {
 					console.log("something wrong!");
 					m_active_frame = null;
 					return;
 				}
 				var end_of_frame = false;
 				m_active_frame['pixels_cur'] += data.length;
-				if(m_active_frame['pixels_cur'] == target_size) {
+				if(m_active_frame['pixels_cur'] == m_active_frame['image_size']) {
 					end_of_frame = true;
 					m_frame_info_ary.push(m_active_frame['meta']);
 				}
