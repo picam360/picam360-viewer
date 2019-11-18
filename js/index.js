@@ -269,7 +269,7 @@ var app = (function() {
 					"STEREO_DISABLED");
 
 				var cmd = UPSTREAM_DOMAIN;
-				cmd += "set_vostream_param stereo=" + (value ? 1 : 0);
+				cmd += "set_vostream_param -p stereo=" + (value ? 1 : 0);
 				self.send_command(cmd);
 			},
 			set_audio: function(value) {
@@ -814,8 +814,8 @@ var app = (function() {
 					view_quat = m_video_handler.horizon_opt_view_quaternion(view_quat);
 				}
 				var cmd = UPSTREAM_DOMAIN;
-				cmd += sprintf("set_vostream_param view_quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
-				cmd += sprintf(" fov=%.3f", fov.toFixed(0));
+				cmd += sprintf("set_vostream_param -p view_quat=%.3f,%.3f,%.3f,%.3f", view_quat.x, view_quat.y, view_quat.z, view_quat.w);
+				cmd += sprintf(" -p fov=%.3f", fov.toFixed(0));
 				self.plugin_host.send_command(cmd, true);
 			}
 
