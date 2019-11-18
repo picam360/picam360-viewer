@@ -22,25 +22,25 @@ function ImageDecoder(callback) {
 	m_video_decoder['JPEG'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("image", image, 0, 0, frame_info);
+			m_frame_callback("image", image, 0, 0, frame_info.meta, frame_info.timestamp);
 		}
 	});
 	m_video_decoder['H264'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
 		}
 	});
 	m_video_decoder['H265'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
 		}
 	});
 	m_video_decoder['I420'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
 		}
 	});
 
@@ -137,7 +137,11 @@ function ImageDecoder(callback) {
 				m_active_frame['pixels_cur'] += data.length;
 				if(m_active_frame['pixels_cur'] == m_active_frame['image_size']) {
 					end_of_frame = true;
-					m_frame_info_ary.push(m_active_frame['meta']);
+					var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
+					m_frame_info_ary.push({
+							meta : m_active_frame['meta'],
+							timestamp : timestamp,
+						});
 				}
 				if (m_active_frame['img_type']) {
 					var codec = m_active_frame['img_type'][2];
