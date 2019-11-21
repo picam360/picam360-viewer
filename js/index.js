@@ -53,6 +53,7 @@ var app = (function() {
 	// data stream handling
 	var rtp;
 	var rtcp;
+	var m_vpm_loader = null;
 	// video decoder
 	var m_video_decoder = null;
 	var opus_decoder;
@@ -604,7 +605,7 @@ var app = (function() {
 							}
 						}
 					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
-						m_video_decoder.decode(packet.GetPayload(), packet.GetPayloadLength());
+						m_video_decoder.decode(packet.GetPayload());
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
 							.decode(new Uint8Array(packet.GetPayload()));
@@ -879,6 +880,10 @@ var app = (function() {
 				m_video_decoder = ImageDecoder();
 				m_video_decoder.set_frame_callback(self.handle_frame);
 
+				if (query['vpm']) {
+					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion_normal, m_video_decoder.decode);
+				}
+
 				// opus_decoder = OpusDecoder();
 				// opus_decoder.set_frame_callback(self.handle_audio_frame);
 
@@ -1013,7 +1018,6 @@ var app = (function() {
 			overlay = document.getElementById('overlay');
 
 			self.plugin_host = PluginHost(self);
-			self.plugin_host.set_menu_visible(true);
 			self.init_common_options();
 			self.init_webgl();
 			self.init_watch();
@@ -1248,46 +1252,42 @@ var app = (function() {
 							divStatus.innerHTML = status;
 						}
 					}
-					if ((frame_count % 10) == 0) {
-						if (m_menu_visible) {
-							var info = ""; {
-								var defualt_color = "#ffffff";
-								var activated_color = "#00ffff";
-								var selected_color = "#ff00ff";
-								var marked_color = "#ffff00";
-								var rows = m_menu.split("\n");
-								var _nodes_index = rows[0].split(",");
-								var nodes_index = [];
-								for (var i = 0; i < _nodes_index.length; i++) {
-									nodes_index[_nodes_index[i].toLowerCase()] = i;
-								}
-								info += "<pre align=\"left\">";
-								for (var i = 1; i < rows.length; i++) {
-									if (!rows[i]) {
-										continue;
-									}
-									var nodes = rows[i].split(",");
-									var color = nodes[nodes_index["selected"]] == "1" ?
-										selected_color :
-										nodes[nodes_index["activated"]] == "1" ?
-										activated_color :
-										nodes[nodes_index["marked"]] == "1" ?
-										marked_color :
-										defualt_color;
-									info += " "
-										.repeat(4 * nodes[nodes_index["depth"]]) +
-										"<font color=\"" +
-										color +
-										"\">" +
-										nodes[nodes_index["name"]] +
-										"</font>" +
-										"<br/>";
-								}
-								info += "</pre>";
-							}
-	
-							self.plugin_host.set_info(info);
+					if (m_menu_visible && (frame_count % 10) == 0) {
+						var info = ""; 
+						var defualt_color = "#ffffff";
+						var activated_color = "#00ffff";
+						var selected_color = "#ff00ff";
+						var marked_color = "#ffff00";
+						var rows = m_menu.split("\n");
+						var _nodes_index = rows[0].split(",");
+						var nodes_index = [];
+						for (var i = 0; i < _nodes_index.length; i++) {
+							nodes_index[_nodes_index[i].toLowerCase()] = i;
 						}
+						info += "<pre align=\"left\">";
+						for (var i = 1; i < rows.length; i++) {
+							if (!rows[i]) {
+								continue;
+							}
+							var nodes = rows[i].split(",");
+							var color = nodes[nodes_index["selected"]] == "1" ?
+								selected_color :
+								nodes[nodes_index["activated"]] == "1" ?
+								activated_color :
+								nodes[nodes_index["marked"]] == "1" ?
+								marked_color :
+								defualt_color;
+							info += " "
+								.repeat(4 * nodes[nodes_index["depth"]]) +
+								"<font color=\"" +
+								color +
+								"\">" +
+								nodes[nodes_index["name"]] +
+								"</font>" +
+								"<br/>";
+						}
+						info += "</pre>";
+						self.plugin_host.set_info(info);
 					}
 					if (!m_frame_active) {
 						return;
