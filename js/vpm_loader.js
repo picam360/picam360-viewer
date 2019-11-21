@@ -12,22 +12,26 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		var req = new XMLHttpRequest();
 		req.responseType = "arraybuffer";
 		req.open("get", path, true);
-		req.send(null);
 
+		req.onerror = function() {
+			if(m_loaded_framecount == 0){
+				console.log("not found : " + req.responseURL);
+				clearInterval(m_timer);
+			}else{
+				console.log("repeat");
+				m_framecount = 0;
+			}
+			return;
+		};
 		req.onload = function() {
-			if(req.status == 404){
-				if(m_loaded_framecount == 0){
-					console.log("not found : " + req.responseURL);
-					clearInterval(m_timer);
-				}else{
-					console.log("repeat");
-					m_framecount = 0;
-				}
+			if(req.status != 200){
+				req.onerror();
 				return;
 			}
 			m_loaded_framecount++;
 			callback(new Uint8Array(req.response));
-		}
+		};
+		req.send(null);
 	}
 	
 	var m_timer = setInterval(() => {
@@ -43,7 +47,6 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		};
 		var x = parseInt(THREE.Math.radToDeg(euler.x));
 		var y = parseInt(THREE.Math.radToDeg(euler.y));
-		var z = 0;
 		var p_angle = 90/m_split_p;
 		var p = Math.round(x/p_angle);
 		var _p = (p <= m_split_p) ? p : m_split_p * 2 - p;
@@ -58,7 +61,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 			y = 0;
 		}
 		++m_framecount;
-		var path = m_base_path + "/" + x + "_" + y + "_" + z + "/" + m_framecount + ".pif";
+		var path = m_base_path + "/" + x + "_" + y + "_0/" + m_framecount + ".pif";
 		console.log(path);
 		loadFile(path, (data) => {
 			if(m_frame_callback){
