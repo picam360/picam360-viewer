@@ -62,7 +62,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		}
 		++m_framecount;
 		var path = m_base_path + "/" + x + "_" + y + "_0/" + m_framecount + ".pif";
-		console.log(path);
+		//console.log(path);
 		loadFile(path, (data) => {
 			if(m_frame_callback){
 				m_frame_callback(data);
