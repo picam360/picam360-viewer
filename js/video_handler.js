@@ -237,13 +237,12 @@
 				}
 			},
 
-			handle_frame : function(type, data, width, height, info, timestamp) {
+			handle_frame : function(type, data, width, height, info, uuid, timestamp) {
 				m_texture_num++;
 
 				var now = new Date().getTime();
 				var tex_quat;
 				var vertex_type = self.vertex_type;
-				var uuid;
 				if (info) {
 					var map = [];
 					var split = info.split(' ');
@@ -261,9 +260,6 @@
 					}
 					if (map["fov"]) {
 						m_texture_fov = parseFloat(map["fov"][2]);
-					}
-					if (map["uuid"]) {
-						uuid = uuidParse.parse(map["uuid"][2]);
 					}
 					if (map["mode"]) {
 						switch (map["mode"][2]) {

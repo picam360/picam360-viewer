@@ -6,7 +6,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 	var m_framecount = 0;
 	var m_loaded_framecount = 0;
 	var m_fps = 5;
-	var m_split_p = 2;
+	var m_split_p = 3;
 
 	function loadFile(path, callback) {
 		var req = new XMLHttpRequest();
@@ -61,7 +61,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 			y = 0;
 		}
 		++m_framecount;
-		var path = m_base_path + "/" + x + "_" + y + "_0/" + m_framecount + ".pif";
+		var path = m_base_path + "/" + x + "_" + y + "/" + m_framecount + ".pif";
 		//console.log(path);
 		loadFile(path, (data) => {
 			if(m_frame_callback){

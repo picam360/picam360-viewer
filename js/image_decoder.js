@@ -115,7 +115,9 @@ function ImageDecoder(callback) {
 				}
 				if (m_active_frame['img_type'][2] == 'WRTC') {
 					if(m_frame_callback){
-						m_frame_callback("frame_info", null, 0, 0, m_active_frame['meta']);
+						var uuid = uuidParse.parse(m_active_frame["uuid"][2]);
+						var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
+						m_frame_callback("frame_info", null, 0, 0, m_active_frame['meta'], uuid, timestamp);
 					}
 					m_active_frame = null;
 					return;
@@ -137,9 +139,11 @@ function ImageDecoder(callback) {
 				m_active_frame['pixels_cur'] += data.length;
 				if(m_active_frame['pixels_cur'] == m_active_frame['image_size']) {
 					end_of_frame = true;
+					var uuid = uuidParse.parse(m_active_frame["uuid"][2]);
 					var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
 					m_frame_info_ary.push({
 							meta : m_active_frame['meta'],
+							uuid : uuid,
 							timestamp : timestamp,
 						});
 				}

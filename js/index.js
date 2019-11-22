@@ -796,7 +796,7 @@ var app = (function() {
 			}
 		},
 
-		handle_frame: function(type, data, width, height, info, timestamp) {
+		handle_frame: function(type, data, width, height, info, uuid, timestamp) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
@@ -821,7 +821,7 @@ var app = (function() {
 			}
 
 			timestamp -= self.timediff_ms;
-			m_video_handler.handle_frame(type, data, width, height, info, timestamp);
+			m_video_handler.handle_frame(type, data, width, height, info, uuid, timestamp);
 		},
 
 		handle_audio_frame: function(left, right) {
