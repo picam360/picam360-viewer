@@ -449,62 +449,64 @@
 						});
 					},500);
 				}
-				if (m_worker) {
-					if(!window.createImageBitmap) {
-						alert("The offscreen mode needs to support ImageBitmap");
-						return;
+				m_receiver = receiver;
+				m_video = document.createElement('video');
+				m_video.crossOrigin = "*";
+				m_video.muted = true;
+				m_video.playsInline = true;
+				
+				function uuid_abs(uuid1, uuid2){
+					var sum = 0;
+					for(var i=0;i<uuid1.length;i++){
+						sum += Math.abs(uuid1[i]-uuid2[i]);
 					}
-					m_receiver = receiver;
-					m_video = document.createElement('video');
-					m_video.crossOrigin = "*";
-					m_video.muted = true;
-					m_video.playsInline = true;
-					
-					function uuid_abs(uuid1, uuid2){
-						var sum = 0;
-						for(var i=0;i<uuid1.length;i++){
-							sum += Math.abs(uuid1[i]-uuid2[i]);
-						}
-						return sum;
+					return sum;
+				}
+				function uuid_ncc(uuid1, uuid2){
+					var sum1 = 0;
+					var sum2 = 0;
+					var sum12 = 0;
+					for(var i=0;i<uuid1.length;i++){
+						sum1 += uuid1[i]*uuid1[i];
+						sum2 += uuid2[i]*uuid2[i];
+						sum12 += uuid1[i]*uuid2[i];
 					}
-					function uuid_ncc(uuid1, uuid2){
-						var sum1 = 0;
-						var sum2 = 0;
-						var sum12 = 0;
-						for(var i=0;i<uuid1.length;i++){
-							sum1 += uuid1[i]*uuid1[i];
-							sum2 += uuid2[i]*uuid2[i];
-							sum12 += uuid1[i]*uuid2[i];
-						}
-						return sum12 / Math.sqrt(sum1*sum2);
-					}
-					
-					function get_uuid_from_canvas(ctx){
-						var uuid = new Uint8Array(16);
-						var pixels = ctx.getImageData(0,0, 32, 2).data;
-						var uuid = new Uint8Array(16);
-						for(var k=0;k<16;k++){
-							var val = 0;
-							for(var i=0;i<2;i++){
-								for(var j=0;j<2;j++){
-									var idx = (32*i + k*2 + j)*4;
-									val += 0.299*pixels[idx+0]+0.587*pixels[idx+1]+0.114*pixels[idx+2];
-								}
+					return sum12 / Math.sqrt(sum1*sum2);
+				}
+				
+				function get_uuid_from_canvas(ctx){
+					var uuid = new Uint8Array(16);
+					var pixels = ctx.getImageData(0,0, 32, 2).data;
+					var uuid = new Uint8Array(16);
+					for(var k=0;k<16;k++){
+						var val = 0;
+						for(var i=0;i<2;i++){
+							for(var j=0;j<2;j++){
+								var idx = (32*i + k*2 + j)*4;
+								val += 0.299*pixels[idx+0]+0.587*pixels[idx+1]+0.114*pixels[idx+2];
 							}
-							uuid[k] = val / 4;
 						}
-						return uuid;
+						uuid[k] = val / 4;
 					}
-					function start_video_poling(){
-						var last_currentTime = m_video.currentTime;
-						var last_uuid = new Uint8Array(16);
-						setInterval(function() {
-							// var st = new Date().getTime();
-							var currentTime = m_video.currentTime;
-							if(currentTime == last_currentTime){
+					return uuid;
+				}
+				function start_video_poling(){
+					var last_currentTime = m_video.currentTime;
+					setInterval(function() {
+						var currentTime = m_video.currentTime;
+						if(currentTime == last_currentTime){
+							return;
+						}else{
+							last_currentTime = currentTime;
+						}
+						var uuid = null;
+						if(window.createImageBitmap){
+							
+						}
+						if (m_worker) {
+							if(!window.createImageBitmap) {
+								alert("The offscreen mode needs to support ImageBitmap");
 								return;
-							}else{
-								last_currentTime = currentTime;
 							}
 							if(!m_videoImage){
 								m_videoImage = document.createElement('canvas');
@@ -517,22 +519,22 @@
 							window.createImageBitmap(m_video).then(imageBitmap => {
 								m_videoImageContext.drawImage(imageBitmap, 0, 0, 32, 2, 0, 0, 32, 2);
 								var uuid = get_uuid_from_canvas(m_videoImageContext);
-								if (uuid_abs(last_uuid, uuid) == 0) {
-									return;
-								}else{
-									last_uuid = uuid;
-								}
 								// console.log("img:"+uuid);
-								m_worker.postMessage({
-									type : 'setFrameImage',
-									img : imageBitmap,
-									uuid,
-								}, [imageBitmap]);
+								if (m_worker){
+									m_worker.postMessage({
+										type : 'setFrameImage',
+										img : imageBitmap,
+										uuid,
+									}, [imageBitmap]);
+								} else {
+									m_omvr.setFrameImage(imageBitmap, uuid);
+								}
 							});
-							// var et = new Date().getTime();
-							// console.log("time:"+(et-st));
-						}, 10); // 100hz
-					}
+						} else {
+							m_omvr.setFrameImage(m_video);
+						}
+					}, 10); // 100hz
+				}
 // function init_video(){
 // if(!m_need_to_push){
 // try{
@@ -569,35 +571,35 @@
 // start_video_poling();
 // }
 // }
-					function try_play() {
-						m_video.play().then(()=>{
-						}).catch((err) =>{
-							console.log(err);
-						}).finally(() =>{
-							m_can_play = true;
-							start_video_poling();
+				function try_play() {
+					m_video.play().then(()=>{
+					}).catch((err) =>{
+						document.addEventListener("touchstart", (e) => {
+							document.removeEventListener("touchstart", arguments.callee, false);
+							m_video.play();
 						});
-					}
-					var timeout = setTimeout(function(){
-						console.log("video play event timeout!");
-						m_need_to_push = true;
+						console.log(err);
+					}).finally(() =>{
+						start_video_poling();
+					});
+				}
+				var timeout = setTimeout(function(){
+					console.log("video play event timeout!");
+					m_need_to_push = true;
+					timeout = null;
+					try_play();
+				}, 2000);
+				m_video.addEventListener("canplay", function(){
+					if(timeout){
+						console.log("video canplay!");
+						clearTimeout(timeout);
 						timeout = null;
 						try_play();
-					}, 2000);
-					m_video.addEventListener("canplay", function(){
-						if(timeout){
-							console.log("video canplay!");
-							clearTimeout(timeout);
-							timeout = null;
-							try_play();
-							m_video.removeEventListener("canplay", arguments.callee, false);
-						}
-					});
-					m_video.srcObject = obj;
-					m_video.load();
-				} else {
-					m_omvr.set_stream(obj, receiver);
-				}
+						m_video.removeEventListener("canplay", arguments.callee, false);
+					}
+				});
+				m_video.srcObject = obj;
+				m_video.load();
 			},
 
 			setModel : function(vertex_type, fragment_type) {

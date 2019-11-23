@@ -55,7 +55,7 @@ var app = (function() {
 	var rtcp;
 	var m_vpm_loader = null;
 	// video decoder
-	var m_video_decoder = null;
+	var m_image_decoder = null;
 	var opus_decoder;
 	var audio_first_packet_s = 0;
 	// motion processer unit
@@ -605,7 +605,7 @@ var app = (function() {
 							}
 						}
 					} else if (packet.GetPayloadType() == PT_CAM_BASE) { // image
-						m_video_decoder.decode(packet.GetPayload());
+						m_image_decoder.decode(packet.GetPayload());
 					} else if (packet.GetPayloadType() == PT_STATUS) { // status
 						var str = (new TextDecoder)
 							.decode(new Uint8Array(packet.GetPayload()));
@@ -879,11 +879,11 @@ var app = (function() {
 				m_video_handler.vertex_type_forcibly = m_vertex_type;
 
 				// video decoder
-				m_video_decoder = ImageDecoder();
-				m_video_decoder.set_frame_callback(self.handle_frame);
+				m_image_decoder = ImageDecoder();
+				m_image_decoder.set_frame_callback(self.handle_frame);
 
 				if (query['vpm']) {
-					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion_normal, m_video_decoder.decode);
+					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion_normal, m_image_decoder.decode);
 				}
 
 				// opus_decoder = OpusDecoder();
