@@ -237,15 +237,17 @@
 				}
 			},
 
-			handle_frame : function(type, data, width, height, info, uuid, timestamp) {
+			handle_frame : function(type, data, width, height, frame_info) {
 				m_texture_num++;
 
 				var now = new Date().getTime();
 				var tex_quat;
 				var vertex_type = self.vertex_type;
-				if (info) {
+				if (frame_info) {
+					self.codec = frame_info.img_type;
+					
 					var map = [];
-					var split = info.split(' ');
+					var split = frame_info.meta.split(' ');
 					for (var i = 0; i < split.length; i++) {
 						var separator = (/[=,\"]/);
 						var _split = split[i].split(separator);
@@ -300,28 +302,7 @@
 					console.log("no view quat info");
 					m_tex_quat = m_view_quat.clone();
 				}
-				if (type == "raw_bmp") {
-					var img = new Image();
-					var header = get_bmp_header(width, height, 32);
-					var raw_data = new Uint8Array(data);
-					var blob = new Blob([header, raw_data], {
-						type : "image/bmp"
-					});
-					var url = window.URL || window.webkitURL;
-					if (img.src && img.src.indexOf("blob") == 0) {
-						url.revokeObjectURL(img.src);
-					}
-					img.src = url.createObjectURL(blob);
-					img.onload = function(ev) {
-						m_texture.image = img;
-						m_texture.needsUpdate = true;
-					};
-					// console.log(m_target_texture.src + " : " + blob.size
-					// + " : " + m_active_frame.length);
-					blob = null;
-				} else if (type == "video") {
-					m_omvr.setVideoTexture(vertex_type, data, m_tex_quat, m_texture_fov, uuid);
-				} else if (type == "yuv") {
+				if (type == "yuv") {
 					if(m_worker){
 						m_worker.postMessage({
 							type : 'setTextureRawYuv',
@@ -331,11 +312,10 @@
 							height,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
-							uuid,
-							timestamp,
+							frame_info,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, uuid, timestamp);
+						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, frame_info);
 					}
 				} else if (type == "rgb") {
 					if(m_worker){
@@ -345,11 +325,10 @@
 							data,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
-							uuid,
-							timestamp,
+							frame_info,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, uuid, timestamp);
+						m_omvr.setTextureRawRgb(vertex_type, data, m_tex_quat, m_texture_fov, frame_info);
 					}
 				} else if (type == "image") {
 					if(m_worker){
@@ -359,11 +338,10 @@
 							data,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
-							uuid,
-							timestamp,
+							frame_info,
 						}, [data]);
 					}else{
-						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, uuid, timestamp);
+						m_omvr.setTextureImage(vertex_type, data, m_tex_quat, m_texture_fov, frame_info);
 					}
 				} else if (type == "frame_info") {
 					if(m_worker){
@@ -372,49 +350,11 @@
 							vertex_type, 
 							quat : m_tex_quat,
 							fov : m_texture_fov,
-							uuid,
-							timestamp,
+							frame_info,
 						});
 					}else{
-						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, uuid, timestamp);
+						m_omvr.setFrameInfo(vertex_type, m_tex_quat, m_texture_fov, frame_info);
 					}
-				} else if (type == "blob") {
-					var img = new Image();
-					var url = window.URL || window.webkitURL;
-					if (img.src && img.src.indexOf("blob") == 0) {
-						url.revokeObjectURL(img.src);
-					}
-					img.src = url.createObjectURL(data);
-					var img_hander = function(value){
-						if(m_worker){
-							m_worker.postMessage({
-								type : 'setTextureImage',
-								vertex_type, 
-								value,
-								quat : m_tex_quat,
-								fov : m_texture_fov,
-								uuid,
-								timestamp,
-							}, [img]);
-						}else{
-							m_omvr.setTextureImage(vertex_type, value, m_tex_quat, m_texture_fov, uuid, timestamp);
-						}
-					}
-					if(m_image_decode_blocking){
-						img.onload = function(ev) {
-							img_hander(img);
-						};
-					}else{
-						img.decode().then((ev) => {
-							img_hander(img);
-							setTimeout(function(){
-								url.revokeObjectURL(img.src);
-							},1000);
-						}).catch((err) => {
-							console.log(err);
-						});
-					}
-					// console.log(img.src + " : " + blob.size);
 				}
 			},
 
@@ -658,13 +598,6 @@
 				} else {
 					m_omvr.set_stream(obj, receiver);
 				}
-			},
-
-			getTextureImg : function() {
-				return m_videoImage;
-			},
-
-			setTextureImg : function(texture) {
 			},
 
 			setModel : function(vertex_type, fragment_type) {

@@ -796,7 +796,7 @@ var app = (function() {
 			}
 		},
 
-		handle_frame: function(type, data, width, height, info, uuid, timestamp) {
+		handle_frame: function(type, data, width, height, info) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				self.plugin_host.set_menu_visible(false);
@@ -820,8 +820,10 @@ var app = (function() {
 				self.plugin_host.send_command(cmd, true);
 			}
 
-			timestamp -= self.timediff_ms;
-			m_video_handler.handle_frame(type, data, width, height, info, uuid, timestamp);
+			if(self.timediff_ms){
+				info.timestamp -= self.timediff_ms;
+			}
+			m_video_handler.handle_frame(type, data, width, height, info);
 		},
 
 		handle_audio_frame: function(left, right) {
@@ -1141,7 +1143,6 @@ var app = (function() {
 						};
 						dc.onclose = function() {
 							self.plugin_host.set_info("p2p connection closed");
-							self.plugin_host.set_menu_visible(true);
 							m_frame_active = false;
 						};
 					};

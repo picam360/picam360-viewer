@@ -22,25 +22,25 @@ function ImageDecoder(callback) {
 	m_video_decoder['JPEG'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("image", image, 0, 0, frame_info.meta, frame_info.timestamp);
+			m_frame_callback("image", image, 0, 0, frame_info);
 		}
 	});
 	m_video_decoder['H264'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
 		}
 	});
 	m_video_decoder['H265'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
 		}
 	});
 	m_video_decoder['I420'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info.meta, frame_info.timestamp);
+			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
 		}
 	});
 
@@ -88,14 +88,6 @@ function ImageDecoder(callback) {
 						map[_split[0]] = _split;
 					}
 					m_active_frame = map;
-					var width = m_active_frame.width.slice(2,5);
-					var stride = m_active_frame.stride.slice(2,5);
-					var height = m_active_frame.height.slice(2,5);
-					var image_size = 0;
-					for(var i=0;i<3;i++){
-						image_size += parseInt(stride[i]) * parseInt(height[i]);
-					}
-					m_active_frame['image_size'] = image_size;
 					
 					data = data.subarray(4 + len);
 					if (data.length == 0) {
@@ -113,11 +105,27 @@ function ImageDecoder(callback) {
 					m_active_frame['meta'] = String.fromCharCode.apply("", data
 							.subarray(0, meta_size), 0);
 				}
+				{//frame_info
+					var width = m_active_frame.width.slice(2,5);
+					var stride = m_active_frame.stride.slice(2,5);
+					var height = m_active_frame.height.slice(2,5);
+					var image_size = 0;
+					for(var i=0;i<3;i++){
+						image_size += parseInt(stride[i]) * parseInt(height[i]);
+					}
+					m_active_frame['image_size'] = image_size;
+					var uuid = uuidParse.parse(m_active_frame["uuid"][2]);
+					var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
+					m_active_frame['frame_info'] = {
+						meta : m_active_frame['meta'],
+						uuid : uuid,
+						timestamp : timestamp,
+						img_type : m_active_frame["img_type"][2],
+					};
+				}
 				if (m_active_frame['img_type'][2] == 'WRTC') {
 					if(m_frame_callback){
-						var uuid = uuidParse.parse(m_active_frame["uuid"][2]);
-						var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
-						m_frame_callback("frame_info", null, 0, 0, m_active_frame['meta'], uuid, timestamp);
+						m_frame_callback("frame_info", null, 0, 0, m_active_frame['frame_info']);
 					}
 					m_active_frame = null;
 					return;
@@ -139,13 +147,7 @@ function ImageDecoder(callback) {
 				m_active_frame['pixels_cur'] += data.length;
 				if(m_active_frame['pixels_cur'] == m_active_frame['image_size']) {
 					end_of_frame = true;
-					var uuid = uuidParse.parse(m_active_frame["uuid"][2]);
-					var timestamp = parseInt(m_active_frame["timestamp"][2])*1000 + parseInt(m_active_frame["timestamp"][3])/1000;
-					m_frame_info_ary.push({
-							meta : m_active_frame['meta'],
-							uuid : uuid,
-							timestamp : timestamp,
-						});
+					m_frame_info_ary.push(m_active_frame['frame_info']);
 				}
 				if (m_active_frame['img_type']) {
 					var codec = m_active_frame['img_type'][2];
