@@ -45,7 +45,9 @@ var app = (function() {
 	// main canvas
 	var canvas;
 	// overlay
-	var overlay;
+	var m_overlay;
+	var m_menu_str;
+	var m_info_str;
 	// webgl handling
 	var m_video_handler;
 	// audio handling
@@ -341,12 +343,26 @@ var app = (function() {
 				// self.send_command(CAPTURE_DOMAIN + 'set_menu_visible ' +
 				// (bln?'1':'0'));
 				m_menu_visible = bln;
-				overlay.style.visibility = m_menu_visible ?
-					"visible" :
-					"hidden";
+				if(bln){
+					m_overlay.innerHTML = m_menu_str;
+				}else{
+					m_overlay.innerHTML = m_info_str;
+				}
+				if(m_overlay.innerHTML) {
+					m_overlay.style.visibility = "visible";
+				}else{
+					m_overlay.style.visibility = "hidden";
+				}
+			},
+			set_menu: function(str) {
+				m_menu_str = str;
+				m_overlay.innerHTML = str;
+				self.set_menu_visible(m_menu_visible);
 			},
 			set_info: function(str) {
-				overlay.innerHTML = str;
+				m_info_str = str;
+				m_overlay.innerHTML = str;
+				self.set_menu_visible(m_menu_visible);
 			},
 			getFile: function(path, callback) {
 				if (!query['force-local'] && core.connected()) {
@@ -799,7 +815,6 @@ var app = (function() {
 		handle_frame: function(type, data, width, height, info) {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
-				self.plugin_host.set_menu_visible(false);
 				m_frame_active = true;
 			} {				
 				var fov = m_view_fov;
@@ -1017,7 +1032,7 @@ var app = (function() {
 			}
 
 			canvas = document.getElementById('panorama');
-			overlay = document.getElementById('overlay');
+			m_overlay = document.getElementById('overlay');
 
 			self.plugin_host = PluginHost(self);
 			self.init_common_options();
@@ -1288,7 +1303,7 @@ var app = (function() {
 								"<br/>";
 						}
 						info += "</pre>";
-						self.plugin_host.set_info(info);
+						self.plugin_host.set_menu(info);
 					}
 					if (!m_frame_active) {
 						return;
