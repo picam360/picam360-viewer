@@ -85,10 +85,14 @@ vec4 PostFX(sampler2D tex_y, sampler2D tex_u, sampler2D tex_v, vec4 posPos)
 }
 
 void main(void) {
+#ifdef STEREO_SIDE_BY_SIDE
 	vec4 _tcoord = vec4(
 		tcoord.x / 2.0 + eye_index * 0.5,
 		1.0 - tcoord.y,
 		tcoord2.x / 2.0 + eye_index * 0.5,
 		1.0 - tcoord2.y);
+#else
+	vec4 _tcoord = vec4(tcoord.x, 1.0 - tcoord.y, tcoord2.x, 1.0 - tcoord2.y);
+#endif
 	gl_FragColor = PostFX(tex_y, tex_u, tex_v, _tcoord);
 }
