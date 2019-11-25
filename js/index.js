@@ -851,7 +851,7 @@ var app = (function() {
 			m_audio_handler.pushAudioStream(left, right);
 		},
 
-		init_webgl: function() {			
+		init_webgl: function(callback) {			
 			m_audio_handler = new AudioHandler();
 			// webgl handling
 			m_video_handler = new VideoHandler();
@@ -897,10 +897,6 @@ var app = (function() {
 				m_image_decoder = ImageDecoder();
 				m_image_decoder.set_frame_callback(self.handle_frame);
 
-				if (query['vpm']) {
-					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion_normal, m_image_decoder.decode);
-				}
-
 				// opus_decoder = OpusDecoder();
 				// opus_decoder.set_frame_callback(self.handle_audio_frame);
 
@@ -910,6 +906,10 @@ var app = (function() {
 
 				// animate
 				self.start_animate();
+				
+				if(callback){
+					callback();
+				}
 			});
 		},
 
@@ -1036,12 +1036,18 @@ var app = (function() {
 
 			self.plugin_host = PluginHost(self);
 			self.init_common_options();
-			self.init_webgl();
-			self.init_watch();
-			self.init_network(function() {
-				self.init_options();
-			}, function() {
-				self.init_options();
+			self.init_webgl(()=>{
+				if(query['vpm']){
+					self.plugin_host.set_info("waiting image...");
+					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion, m_image_decoder.decode);
+				}else{
+					self.init_watch();
+					self.init_network(function() {
+						self.init_options();
+					}, function() {
+						self.init_options();
+					});
+				}
 			});
 		},
 		start_ws: function(callback, err_callback) {
