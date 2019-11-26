@@ -33,7 +33,8 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 				return;
 			}
 			{//bitrate
-				var elapsed = new Date().getTime() - m_timestamp;
+				var now = new Date().getTime();
+				var elapsed = now - m_timestamp;
 				elapsed = Math.max(elapsed, 1);
 				var mbps = 8 * req.response.byteLength / elapsed / 1000;
 				if(m_mbps == 0){
