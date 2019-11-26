@@ -13,6 +13,8 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 	var m_view_quat = new THREE.Quaternion();
 	var m_framecount = 0;
 	var m_timer = null;
+	var m_mbps = 0;
+	var m_timestamp = new Date().getTime();;
 
 	function loadFile(path, callback, error_callbackk) {
 		var req = new XMLHttpRequest();
@@ -29,6 +31,16 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 			if(req.status != 200){
 				req.onerror();
 				return;
+			}
+			{//bitrate
+				var now = new Date().getTime();
+				var mbps = req.response.byteLength*8 / (now - m_timestamp) / 1000;
+				if(m_mbps == 0){
+					m_mbps = mbps;
+				}else{
+					m_mbps = m_mbps*0.9+mbps*0.1;
+				}
+				m_timestamp = now;
 			}
 			m_loaded_framecount++;
 			callback(new Uint8Array(req.response));
@@ -89,6 +101,9 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 	
 	
 	var self = {
+		get_bitrate_mbps : () => {
+			return m_mbps;
+		},
 	}; // self
 	return self;
 }

@@ -1245,9 +1245,13 @@ var app = (function() {
 								}
 								status += "r-fps:" + texture_info.animate_fps.toFixed(3) +
 									"<br/>";
-								status += "latency:" +
-									texture_info.latency_msec.toFixed(0) +
-									"ms<br/>";
+								if(m_vpm_loader){
+									//not realtime
+								}else{
+									status += "latency:" +
+										texture_info.latency_msec.toFixed(0) +
+										"ms<br/>";
+								}
 								status += "codec:" + texture_info.codec + "<br/>";
 								status += "<br/>";
 							}
@@ -1257,10 +1261,16 @@ var app = (function() {
 								status += "bitrate:" + (texture_info.bitrate / 1e6).toFixed(3) +
 									"Mbit/s<br/>";
 								status += "<br/>";
-							}else{
+							}else if(rtp){
 								var rtp_info = rtp.get_info();
 								status += "packet<br/>";
 								status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
+									"Mbit/s<br/>";
+								status += "<br/>";
+							}else if(m_vpm_loader){
+								var mbps = m_vpm_loader.get_bitrate_mbps();
+								status += "packet<br/>";
+								status += "bitrate:" + mbps.toFixed(3) +
 									"Mbit/s<br/>";
 								status += "<br/>";
 							}
