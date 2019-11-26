@@ -80,8 +80,8 @@ var app = (function() {
 
 	var m_frame_active = false;
 	var m_menu_visible = false;
-	var m_info = "";
-	var m_menu = "";
+	var m_upstream_info = "";
+	var m_upstream_menu = "";
 	
 	var m_pc = null;
 
@@ -938,10 +938,10 @@ var app = (function() {
 				}
 			});
 			self.plugin_host.add_watch("upstream.info", function(value) {
-				m_info = value;
+				m_upstream_info = value;
 			});
 			self.plugin_host.add_watch("upstream.menu", function(value) {
-				m_menu = value;
+				m_upstream_menu = value;
 			});
 
 			self.plugin_host
@@ -1275,9 +1275,10 @@ var app = (function() {
 								status += "<br/>";
 							}
 	
+							if(m_upstream_info)
 							{
 								status += "upstream<br/>";
-								status += m_info.replace(/\n/gm, "<br/>");
+								status += m_upstream_info.replace(/\n/gm, "<br/>");
 								status += "<br/>";
 							}
 	
@@ -1290,7 +1291,7 @@ var app = (function() {
 						var activated_color = "#00ffff";
 						var selected_color = "#ff00ff";
 						var marked_color = "#ffff00";
-						var rows = m_menu.split("\n");
+						var rows = m_upstream_menu.split("\n");
 						var _nodes_index = rows[0].split(",");
 						var nodes_index = [];
 						for (var i = 0; i < _nodes_index.length; i++) {
