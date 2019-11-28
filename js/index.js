@@ -816,6 +816,9 @@ var app = (function() {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				m_frame_active = true;
+				if (parseBoolean(query['stereo'] || 'true')) {
+					self.plugin_host.set_stereo(true);
+				}
 			} {				
 				var fov = m_view_fov;
 				var view_quat = m_video_handler.get_view_quaternion();
