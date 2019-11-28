@@ -76,7 +76,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		loadFile(path, (data) => {
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			var wait_ms = Math.max(1000/m_options.fps - elapsed, 1);
+			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);//30hz maxs
 			setTimeout(()=>{
 				var now = new Date().getTime();
 				var elapsed = now - m_timestamp;
@@ -88,11 +88,11 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 					}else{
 						m_mbps = m_mbps*0.9+mbps*0.1;
 					}
-					m_timestamp = now;
 				}
 				if(m_frame_callback){
 					m_frame_callback(data);
 				}
+				m_timestamp = now;
 				request_new_frame();
 			}, wait_ms);
 		}, (req) => {
