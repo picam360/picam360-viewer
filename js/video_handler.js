@@ -278,6 +278,8 @@
 				}
 				if (self.vertex_type_forcibly) {
 					vertex_type = self.vertex_type_forcibly;
+				}else if(!vertex_type){
+					vertex_type = "window";
 				}
 				self.vertex_type = vertex_type;
 				
