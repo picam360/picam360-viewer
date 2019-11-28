@@ -816,7 +816,7 @@ var app = (function() {
 			if (!m_frame_active) {
 				self.plugin_host.set_info("");
 				m_frame_active = true;
-				if (parseBoolean(query['stereo'] || 'true')) {
+				if (parseBoolean(query['stereo'] || 'false')) {
 					self.plugin_host.set_stereo(true);
 				}
 			} {				
