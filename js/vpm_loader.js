@@ -76,7 +76,7 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		loadFile(path, (data) => {
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);//30hz maxs
+			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);//30hz max
 			setTimeout(()=>{
 				var now = new Date().getTime();
 				var elapsed = now - m_timestamp;
