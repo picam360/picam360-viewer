@@ -1043,6 +1043,7 @@ var app = (function() {
 				if(query['vpm']){
 					self.plugin_host.set_info("waiting image...");
 					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion, m_image_decoder.decode);
+					self.init_options();
 				}else{
 					self.init_watch();
 					self.init_network(function() {
