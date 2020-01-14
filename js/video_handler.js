@@ -266,6 +266,7 @@
 					if (map["mode"]) {
 						switch (map["mode"][2]) {
 							case "WINDOW" :
+							case "FISHEYE" :
 							case "EQUIRECTANGULAR" :
 							case "PICAM360MAP" :
 							case "PICAM360MAP3D" :
