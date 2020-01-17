@@ -79,28 +79,31 @@
 
 		var self = {
 			updateCanvasSize : function() {
-// var w = Math.abs(window.orientation || 0) != 90
-// ? window.innerWidth
-// : window.innerHeight;
-// var h = Math.abs(window.orientation || 0) != 90
-// ? window.innerHeight
-// : window.innerWidth;
-				var w = window.innerWidth;
-				var h = window.innerHeight;
-
-				if(m_worker){
-					m_worker.postMessage({
-						type : 'setCanvasSize',
-						width : w,
-						height : h,
-					});
-				}else if(m_omvr){
-					m_omvr.setCanvasSize(w, h);
-				}
-
-				console.log("updateCanvasSize : " + w + "," + h);
+				//in some browser, window.innerWidth, window.innerHeight not changed correctly on resize event
+				setTimeout(()=>{
+					// var w = Math.abs(window.orientation || 0) != 90
+					// ? window.innerWidth
+					// : window.innerHeight;
+					// var h = Math.abs(window.orientation || 0) != 90
+					// ? window.innerHeight
+					// : window.innerWidth;
+					var w = window.innerWidth;
+					var h = window.innerHeight;
 	
-				gotoTop();
+					if(m_worker){
+						m_worker.postMessage({
+							type : 'setCanvasSize',
+							width : w,
+							height : h,
+						});
+					}else if(m_omvr){
+						m_omvr.setCanvasSize(w, h);
+					}
+	
+					console.log("updateCanvasSize : " + w + "," + h);
+		
+					gotoTop();
+				}, 500);
 			},
 // set_view_quaternion : function(value) {
 // m_view_quat_1 = m_view_quat;
