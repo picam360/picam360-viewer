@@ -103,7 +103,7 @@
 					console.log("updateCanvasSize : " + w + "," + h);
 		
 					gotoTop();
-				}, 500);
+				}, 100);
 			},
 // set_view_quaternion : function(value) {
 // m_view_quat_1 = m_view_quat;
