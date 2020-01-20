@@ -169,6 +169,7 @@ var create_plugin = (function() {
 					case 'double_click':
 						if(m_active_branch){
 							m_active_path = m_active_branch;
+							m_active_branch = null;//wait for next eos
 							if(m_tour.paths && m_tour.paths[m_active_path]){
 								m_plugin_host.load_vpm(m_tour.paths[m_active_path].vpm_path);
 							}
