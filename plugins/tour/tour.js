@@ -120,6 +120,9 @@ var create_plugin = (function() {
 					case 'sos':
 						break;
 					case 'eos':
+						if(m_branch_meshes){
+							return;
+						}
 						m_branch_meshes = {};
 						for(var key in m_tour.paths[m_active_path].branches) {
 							var branch = m_tour.paths[m_active_path].branches[key];

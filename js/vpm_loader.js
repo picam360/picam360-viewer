@@ -18,6 +18,7 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 	var m_timestamp = new Date().getTime();
 	var m_x_deg = 0;
 	var m_y_deg = 0;
+	var m_eos = false;
 
 	function loadFile(path, callback, error_callbackk) {
 		var req = new XMLHttpRequest();
@@ -110,7 +111,8 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 				if(m_info_callback){
 					m_info_callback("not_found");
 				}
-			}else{
+			}else if(!m_eos){
+				m_eos = true;
 				console.log("end");
 				if(m_info_callback){
 					m_info_callback("eos");
