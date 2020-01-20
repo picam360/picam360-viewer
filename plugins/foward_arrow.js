@@ -8,7 +8,7 @@ var create_plugin = (function() {
 		var loader = new THREE.AMFLoader();
 		loader.load( 'img/arrow.amf', function ( mesh ) {
 			mesh.position.set( 0.0, -1000.0, 0.0 );
-			mesh.rotation.set( Math.PI / 2, 0,  Math.PI / 2 );
+			mesh.rotation.set( 0, 0, 0 );
 			mesh.castShadow = true;
 			mesh.receiveShadow = true;
 			mesh.scale.set(10,10,10);
@@ -17,7 +17,9 @@ var create_plugin = (function() {
 					mesh.position.z = 1;
 				}else{
 					mesh.position.z += 50;
-			}},50);
+				}
+				mesh.rotation.set( 0, 0, mesh.position.z/300 );
+			},50);
 			m_plugin_host.add_overlay_object( mesh );
         } );
 		
