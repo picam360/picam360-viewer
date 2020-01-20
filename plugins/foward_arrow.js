@@ -5,10 +5,8 @@ var create_plugin = (function() {
 	return function(plugin_host) {
 		m_plugin_host = plugin_host;
 		
-		var loader = new THREE.STLLoader();
-		loader.load( 'img/arrow.stl', function ( geometry ) {
-			var material = new THREE.MeshPhongMaterial( { color: 0xa48210, specular: 0x111111, shininess: 1 } )
-			var mesh = new THREE.Mesh( geometry, material );
+		var loader = new THREE.AMFLoader();
+		loader.load( 'img/arrow.amf', function ( mesh ) {
 			mesh.position.set( 0.0, -1000.0, 0.0 );
 			mesh.rotation.set( Math.PI / 2, 0,  Math.PI / 2 );
 			mesh.castShadow = true;
