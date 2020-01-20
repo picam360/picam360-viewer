@@ -118,12 +118,6 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						if(m_branch_meshes){
-							for(var key in m_branch_meshes) {
-								m_plugin_host.remove_overlay_object( m_branch_meshes[key] );
-							}
-						}
-						m_branch_meshes = null;
 						break;
 					case 'eos':
 						m_branch_meshes = {};
@@ -131,7 +125,7 @@ var create_plugin = (function() {
 							var branch = m_tour.paths[m_active_path].branches[key];
 							loadFile(branch.marker, (data) => {
 								var txt = (new TextDecoder).decode(data);
-								var color = [1.0, 1.0, 0.0, 0.5];
+								var color = [1.0, 1.0, 0.0, 0.75];
 								color_tag = sprintf(
 										'<color><r>%f</r><g>%f</g><b>%f</b><a>%f</a></color>',
 										color[0], color[1], color[2], color[3]);
@@ -151,7 +145,7 @@ var create_plugin = (function() {
 									mesh.quaternion.copy( quat );
 									mesh.castShadow = true;
 									mesh.receiveShadow = true;
-									mesh.scale.set(10,10,10);
+									mesh.scale.set(20,20,20);
 									m_branch_meshes[key] = mesh;
 									m_plugin_host.add_overlay_object( mesh );
 						        } );
@@ -172,6 +166,12 @@ var create_plugin = (function() {
 							if(m_tour.paths && m_tour.paths[m_active_path]){
 								m_plugin_host.load_vpm(m_tour.paths[m_active_path].vpm_path);
 							}
+							if(m_branch_meshes){
+								for(var key in m_branch_meshes) {
+									m_plugin_host.remove_overlay_object( m_branch_meshes[key] );
+								}
+							}
+							m_branch_meshes = null;
 						}
 						break;
 					default:
