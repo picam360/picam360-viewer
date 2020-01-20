@@ -78,6 +78,7 @@ var create_plugin = (function() {
 				return;
 			}
 			var now = new Date().getTime();
+			var active_branch;
 			for(var key in m_branch_meshes) {
 				var branch = m_tour.paths[m_active_path].branches[key];
 				var mesh = m_branch_meshes[key];
@@ -92,12 +93,13 @@ var create_plugin = (function() {
 				
 				var dot = dir.dot(view_dir);
 				if(dot > 0.9){
-					m_active_branch = key;
+					active_branch = key;
 					var euler_diff = new THREE.Euler(0, 0.1, 0, "YXZ");
 					var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 					mesh.quaternion.multiply(quat_diff);
 				}
 			}
+			m_active_branch = active_branch;
 		},50);
 	}
 	
@@ -128,7 +130,7 @@ var create_plugin = (function() {
 							var branch = m_tour.paths[m_active_path].branches[key];
 							loadFile(branch.marker, (data) => {
 								var txt = (new TextDecoder).decode(data);
-								var color = [1.0, 1.0, 0.0, 0.75];
+								var color = [1.0, 1.0, 0.0, 0.5];
 								color_tag = sprintf(
 										'<color><r>%f</r><g>%f</g><b>%f</b><a>%f</a></color>',
 										color[0], color[1], color[2], color[3]);
@@ -141,14 +143,15 @@ var create_plugin = (function() {
 									var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 											 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
 									var quat = new THREE.Quaternion().setFromEuler(euler);
-									var pos = new THREE.Vector3(0, -1000, -500).applyQuaternion(quat);
+									var pos = new THREE.Vector3(0, -10000, 0).applyQuaternion(quat);
 									var euler2 = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 											 .degToRad(-branch.dir[1]), THREE.Math.degToRad(0), "XYZ");
 									mesh.position.copy( pos );
 									mesh.quaternion.copy( quat );
 									mesh.castShadow = true;
 									mesh.receiveShadow = true;
-									mesh.scale.set(20,20,20);
+									var scale = 100*(branch.marker_scale||1);
+									mesh.scale.set(scale, scale, scale);
 									m_branch_meshes[key] = mesh;
 									m_plugin_host.add_overlay_object( mesh );
 						        } );
