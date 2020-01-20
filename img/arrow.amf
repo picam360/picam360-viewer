@@ -2,7 +2,6 @@
 <amf unit="millimeter">
  <metadata type="producer">OpenSCAD 2019.03.03 (git abd9ae92)</metadata>
  <object id="0">
- <color><r>1.0</r><g>1.0</g><b>0.0</b><a>0.5</a></color>
   <mesh>
    <vertices>
     <vertex><coordinates>
