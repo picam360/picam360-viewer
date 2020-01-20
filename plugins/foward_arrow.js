@@ -8,7 +8,7 @@ var create_plugin = (function() {
 		var loader = new THREE.AMFLoader();
 		loader.load( 'img/arrow.amf', function ( mesh ) {
 			mesh.position.set( 0.0, -1000.0, 0.0 );
-			mesh.rotation.set( 0, 0, 0 );
+			mesh.rotation.set( Math.PI / 2, 0,  Math.PI / 2 );
 			mesh.castShadow = true;
 			mesh.receiveShadow = true;
 			mesh.scale.set(10,10,10);
