@@ -1,7 +1,8 @@
-function VpmLoader(base_path, get_view_quaternion, callback) {
+function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 	var m_base_path = base_path;
 	var m_get_view_quaternion = get_view_quaternion;
 	var m_frame_callback = callback;
+	var m_info_callback = info_callback;
 	var m_loaded_framecount = 0;
 	var m_options = {
 			"num_per_quarter" : 3,
@@ -34,7 +35,6 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 				req.onerror();
 				return;
 			}
-			m_loaded_framecount++;
 			callback(new Uint8Array(req.response));
 		};
 		req.send(null);
@@ -74,14 +74,23 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		var path = m_base_path + "/" + m_x_deg + "_" + m_y_deg + "/" + m_framecount + ".pif";
 		// console.log(path);
 		loadFile(path, (data) => {
+			if(m_loaded_framecount == 0){
+				console.log("start");
+				if(m_info_callback){
+					m_info_callback("sos");
+				}
+			}
+			m_loaded_framecount++;
+			
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);//30hz max
+			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);// 30hz
+																		// max
 			setTimeout(()=>{
 				var now = new Date().getTime();
 				var elapsed = now - m_timestamp;
 				elapsed = Math.max(elapsed, 1);
-				{//bitrate
+				{// bitrate
 					var mbps = 8 * data.byteLength / elapsed / 1000;
 					if(m_mbps == 0){
 						m_mbps = mbps;
@@ -98,10 +107,14 @@ function VpmLoader(base_path, get_view_quaternion, callback) {
 		}, (req) => {
 			if(m_loaded_framecount == 0){
 				console.log("not found : " + req.responseURL);
+				if(m_info_callback){
+					m_info_callback("not_found");
+				}
 			}else{
-				console.log("repeat");
-				m_framecount = 0;
-				request_new_frame();
+				console.log("end");
+				if(m_info_callback){
+					m_info_callback("eos");
+				}
 			}
 		});
 	}

@@ -405,6 +405,14 @@ var app = (function() {
 			add_overlay_object : function(obj) {
 				m_video_handler.add_overlay_object( obj );
 			},
+			remove_overlay_object : function(obj) {
+				m_video_handler.remove_overlay_object( obj );
+			},
+			load_vpm : function(url) {
+				m_vpm_loader = VpmLoader(url, m_video_handler.get_view_quaternion, m_image_decoder.decode, (info) => {
+					self.send_event('vpm_loader', info);
+				});
+			},
 		};
 		return self;
 	};
@@ -882,7 +890,7 @@ var app = (function() {
 							.degToRad(0), THREE.Math.degToRad(0), THREE.Math
 							.degToRad(0.5), "YXZ"));
 					view_offset = view_quat
-						.multiply(view_offset_diff_quat).multiply(quat
+						.multiply(view_offset_diff_quat).multiply(view_quat
 							.conjugate());
 				}
 			}, 100);
@@ -1050,18 +1058,16 @@ var app = (function() {
 			self.plugin_host = PluginHost(self);
 			self.init_common_options();
 			self.init_webgl(()=>{
-				if(query['vpm']){
-					self.plugin_host.set_info("waiting image...");
-					m_vpm_loader = VpmLoader(query['vpm'], m_video_handler.get_view_quaternion, m_image_decoder.decode);
+				self.init_watch();
+				self.init_network(function() {
 					self.init_options();
-				}else{
-					self.init_watch();
-					self.init_network(function() {
-						self.init_options();
-					}, function() {
-						self.init_options();
-					});
-				}
+				}, function() {
+					if(query['vpm']){
+						self.plugin_host.set_info("waiting image...");
+						self.plugin_host.load_vpm(query['vpm']);
+					}
+					self.init_options();
+				});
 			});
 		},
 		start_ws: function(callback, err_callback) {

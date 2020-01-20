@@ -30,6 +30,7 @@ var create_plugin = (function() {
 	}
 
 	function init() {
+		var last_mouseup = 0;
 		var down = false;
 		var swipeable = false;
 		var sx = 0, sy = 0;
@@ -108,6 +109,11 @@ var create_plugin = (function() {
 		}
 		var mouseupFunc = function() {
 			down = false;
+			var now = new Date().getTime();
+			if(now - last_mouseup < 500){
+				m_plugin_host.send_event("mouse", "double_click");
+			}
+			last_mouseup = now;
 		};
 		var mousewheelFunc = function(e) {
 			fov += e.wheelDelta < 0 ? 5 : -5;
