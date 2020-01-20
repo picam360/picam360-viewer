@@ -402,6 +402,9 @@ var app = (function() {
 					}
 				});
 			},
+			add_overlay_object : function(obj) {
+				m_video_handler.add_overlay_object( obj );
+			},
 		};
 		return self;
 	};
@@ -472,6 +475,13 @@ var app = (function() {
 				var txt = (new TextDecoder).decode(chunk_array[0]);
 				if (txt) {
 					options = JSON.parse(txt);
+				}
+				if (query['plugin_paths']) {
+					var plugin_paths = JSON.parse(query['plugin_paths']);
+					if(!options.plugin_paths){
+						options.plugin_paths = [];
+					}
+					options.plugin_paths = options.plugin_paths.concat(plugin_paths);
 				}
 				if (options.plugin_paths && options.plugin_paths.length != 0) {
 					function load_plugin(idx) {

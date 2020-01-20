@@ -105,6 +105,14 @@
 					gotoTop();
 				}, 100);
 			},
+
+			add_overlay_object : function(obj) {
+				if(m_worker){
+					//TODO
+				}else if(m_omvr){
+					m_omvr.add_overlay_object( obj );
+				}
+			},
 // set_view_quaternion : function(value) {
 // m_view_quat_1 = m_view_quat;
 // m_view_quat_1_time = m_view_quat_time;
