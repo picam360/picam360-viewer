@@ -4,8 +4,9 @@
 			"vpm_path" :  "https://vpm.picam360.com/h265",
 			"branches" : {
 				"end" : {
-					"marker" : "img/magic_gate.stl",
+					"marker" : "img/arrow.stl",
 					"marker_scale" : 0.5,
+					"effect" : "arrow",
 					"dir" : [90, -45, 0]
 				}
 			}
@@ -16,6 +17,7 @@
 				"start" : {
 					"marker" : "img/magic_gate.stl",
 					"marker_scale" : 0.5,
+					"effect" : "rotate",
 					"dir" : [90, 45, 0]
 				}
 			}

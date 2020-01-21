@@ -38,25 +38,25 @@ var create_plugin = (function() {
 			}));
 			var loader = new THREE.AMFLoader();
 			loader.load(url, function ( mesh ) {
-				var base_pos = new THREE.Vector3(0, -1000, -500);
-				var euler = new THREE.Euler(-Math.PI/2, 0, 0, "YXZ");
+				var base_pos = new THREE.Vector3(0, -1000, 0);
+				var euler = new THREE.Euler(-Math.PI/2-Math.PI/4, 0, 0, "YXZ");
 				var quat = new THREE.Quaternion().setFromEuler(euler);
-				var pos = base_pos.clone().applyQuaternion(quat);
-				mesh.position.copy( pos );
+				mesh.position.copy( base_pos );
 				mesh.quaternion.copy( quat );
 				mesh.castShadow = true;
 				mesh.receiveShadow = true;
 				mesh.scale.set(10,10,10);
 				setInterval(()=>{
-					if(base_pos.y < -2000){
-						base_pos.y = -1;
+					if(base_pos.y > 0){
+						base_pos.y = -1000;
+						base_pos.z = 0;
 					}else{
-						base_pos.y -= 50;
+						base_pos.y += 25;
+						base_pos.z += 100;
 					}
 					var euler_diff = new THREE.Euler(0, 0.1, 0, "YXZ");
 					var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
-					var pos = base_pos.clone().applyQuaternion(quat);
-					mesh.position.copy( pos );
+					mesh.position.copy( base_pos );
 					mesh.quaternion.multiply(quat_diff);
 				},50);
 				m_plugin_host.add_overlay_object( mesh );

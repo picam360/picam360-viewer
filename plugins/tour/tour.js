@@ -82,7 +82,6 @@ var create_plugin = (function() {
 			if(!m_branch_meshes){
 				return;
 			}
-			var now = new Date().getTime();
 			var active_branch;
 			for(var key in m_branch_meshes) {
 				var branch = m_tour.paths[m_active_path].branches[key];
@@ -97,22 +96,80 @@ var create_plugin = (function() {
 				var dir = new THREE.Vector3(0, -1, 0).applyQuaternion(quat);
 				
 				var dot = dir.dot(view_dir);
+				var active = false;
 				if(dot > 0.9){
 					active_branch = key;
-					var euler_diff = new THREE.Euler(0, 0.2*2*Math.PI/1000*50, 0, "YXZ");
-					var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
-					mesh.quaternion.multiply(quat_diff);
-					var scale = 5*FACTOR*(branch.marker_scale||1);
-					mesh.scale.set(scale, scale, scale);
-					mesh.material.opacity = 0.75;
-				}else{
-					var scale = FACTOR*(branch.marker_scale||1);
-					mesh.scale.set(scale, scale, scale);
-					mesh.material.opacity = 0.5;
+					active = true;
+				}
+				switch(branch.effect){
+				case "arrow":
+					arrow_effect(branch, mesh, active);
+					break;
+				case "rotate":
+				default:
+					rotate_effect(branch, mesh, active);
+					break;
 				}
 			}
 			m_active_branch = active_branch;
 		},50);
+	}
+	
+	function arrow_effect(branch, mesh, active){
+		var now = new Date().getTime();
+		var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
+				 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
+		var quat = new THREE.Quaternion().setFromEuler(euler);
+		var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
+		mesh.position.copy( pos );
+		mesh.quaternion.copy( quat );
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		var euler_diff = new THREE.Euler(-Math.PI/4, 0, 0, "YXZ");
+		var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
+		mesh.quaternion.multiply(quat_diff);
+
+		if(active){
+			var vec = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(mesh.quaternion);
+			var base = pos.sub(vec);
+			var k = (now%(2*1000))/(2*1000);
+			pos = base.add(vec.multiplyScalar(k));
+			mesh.position.copy( pos );
+			var euler_diff2 = new THREE.Euler(0, 2*Math.PI*now/1000, 0, "YXZ");
+			var quat_diff2 = new THREE.Quaternion().setFromEuler(euler_diff2);
+			mesh.quaternion.multiply(quat_diff2);
+			var scale = 2*FACTOR*(branch.marker_scale||1);
+			mesh.scale.set(scale, scale, scale);
+			mesh.material.opacity = 0.75;
+		}else{
+			var scale = FACTOR*(branch.marker_scale||1);
+			mesh.scale.set(scale, scale, scale);
+			mesh.material.opacity = 0.5;
+		}
+	}
+	
+	function rotate_effect(branch, mesh, active){
+		var now = new Date().getTime();
+		var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
+				 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
+		var quat = new THREE.Quaternion().setFromEuler(euler);
+		var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
+		mesh.position.copy( pos );
+		mesh.quaternion.copy( quat );
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		if(active){
+			var euler_diff = new THREE.Euler(0, 0.2*2*Math.PI*now/1000, 0, "YXZ");
+			var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
+			mesh.quaternion.multiply(quat_diff);
+			var scale = 5*FACTOR*(branch.marker_scale||1);
+			mesh.scale.set(scale, scale, scale);
+			mesh.material.opacity = 0.75;
+		}else{
+			var scale = FACTOR*(branch.marker_scale||1);
+			mesh.scale.set(scale, scale, scale);
+			mesh.material.opacity = 0.5;
+		}
 	}
 	
 	function load_stl(url, callback){
@@ -176,7 +233,7 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						break;
+						//break;
 					case 'eos':
 						if(m_branch_meshes){
 							return;
@@ -191,16 +248,6 @@ var create_plugin = (function() {
 								loader = load_stl;
 							}
 							loader(branch.marker, function(mesh){
-								var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
-										 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
-								var quat = new THREE.Quaternion().setFromEuler(euler);
-								var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
-								mesh.position.copy( pos );
-								mesh.quaternion.copy( quat );
-								mesh.castShadow = true;
-								mesh.receiveShadow = true;
-								var scale = FACTOR*(branch.marker_scale||1);
-								mesh.scale.set(scale, scale, scale);
 								m_branch_meshes[key] = mesh;
 								m_plugin_host.add_overlay_object( mesh );
 					        } );
