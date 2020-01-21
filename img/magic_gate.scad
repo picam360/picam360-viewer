@@ -13,8 +13,8 @@ module magic_circle(){
         }
     }
         difference(){
-            cylinder(r=10, h=1, center=true);
-            cylinder(r=9, h=100, center=true);
+            cylinder(r=10, h=1, $fn=90, center=true);
+            cylinder(r=9, h=100, $fn=90, center=true);
         }
 }
 color([0.5,0.5,0.5,0.75])
