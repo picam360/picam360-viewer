@@ -1,6 +1,7 @@
 var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
+	var FACTOR = 10;//related to stereo
 
 	function loadFile(path, callback, error_callbackk) {
 		var req = new XMLHttpRequest();
@@ -97,6 +98,11 @@ var create_plugin = (function() {
 					var euler_diff = new THREE.Euler(0, 0.1, 0, "YXZ");
 					var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 					mesh.quaternion.multiply(quat_diff);
+					var scale = 3*FACTOR*(branch.marker_scale||1);
+					mesh.scale.set(scale, scale, scale);
+				}else{
+					var scale = FACTOR*(branch.marker_scale||1);
+					mesh.scale.set(scale, scale, scale);
 				}
 			}
 			m_active_branch = active_branch;
@@ -143,14 +149,14 @@ var create_plugin = (function() {
 									var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 											 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
 									var quat = new THREE.Quaternion().setFromEuler(euler);
-									var pos = new THREE.Vector3(0, -10000, 0).applyQuaternion(quat);
+									var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
 									var euler2 = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 											 .degToRad(-branch.dir[1]), THREE.Math.degToRad(0), "XYZ");
 									mesh.position.copy( pos );
 									mesh.quaternion.copy( quat );
 									mesh.castShadow = true;
 									mesh.receiveShadow = true;
-									var scale = 100*(branch.marker_scale||1);
+									var scale = FACTOR*(branch.marker_scale||1);
 									mesh.scale.set(scale, scale, scale);
 									m_branch_meshes[key] = mesh;
 									m_plugin_host.add_overlay_object( mesh );
