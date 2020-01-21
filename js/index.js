@@ -1276,7 +1276,13 @@ var app = (function() {
 								status += "<br/>";
 							}
 	
-							if(m_pc){
+							if(m_vpm_loader){
+								var mbps = m_vpm_loader.get_bitrate_mbps();
+								status += "packet<br/>";
+								status += "bitrate:" + mbps.toFixed(3) +
+									"Mbit/s<br/>";
+								status += "<br/>";
+							} else if(m_pc){
 								status += "packet<br/>";
 								status += "bitrate:" + (texture_info.bitrate / 1e6).toFixed(3) +
 									"Mbit/s<br/>";
@@ -1287,13 +1293,7 @@ var app = (function() {
 								status += "bitrate:" + rtp_info.bitrate.toFixed(3) +
 									"Mbit/s<br/>";
 								status += "<br/>";
-							}else if(m_vpm_loader){
-								var mbps = m_vpm_loader.get_bitrate_mbps();
-								status += "packet<br/>";
-								status += "bitrate:" + mbps.toFixed(3) +
-									"Mbit/s<br/>";
-								status += "<br/>";
-							}
+							} 
 	
 							if(m_upstream_info)
 							{
