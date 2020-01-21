@@ -1062,26 +1062,26 @@ var app = (function() {
 				self.init_network(function() {
 					self.init_options();
 				}, function() {
-					if(query['vpm']){
-						self.plugin_host.set_info("waiting image...");
-						self.plugin_host.load_vpm(query['vpm']);
-					}
 					self.init_options();
 				});
 			});
 		},
 		start_ws: function(callback, err_callback) {
-			// websocket
-			var ws_url = "ws://" + server_url.slice(server_url.indexOf("://")+3);
-			var socket = new WebSocket(ws_url);
-			socket.binaryType = 'arraybuffer';// blob or arraybuffer
-			socket.addEventListener('open', function (event) {
-				callback(socket);
-			});
-			socket.addEventListener('error', function (event) {
-				self.plugin_host.set_info("error : Could not connect : " + event);
+			try{
+				// websocket
+				var ws_url = "ws://" + server_url.slice(server_url.indexOf("://")+3);
+				var socket = new WebSocket(ws_url);
+				socket.binaryType = 'arraybuffer';// blob or arraybuffer
+				socket.addEventListener('open', function (event) {
+					callback(socket);
+				});
+				socket.addEventListener('error', function (event) {
+					self.plugin_host.set_info("error : Could not connect : " + event);
+					err_callback();
+				});
+			}catch{
 				err_callback();
-			});
+			}
 		},
 		start_p2p: function(p2p_uuid, callback, err_callback) {
 			var options = {
