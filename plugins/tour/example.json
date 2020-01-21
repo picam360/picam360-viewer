@@ -5,7 +5,7 @@
 			"branches" : {
 				"end" : {
 					"marker" : "img/arrow2.stl",
-					"marker_scale" : 0.5,
+					"marker_scale" : 1,
 					"effect" : "arrow",
 					"dir" : [90, -45, 0]
 				}

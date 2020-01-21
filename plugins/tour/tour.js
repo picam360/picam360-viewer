@@ -135,7 +135,7 @@ var create_plugin = (function() {
 			var k = (now%(0.75*1000))/(0.75*1000);
 			pos = base.add(vec.multiplyScalar(k));
 			mesh.position.copy( pos );
-			var scale = 2*FACTOR*(branch.marker_scale||1);
+			var scale = FACTOR*(branch.marker_scale||1);
 			mesh.scale.set(scale, scale, scale);
 			mesh.material.opacity = 0.75;
 		}else{
