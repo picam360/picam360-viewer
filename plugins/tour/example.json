@@ -4,8 +4,8 @@
 			"vpm_path" :  "https://vpm.picam360.com/h265",
 			"branches" : {
 				"end" : {
-					"marker" : "img/magic_gate.amf",
-					"marker_scale" : 1,
+					"marker" : "img/magic_gate.stl",
+					"marker_scale" : 0.5,
 					"dir" : [90, -45, 0]
 				}
 			}
@@ -14,8 +14,8 @@
 			"vpm_path" :  "https://vpm.picam360.com/3d_h265_2mbps",
 			"branches" : {
 				"start" : {
-					"marker" : "img/magic_gate.amf",
-					"marker_scale" : 1,
+					"marker" : "img/magic_gate.stl",
+					"marker_scale" : 0.5,
 					"dir" : [90, 45, 0]
 				}
 			}

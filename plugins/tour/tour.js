@@ -1,7 +1,7 @@
 var create_plugin = (function() {
 	var m_plugin_host = null;
 	var m_is_init = false;
-	var FACTOR = 10;//related to stereo
+	var FACTOR = 10;// related to stereo
 
 	function loadFile(path, callback, error_callbackk) {
 		var req = new XMLHttpRequest();
@@ -99,18 +99,48 @@ var create_plugin = (function() {
 				var dot = dir.dot(view_dir);
 				if(dot > 0.9){
 					active_branch = key;
-					var euler_diff = new THREE.Euler(0, 0.1, 0, "YXZ");
+					var euler_diff = new THREE.Euler(0, 0.2*2*Math.PI/1000*50, 0, "YXZ");
 					var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 					mesh.quaternion.multiply(quat_diff);
-					var scale = 3*FACTOR*(branch.marker_scale||1);
+					var scale = 5*FACTOR*(branch.marker_scale||1);
 					mesh.scale.set(scale, scale, scale);
+					mesh.material.opacity = 0.8;
 				}else{
 					var scale = FACTOR*(branch.marker_scale||1);
 					mesh.scale.set(scale, scale, scale);
+					mesh.material.opacity = 0.5;
 				}
 			}
 			m_active_branch = active_branch;
 		},50);
+	}
+	
+	function load_stl(url, callback){
+		var loader = new STLLoader();
+		loader.load(url, function ( geometry ) {
+			var material = new THREE.MeshPhongMaterial( { 
+				transparent: true, opacity: 0.5, color: 0xffffff, specular: 0xffffff, shininess: 1000 } );
+			var mesh = new THREE.Mesh( geometry, material );
+			callback(mesh);
+		});
+	}
+	
+	function load_amf(_url, callback){
+		loadFile(_url, (data) => {
+			var txt = (new TextDecoder).decode(data);
+			var color = [1.0, 1.0, 0.0, 0.5];
+			color_tag = sprintf(
+					'<color><r>%f</r><g>%f</g><b>%f</b><a>%f</a></color>',
+					color[0], color[1], color[2], color[3]);
+			txt = txt.replace('<object id="0">', '<object id="0">' + color_tag);
+			var url = URL.createObjectURL(new Blob([txt], {
+				  type: "text/plain"
+			}));
+			var loader = new THREE.AMFLoader();
+			loader.load(url, function ( mesh ) {
+				callback(mesh);
+			});
+		});
 	}
 	
 	return function(plugin_host) {
@@ -127,7 +157,7 @@ var create_plugin = (function() {
 				if(!m_query['tour']){
 					return;
 				}
-				if (sender == "ICADE") {//filter
+				if (sender == "ICADE") {// filter
 					switch (event) {
 					case "UP_BUTTON_DOWN" :
 						sender = "self";
@@ -135,7 +165,7 @@ var create_plugin = (function() {
 						break;
 					}
 				}
-				if(sender == 'mouse'){//filter
+				if(sender == 'mouse'){// filter
 					switch(event){
 					case 'double_click':
 						sender = "self";
@@ -154,34 +184,26 @@ var create_plugin = (function() {
 						m_branch_meshes = {};
 						for(var key in m_tour.paths[m_active_path].branches) {
 							var branch = m_tour.paths[m_active_path].branches[key];
-							loadFile(branch.marker, (data) => {
-								var txt = (new TextDecoder).decode(data);
-								var color = [1.0, 1.0, 0.0, 0.5];
-								color_tag = sprintf(
-										'<color><r>%f</r><g>%f</g><b>%f</b><a>%f</a></color>',
-										color[0], color[1], color[2], color[3]);
-								txt = txt.replace('<object id="0">', '<object id="0">' + color_tag);
-								var url = URL.createObjectURL(new Blob([txt], {
-									  type: "text/plain"
-								}));
-								var loader = new THREE.AMFLoader();
-								loader.load(url, function ( mesh ) {
-									var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
-											 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
-									var quat = new THREE.Quaternion().setFromEuler(euler);
-									var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
-									var euler2 = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
-											 .degToRad(-branch.dir[1]), THREE.Math.degToRad(0), "XYZ");
-									mesh.position.copy( pos );
-									mesh.quaternion.copy( quat );
-									mesh.castShadow = true;
-									mesh.receiveShadow = true;
-									var scale = FACTOR*(branch.marker_scale||1);
-									mesh.scale.set(scale, scale, scale);
-									m_branch_meshes[key] = mesh;
-									m_plugin_host.add_overlay_object( mesh );
-						        } );
-							});
+							var loader;
+							if(branch.marker.endsWith(".amf")){
+								loader = load_amf;
+							}else if(branch.marker.endsWith(".stl")){
+								loader = load_stl;
+							}
+							loader(branch.marker, function(mesh){
+								var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
+										 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
+								var quat = new THREE.Quaternion().setFromEuler(euler);
+								var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
+								mesh.position.copy( pos );
+								mesh.quaternion.copy( quat );
+								mesh.castShadow = true;
+								mesh.receiveShadow = true;
+								var scale = FACTOR*(branch.marker_scale||1);
+								mesh.scale.set(scale, scale, scale);
+								m_branch_meshes[key] = mesh;
+								m_plugin_host.add_overlay_object( mesh );
+					        } );
 						}
 						break;
 					case 'not_found':
@@ -196,7 +218,7 @@ var create_plugin = (function() {
 					case 'select_branch':
 						if(m_active_branch){
 							m_active_path = m_active_branch;
-							m_active_branch = null;//wait for next eos
+							m_active_branch = null;// wait for next eos
 							if(m_tour.paths && m_tour.paths[m_active_path]){
 								m_plugin_host.load_vpm(m_tour.paths[m_active_path].vpm_path);
 							}
