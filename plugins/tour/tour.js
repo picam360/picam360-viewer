@@ -104,7 +104,7 @@ var create_plugin = (function() {
 					mesh.quaternion.multiply(quat_diff);
 					var scale = 5*FACTOR*(branch.marker_scale||1);
 					mesh.scale.set(scale, scale, scale);
-					mesh.material.opacity = 0.8;
+					mesh.material.opacity = 0.75;
 				}else{
 					var scale = FACTOR*(branch.marker_scale||1);
 					mesh.scale.set(scale, scale, scale);
@@ -119,7 +119,7 @@ var create_plugin = (function() {
 		var loader = new STLLoader();
 		loader.load(url, function ( geometry ) {
 			var material = new THREE.MeshPhongMaterial( { 
-				transparent: true, opacity: 0.5, color: 0xffffff, specular: 0xffffff, shininess: 1000 } );
+				transparent: true, opacity: 0.5, color: 0xffffff, specular: 0x111111, shininess: 200 } );
 			var mesh = new THREE.Mesh( geometry, material );
 			callback(mesh);
 		});
@@ -176,7 +176,7 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						break;
+						//break;
 					case 'eos':
 						if(m_branch_meshes){
 							return;
