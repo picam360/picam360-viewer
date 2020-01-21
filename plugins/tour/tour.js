@@ -176,7 +176,7 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						//break;
+						break;
 					case 'eos':
 						if(m_branch_meshes){
 							return;
