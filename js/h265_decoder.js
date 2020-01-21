@@ -29,7 +29,10 @@ function H265Decoder(callback) {
 	}
 	var query = GetQueryString();
 
+	
 	var worker = null;
+	var m_decoding_farame_num = 0;
+	var m_pending_frames = [];
 	if (true) {
 		worker = new Worker("js/libde265_worker.js");
 		worker
@@ -46,6 +49,12 @@ function H265Decoder(callback) {
 						height : data.height,
 						});
 				}
+				if(m_pending_frames.length > 0){
+					//pending frame
+					var nal_buffer = m_pending_frames.shift();
+					request_decode(nal_buffer);
+				}
+				m_decoding_farame_num--;
 			}, false);
 	} else {
 		var script = document.createElement('script');
@@ -62,10 +71,42 @@ function H265Decoder(callback) {
 							});
 					}
 				});
+			if(m_pending_frames.length > 0){
+				//pending frame
+				var nal_buffer = m_pending_frames.shift();
+				request_decode(nal_buffer);
+			}
+			m_decoding_farame_num--;
 		};
 		script.src = decoder_file;
 
 		document.head.appendChild(script);
+	}
+	function request_decode(nal_buffer){
+		m_decoding_farame_num++;
+		if (worker) {
+			worker.postMessage({
+				buf : nal_buffer,
+			}, [nal_buffer.buffer]); // Send data to our worker.
+		} else {
+			// decoder.push_data(annexb_sc);
+			decoder.push_data(nal_buffer);
+			decoder.flush();
+			decoder.decode(function(err) {
+				switch (err) {
+					case libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA :
+						console.log("waiting");
+						return;
+
+					default :
+						if (!libde265.de265_isOK(err)) {
+							console.log(libde265
+								.de265_get_error_text(err));
+							return;
+						}
+				}
+			});
+		}
 	}
 
 	var is_init = false;
@@ -141,28 +182,11 @@ function H265Decoder(callback) {
 					}
 				}
 				
-				if (worker) {
-					worker.postMessage({
-						buf : nal_buffer,
-					}, [nal_buffer.buffer]); // Send data to our worker.
-				} else {
-					// decoder.push_data(annexb_sc);
-					decoder.push_data(nal_buffer);
-					decoder.flush();
-					decoder.decode(function(err) {
-						switch (err) {
-							case libde265.DE265_ERROR_WAITING_FOR_INPUT_DATA :
-								console.log("waiting");
-								return;
-
-							default :
-								if (!libde265.de265_isOK(err)) {
-									console.log(libde265
-										.de265_get_error_text(err));
-									return;
-								}
-						}
-					});
+				if(m_decoding_farame_num > 0 || m_pending_frames.length > 0){
+					//pending
+					m_pending_frames.push(nal_buffer);
+				}else{
+					request_decode(nal_buffer);
 				}
 
 				m_active_frame = null;
