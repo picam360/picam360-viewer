@@ -6,7 +6,7 @@
 				"end" : {
 					"marker" : "img/magic_gate.amf",
 					"marker_scale" : 2,
-					"dir" : [90, 45, 0]
+					"dir" : [90, -45, 0]
 				}
 			}
 		},
@@ -16,7 +16,7 @@
 				"start" : {
 					"marker" : "img/magic_gate.amf",
 					"marker_scale" : 2,
-					"dir" : [90, -45, 0]
+					"dir" : [90, 45, 0]
 				}
 			}
 		}

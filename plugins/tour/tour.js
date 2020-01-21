@@ -127,6 +127,22 @@ var create_plugin = (function() {
 				if(!m_query['tour']){
 					return;
 				}
+				if (sender == "ICADE") {//filter
+					switch (event) {
+					case "UP_BUTTON_DOWN" :
+						sender = "self";
+						event = "select_branch";
+						break;
+					}
+				}
+				if(sender == 'mouse'){//filter
+					switch(event){
+					case 'double_click':
+						sender = "self";
+						event = "select_branch";
+						break;
+					}
+				}
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
@@ -174,9 +190,10 @@ var create_plugin = (function() {
 					default:
 						break;
 					}
-				}else if(sender == 'mouse'){
+				}
+				if(sender == 'self'){
 					switch(event){
-					case 'double_click':
+					case 'select_branch':
 						if(m_active_branch){
 							m_active_path = m_active_branch;
 							m_active_branch = null;//wait for next eos
