@@ -125,24 +125,29 @@ var create_plugin = (function() {
 		mesh.quaternion.copy( quat );
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
-		var euler_diff = new THREE.Euler(-Math.PI/4, 0, 0, "YXZ");
+		var euler_diff = new THREE.Euler(-Math.PI/8, 0, 0, "YXZ");
 		var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 		mesh.quaternion.multiply(quat_diff);
 
 		if(active){
-			var vec = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(mesh.quaternion);
+			var vec = new THREE.Vector3(0, -30*FACTOR, 0).applyQuaternion(mesh.quaternion);
 			var base = pos.sub(vec);
-			var k = (now%(2*1000))/(2*1000);
+			var k = (now%(0.5*1000))/(0.5*1000);
 			pos = base.add(vec.multiplyScalar(k));
 			mesh.position.copy( pos );
-			var euler_diff2 = new THREE.Euler(0, 2*Math.PI*now/1000, 0, "YXZ");
-			var quat_diff2 = new THREE.Quaternion().setFromEuler(euler_diff2);
-			mesh.quaternion.multiply(quat_diff2);
+//			var euler_diff2 = new THREE.Euler(0, 2*Math.PI*now/1000, 0, "YXZ");
+//			var quat_diff2 = new THREE.Quaternion().setFromEuler(euler_diff2);
+//			mesh.quaternion.multiply(quat_diff2);
 			var scale = 2*FACTOR*(branch.marker_scale||1);
 			mesh.scale.set(scale, scale, scale);
 			mesh.material.opacity = 0.75;
 		}else{
-			var euler_diff2 = new THREE.Euler(0, 2*Math.PI*now/1000, 0, "YXZ");
+//			var vec = new THREE.Vector3(0, -10*FACTOR, 0).applyQuaternion(mesh.quaternion);
+//			var base = pos.sub(vec);
+//			var k = (now%(2*1000))/(2*1000);
+//			pos = base.add(vec.multiplyScalar(k));
+			mesh.position.copy( pos );
+			var euler_diff2 = new THREE.Euler(0, 0.5*2*Math.PI*now/1000, 0, "YXZ");
 			var quat_diff2 = new THREE.Quaternion().setFromEuler(euler_diff2);
 			mesh.quaternion.multiply(quat_diff2);
 			var scale = FACTOR*(branch.marker_scale||1);
@@ -175,11 +180,43 @@ var create_plugin = (function() {
 		}
 	}
 	
+	function load_svg(url, callback){
+		var loader = new THREE.SVGLoader();
+		loader.load(url, function ( data ) {
+			var paths = data.paths;
+			var group = new THREE.Group();
+
+			for ( var i = 0; i < paths.length; i ++ ) {
+
+				var path = paths[ i ];
+
+				var material = new THREE.MeshBasicMaterial( {
+					color: path.color,
+					side: THREE.DoubleSide,
+					depthWrite: false
+				} );
+
+				var shapes = path.toShapes( true );
+
+				for ( var j = 0; j < shapes.length; j ++ ) {
+
+					var shape = shapes[ j ];
+					var geometry = new THREE.ShapeBufferGeometry( shape );
+					var mesh = new THREE.Mesh( geometry, material );
+					group.add( mesh );
+
+				}
+
+			}
+			callback(group);
+		});
+	}
+	
 	function load_stl(url, callback){
 		var loader = new STLLoader();
 		loader.load(url, function ( geometry ) {
 			var material = new THREE.MeshPhongMaterial( { 
-				transparent: true, opacity: 0.5, color: 0xffffff, specular: 0x111111, shininess: 200 } );
+				transparent: true, opacity: 0.5, color: 0xffff00, specular: 0x111111, shininess: 200 } );
 			var mesh = new THREE.Mesh( geometry, material );
 			callback(mesh);
 		});
@@ -236,7 +273,7 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						break;
+						//break;
 					case 'eos':
 						if(m_branch_meshes){
 							return;
@@ -249,6 +286,8 @@ var create_plugin = (function() {
 								loader = load_amf;
 							}else if(branch.marker.endsWith(".stl")){
 								loader = load_stl;
+							}else if(branch.marker.endsWith(".svg")){
+								loader = load_svg;
 							}
 							loader(branch.marker, function(mesh){
 								m_branch_meshes[key] = mesh;

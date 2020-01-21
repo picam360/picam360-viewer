@@ -4,7 +4,7 @@
 			"vpm_path" :  "https://vpm.picam360.com/h265",
 			"branches" : {
 				"end" : {
-					"marker" : "img/arrow.stl",
+					"marker" : "img/arrow2.stl",
 					"marker_scale" : 0.5,
 					"effect" : "arrow",
 					"dir" : [90, -45, 0]
