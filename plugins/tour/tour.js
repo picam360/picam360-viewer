@@ -142,6 +142,9 @@ var create_plugin = (function() {
 			mesh.scale.set(scale, scale, scale);
 			mesh.material.opacity = 0.75;
 		}else{
+			var euler_diff2 = new THREE.Euler(0, 2*Math.PI*now/1000, 0, "YXZ");
+			var quat_diff2 = new THREE.Quaternion().setFromEuler(euler_diff2);
+			mesh.quaternion.multiply(quat_diff2);
 			var scale = FACTOR*(branch.marker_scale||1);
 			mesh.scale.set(scale, scale, scale);
 			mesh.material.opacity = 0.5;
@@ -233,7 +236,7 @@ var create_plugin = (function() {
 				if(sender == 'vpm_loader'){
 					switch(event){
 					case 'sos':
-						//break;
+						break;
 					case 'eos':
 						if(m_branch_meshes){
 							return;
