@@ -97,7 +97,7 @@ var create_plugin = (function() {
 				
 				var dot = dir.dot(view_dir);
 				var active = false;
-				if(dot > 0.9){
+				if(dot > 0.95){
 					active_branch = key;
 					active = true;
 				}
