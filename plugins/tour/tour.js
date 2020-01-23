@@ -46,7 +46,10 @@ var create_plugin = (function() {
 	var m_tour = {};
 	var m_active_path;
 	var m_branch_meshes;
+	var m_user_action;
+	var m_user_last_view;
 	var m_active_branch;
+	var m_active_start;
 	
 	function get_view_quat() {
 		var quat = m_plugin_host.get_view_quaternion() || new THREE.Quaternion();
@@ -79,15 +82,26 @@ var create_plugin = (function() {
 			}
 		});
 		setInterval(()=>{
+			var current_view_quat = get_view_quat();
 			if(!m_branch_meshes){
+				m_user_action = false;
+				m_user_last_view = current_view_quat;
+				return;
+			} else if (!m_user_action){
+				if(m_user_last_view.x != current_view_quat.x || 
+						m_user_last_view.y != current_view_quat.y ||
+						m_user_last_view.z != current_view_quat.z){
+					m_user_action = true;
+				}
 				return;
 			}
+			var now = new Date().getTime();
 			var active_branch;
 			for(var key in m_branch_meshes) {
 				var branch = m_tour.paths[m_active_path].branches[key];
 				var mesh = m_branch_meshes[key];
 				
-				var view_quat = convert_to_gl_quat(get_view_quat());
+				var view_quat = convert_to_gl_quat(current_view_quat);
 				var view_dir = new THREE.Vector3(0, -1, 0).applyQuaternion(view_quat);
 				
 				var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
@@ -110,6 +124,18 @@ var create_plugin = (function() {
 					rotate_effect(branch, mesh, active);
 					break;
 				}
+			}
+			if(active_branch){
+				if(m_active_start){
+					if(now - m_active_start > 5000){
+						m_plugin_host.send_event("TOUR", "SELECT_BRANCH");
+						m_active_start = 0;
+					}
+				}else{
+					m_active_start = now;
+				}
+			}else{
+				m_active_start = 0;
 			}
 			m_active_branch = active_branch;
 		},50);
@@ -246,6 +272,14 @@ var create_plugin = (function() {
 			event_handler : function(sender, event) {
 				if(!m_query['tour']){
 					return;
+				}				
+				if (sender == "TOUR") {// filter
+					switch (event) {
+					case "SELECT_BRANCH" :
+						sender = "self";
+						event = "select_branch";
+						break;
+					}
 				}
 				if (sender == "ICADE") {// filter
 					switch (event) {
@@ -283,6 +317,7 @@ var create_plugin = (function() {
 								loader = load_svg;
 							}
 							loader(branch.marker, function(mesh){
+								mesh.material.opacity = 0.0;
 								m_branch_meshes[key] = mesh;
 								m_plugin_host.add_overlay_object( mesh );
 					        } );
