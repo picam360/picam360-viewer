@@ -42,6 +42,46 @@ var create_plugin = (function() {
 		return result;
 	}
 	
+	function createTextCanvas(text, parameters = {}){
+	    
+	    const canvas = document.createElement("canvas");
+	    const ctx = canvas.getContext("2d");
+	    
+	    // Prepare the font to be able to measure
+	    let fontSize = parameters.fontSize || 56;
+	    ctx.font = `${fontSize}px monospace`;
+	    
+	    const textMetrics = ctx.measureText(text);
+	    
+	    let width = textMetrics.width;
+	    let height = fontSize;
+	    
+	    // Resize canvas to match text size 
+	    canvas.width = width;
+	    canvas.height = height;
+	    canvas.style.width = width + "px";
+	    canvas.style.height = height + "px";
+	    
+	    // Re-apply font since canvas is resized.
+	    ctx.font = `${fontSize}px monospace`;
+	    ctx.textAlign = parameters.align || "center" ;
+	    ctx.textBaseline = parameters.baseline || "middle";
+	    
+	    // Make the canvas transparent for simplicity
+	    ctx.fillStyle = "transparent";
+	    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	    
+	    ctx.fillStyle = parameters.color || "white";
+	    ctx.fillText(text, width / 2, height / 2);
+
+//	    canvas.style.position = 'fixed';
+//	    canvas.style.top = '0%';
+//	    canvas.style.left = '0%';
+//		document.body.appendChild(canvas);
+	    
+	    return canvas;
+	}
+	
 	var m_query = GetQueryString();
 	var m_tour = {};
 	var m_active_path;
@@ -50,6 +90,7 @@ var create_plugin = (function() {
 	var m_user_last_view;
 	var m_active_branch;
 	var m_active_start;
+	var m_canvas_texture;
 	
 	function get_view_quat() {
 		var quat = m_plugin_host.get_view_quaternion() || new THREE.Quaternion();
@@ -83,16 +124,23 @@ var create_plugin = (function() {
 		});
 		setInterval(()=>{
 			var current_view_quat = get_view_quat();
+			if(m_canvas_texture){
+				m_plugin_host.remove_overlay_object(m_canvas_texture);
+				m_canvas_texture = null;
+			}
 			if(!m_branch_meshes){
 				m_user_action = false;
 				m_user_last_view = current_view_quat;
 				return;
 			} else if (!m_user_action){
-				if(m_user_last_view.x != current_view_quat.x || 
-						m_user_last_view.y != current_view_quat.y ||
-						m_user_last_view.z != current_view_quat.z){
-					m_user_action = true;
+				if(m_user_last_view){
+					if(m_user_last_view.x != current_view_quat.x || 
+							m_user_last_view.y != current_view_quat.y ||
+							m_user_last_view.z != current_view_quat.z){
+						m_user_action = true;
+					}
 				}
+				m_user_last_view = current_view_quat;
 				return;
 			}
 			var now = new Date().getTime();
@@ -127,9 +175,42 @@ var create_plugin = (function() {
 			}
 			if(active_branch){
 				if(m_active_start){
-					if(now - m_active_start > 5000){
+					var timelimit = 5;
+					var timeremain = m_active_start + timelimit*1000 - now;
+					if(timeremain <= 0){
 						m_plugin_host.send_event("TOUR", "SELECT_BRANCH");
 						m_active_start = 0;
+					}else{
+						var texture = new THREE.CanvasTexture(createTextCanvas(Math.ceil(timeremain/1000).toString(), 
+								{fontSize:56, color:'#ffff00'}));
+						texture.generateMipmaps = false;// performance
+						texture.minFilter = THREE.LinearFilter;
+						texture.magFilter = THREE.LinearFilter;
+						
+						var geometry = new THREE.PlaneBufferGeometry();
+						//var texture = new THREE.TextureLoader().load( "img/logo.png" );
+						var material = new THREE.MeshBasicMaterial({
+							map: texture, 
+							side: THREE.DoubleSide, 
+							transparent: true});
+						material.needsUpdate = true;
+						
+						var mesh = new Mesh(geometry,material);
+						var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
+								 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
+						var quat = new THREE.Quaternion().setFromEuler(euler);
+						var pos = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(quat);
+						mesh.position.copy( pos );
+						mesh.quaternion.copy( quat );
+						var scale = FACTOR*10;
+						mesh.scale.set(scale, scale, scale);
+						var euler_diff = new THREE.Euler(-Math.PI/2, Math.PI, 0, "YXZ");
+						var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
+						mesh.quaternion.multiply(quat_diff);
+						//mesh.castShadow = true;
+						//mesh.receiveShadow = true;
+						m_plugin_host.add_overlay_object(mesh);
+						m_canvas_texture = mesh;
 					}
 				}else{
 					m_active_start = now;
