@@ -239,7 +239,8 @@ var create_plugin = (function() {
 		if(active){
 			var vec = new THREE.Vector3(0, -30*FACTOR, 0).applyQuaternion(mesh.quaternion);
 			var base = pos.sub(vec);
-			var k = (now%(0.75*1000))/(0.75*1000);
+			var hz = 1;
+			var k = (now%(1000/hz))/(1000/hz);
 			pos = base.add(vec.multiplyScalar(k));
 			mesh.position.copy( pos );
 			var scale = FACTOR*(branch.marker_scale||1);

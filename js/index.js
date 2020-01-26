@@ -1059,11 +1059,15 @@ var app = (function() {
 			self.init_common_options();
 			self.init_webgl(()=>{
 				self.init_watch();
-				self.init_network(function() {
+				if (parseBoolean(query['network'] || 'true')) {
+					self.init_network(function() {
+						self.init_options();
+					}, function() {
+						self.init_options();
+					});
+				}else{
 					self.init_options();
-				}, function() {
-					self.init_options();
-				});
+				}
 			});
 		},
 		start_ws: function(callback, err_callback) {
