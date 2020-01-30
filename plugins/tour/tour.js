@@ -165,11 +165,11 @@ var create_plugin = (function() {
 				}
 				switch(branch.effect){
 				case "arrow":
-					arrow_effect(branch, mesh, active);
+					arrow_effect(branch, mesh, active ? now - m_active_start : 0);
 					break;
 				case "rotate":
 				default:
-					rotate_effect(branch, mesh, active);
+					rotate_effect(branch, mesh, active ? now - m_active_start : 0);
 					break;
 				}
 			}
@@ -222,7 +222,7 @@ var create_plugin = (function() {
 		},50);
 	}
 	
-	function arrow_effect(branch, mesh, active){
+	function arrow_effect(branch, mesh, active_time){
 		var now = new Date().getTime();
 		var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 				 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
@@ -236,11 +236,11 @@ var create_plugin = (function() {
 		var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 		mesh.quaternion.multiply(quat_diff);
 
-		if(active){
+		if(active_time){
 			var vec = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(mesh.quaternion);
 			var base = pos.sub(vec);
 			var hz = 1;
-			var k = (now%(1000/hz))/(1000/hz);
+			var k = (active_time%(1000/hz))/(1000/hz);
 			pos = base.add(vec.multiplyScalar(k));
 			mesh.position.copy( pos );
 			var scale = FACTOR*(branch.marker_scale||1);
@@ -257,7 +257,7 @@ var create_plugin = (function() {
 		}
 	}
 	
-	function rotate_effect(branch, mesh, active){
+	function rotate_effect(branch, mesh, active_time){
 		var now = new Date().getTime();
 		var euler = new THREE.Euler(THREE.Math.degToRad(-branch.dir[0]), THREE.Math
 				 .degToRad(branch.dir[1]), THREE.Math.degToRad(branch.dir[2]), "YXZ");
@@ -267,8 +267,8 @@ var create_plugin = (function() {
 		mesh.quaternion.copy( quat );
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
-		if(active){
-			var euler_diff = new THREE.Euler(0, 0.2*2*Math.PI*now/1000, 0, "YXZ");
+		if(active_time){
+			var euler_diff = new THREE.Euler(0, 0.2*2*Math.PI*active_time/1000, 0, "YXZ");
 			var quat_diff = new THREE.Quaternion().setFromEuler(euler_diff);
 			mesh.quaternion.multiply(quat_diff);
 			var scale = 5*FACTOR*(branch.marker_scale||1);
