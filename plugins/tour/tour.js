@@ -237,7 +237,7 @@ var create_plugin = (function() {
 		mesh.quaternion.multiply(quat_diff);
 
 		if(active){
-			var vec = new THREE.Vector3(0, -30*FACTOR, 0).applyQuaternion(mesh.quaternion);
+			var vec = new THREE.Vector3(0, -100*FACTOR, 0).applyQuaternion(mesh.quaternion);
 			var base = pos.sub(vec);
 			var hz = 1;
 			var k = (now%(1000/hz))/(1000/hz);
