@@ -28,37 +28,13 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 			loadFile_from_dir(base_path, path, callback, error_callback);
 		}
 	}
-	
-	function Uint8ArrayWriter() {
-		var data;
-		var that = this
-
-		function init(callback) {
-			callback();
-		}
-
-		function writeUint8Array(array, callback) {
-			data = array;
-			callback();
-		}
-
-		function getData(callback) {
-			callback(data);
-		}
-
-		that.init = init;
-		that.writeUint8Array = writeUint8Array;
-		that.getData = getData;
-	}
-	Uint8ArrayWriter.prototype = new zip.Writer();
-	Uint8ArrayWriter.prototype.constructor = Uint8ArrayWriter;
 
 	function loadFile_from_zip(base_path, path, callback, error_callback) {
 		if(path[0] == '/'){
 			path = path.substr(1);
 		}
 		if(m_zip_entries[path]){
-			m_zip_entries[path].getData(new Uint8ArrayWriter(), callback);
+			m_zip_entries[path].getData(null, callback);
 		}else{
 			error_callback({responseURL:path});
 		}
