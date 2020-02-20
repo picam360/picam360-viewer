@@ -10,6 +10,7 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 			"keyframe_interval" : 1,
 			"keyframe_offset" : [],
 	};
+	var m_zip_entries = null;
 	
 	var m_view_quat = new THREE.Quaternion();
 	var m_framecount = 0;
@@ -20,14 +21,57 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 	var m_y_deg = 0;
 	var m_eos = false;
 
-	function loadFile(path, callback, error_callbackk) {
+	function loadFile(base_path, path, callback, error_callback) {
+		if(m_zip_entries){
+			loadFile_from_zip(base_path, path, callback, error_callback);
+		}else{
+			loadFile_from_dir(base_path, path, callback, error_callback);
+		}
+	}
+	
+	function Uint8ArrayWriter() {
+		var data;
+		var that = this
+
+		function init(callback) {
+			callback();
+		}
+
+		function writeUint8Array(array, callback) {
+			data = array;
+			callback();
+		}
+
+		function getData(callback) {
+			callback(data);
+		}
+
+		that.init = init;
+		that.writeUint8Array = writeUint8Array;
+		that.getData = getData;
+	}
+	Uint8ArrayWriter.prototype = new zip.Writer();
+	Uint8ArrayWriter.prototype.constructor = Uint8ArrayWriter;
+
+	function loadFile_from_zip(base_path, path, callback, error_callback) {
+		if(path[0] == '/'){
+			path = path.substr(1);
+		}
+		if(m_zip_entries[path]){
+			m_zip_entries[path].getData(new Uint8ArrayWriter(), callback);
+		}else{
+			error_callback({responseURL:path});
+		}
+	}
+	
+	function loadFile_from_dir(base_path, path, callback, error_callback) {
 		var req = new XMLHttpRequest();
 		req.responseType = "arraybuffer";
-		req.open("get", path, true);
+		req.open("get", base_path + path, true);
 
 		req.onerror = function() {
-			if(error_callbackk){
-				error_callbackk(req);
+			if(error_callback){
+				error_callback(req);
 			}
 			return;
 		};
@@ -72,9 +116,9 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 		}
 		
 		++m_framecount;
-		var path = m_base_path + "/" + m_x_deg + "_" + m_y_deg + "/" + m_framecount + ".pif";
+		var path = "/" + m_x_deg + "_" + m_y_deg + "/" + m_framecount + ".pif";
 		// console.log(path);
-		loadFile(path, (data) => {
+		loadFile(m_base_path, path, (data) => {
 			if(m_loaded_framecount == 0){
 				console.log("start");
 				if(m_info_callback){
@@ -120,17 +164,37 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 			}
 		});
 	}
-	loadFile(base_path+"/config.json", (data)=>{
-		var options = {};
-		var txt = (new TextDecoder).decode(data);
-		if (txt) {
-			options = JSON.parse(txt);
-		}
-		m_options = Object.assign(m_options, options);
-		request_new_frame();
-		m_timer = setInterval(() => {
-		}, 1000/m_options.fps);
-	})
+	var init = function(){
+		loadFile(m_base_path, "/config.json", (data)=>{
+			var options = {};
+			var txt = (new TextDecoder).decode(data);
+			if (txt) {
+				options = JSON.parse(txt);
+			}
+			m_options = Object.assign(m_options, options);
+			request_new_frame();
+			m_timer = setInterval(() => {
+			}, 1000/m_options.fps);
+		});
+	};
+	
+	if(m_base_path.toLowerCase().endsWith('.pvf') || m_base_path.toLowerCase().endsWith('.zip')){
+		zip.useWebWorkers = false;
+		zip.createReader(new zip.HttpRangeReader(base_path), function(zipReader) {
+			zipReader.getEntries(function(entries) {
+				m_zip_entries = {};
+				for(var entry of entries){
+					if(entry.directory){
+						continue;
+					}
+					m_zip_entries[entry.filename] = entry;
+				}
+				init();
+			})
+		});
+	} else {
+		init();
+	}
 	
 	
 	var self = {
