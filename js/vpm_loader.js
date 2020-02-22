@@ -105,9 +105,8 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 			
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			var wait_ms = Math.max(1000/m_options.fps - elapsed, 33);// 30hz
-																		// max
-			setTimeout(()=>{
+			var wait_ms = 1000 / Math.max(m_options.fps, 0.1) - elapsed;
+			var delay_func = function(){
 				var now = new Date().getTime();
 				var elapsed = now - m_timestamp;
 				elapsed = Math.max(elapsed, 1);
@@ -124,7 +123,12 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 				}
 				m_timestamp = now;
 				request_new_frame();
-			}, wait_ms);
+			}
+			if(wait_ms <= 0){
+				delay_func();
+			}else{
+				setTimeout(delay_func, wait_ms);
+			}
 		}, (req) => {
 			if(m_loaded_framecount == 0){
 				console.log("not found : " + req.responseURL);
