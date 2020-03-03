@@ -1,5 +1,6 @@
-function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
-	var m_base_path = base_path;
+function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback) {
+	var m_url = url;
+	var m_url_query = url_query;
 	var m_get_view_quaternion = get_view_quaternion;
 	var m_frame_callback = callback;
 	var m_info_callback = info_callback;
@@ -21,15 +22,15 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 	var m_y_deg = 0;
 	var m_eos = false;
 
-	function loadFile(base_path, path, callback, error_callback) {
+	function loadFile(url, path, callback, error_callback) {
 		if(m_zip_entries){
-			loadFile_from_zip(base_path, path, callback, error_callback);
+			loadFile_from_zip(url, path, callback, error_callback);
 		}else{
-			loadFile_from_dir(base_path, path, callback, error_callback);
+			loadFile_from_dir(url, path, callback, error_callback);
 		}
 	}
 
-	function loadFile_from_zip(base_path, path, callback, error_callback) {
+	function loadFile_from_zip(url, path, callback, error_callback) {
 		if(path[0] == '/'){
 			path = path.substr(1);
 		}
@@ -40,10 +41,10 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 		}
 	}
 	
-	function loadFile_from_dir(base_path, path, callback, error_callback) {
+	function loadFile_from_dir(url, path, callback, error_callback) {
 		var req = new XMLHttpRequest();
 		req.responseType = "arraybuffer";
-		req.open("get", base_path + path, true);
+		req.open("get", url + path, true);
 
 		req.onerror = function() {
 			if(error_callback){
@@ -94,7 +95,7 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 		++m_framecount;
 		var path = "/" + m_x_deg + "_" + m_y_deg + "/" + m_framecount + ".pif";
 		// console.log(path);
-		loadFile(m_base_path, path, (data) => {
+		loadFile(m_url, path, (data) => {
 			if(m_loaded_framecount == 0){
 				console.log("start");
 				if(m_info_callback){
@@ -145,7 +146,7 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 		});
 	}
 	var init = function(){
-		loadFile(m_base_path, "/config.json", (data)=>{
+		loadFile(m_url, "/config.json", (data)=>{
 			var options = {};
 			var txt = (new TextDecoder).decode(data);
 			if (txt) {
@@ -158,9 +159,9 @@ function VpmLoader(base_path, get_view_quaternion, callback, info_callback) {
 		});
 	};
 	
-	if(m_base_path.toLowerCase().endsWith('.pvf') || m_base_path.toLowerCase().endsWith('.zip')){
+	if(m_url.toLowerCase().endsWith('.pvf') || m_url.toLowerCase().endsWith('.zip')){
 		zip.useWebWorkers = false;
-		zip.createReader(new zip.HttpRangeReader(base_path), function(zipReader) {
+		zip.createReader(new zip.HttpRangeReader(m_url, m_url_query), function(zipReader) {
 			zipReader.getEntries(function(entries) {
 				m_zip_entries = {};
 				for(var entry of entries){

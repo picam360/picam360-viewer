@@ -409,7 +409,7 @@ var app = (function() {
 				m_video_handler.remove_overlay_object( obj );
 			},
 			load_vpm : function(url) {
-				m_vpm_loader = VpmLoader(url, m_video_handler.get_view_quaternion, m_image_decoder.decode, (info) => {
+				m_vpm_loader = VpmLoader(url, query, m_video_handler.get_view_quaternion, m_image_decoder.decode, (info) => {
 					self.send_event('vpm_loader', info);
 				});
 			},
