@@ -4,7 +4,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_get_view_quaternion = get_view_quaternion;
 	var m_frame_callback = callback;
 	var m_info_callback = info_callback;
-	var m_loaded_framecount = 0;
 	var m_options = {
 			"num_per_quarter" : 3,
 			"fps" : 10,
@@ -12,10 +11,14 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			"keyframe_offset" : [],
 	};
 	var m_zip_entries = null;
+	var m_frames = {};
+	var m_loaded_framecount = 0;
+	var m_request_framecount = 0;
+	var m_stream_framecount = 0;
+	var m_request_loop_timer = null;
+	var m_stream_loop_timer = null;
 	
 	var m_view_quat = new THREE.Quaternion();
-	var m_framecount = 0;
-	var m_timer = null;
 	var m_mbps = 0;
 	var m_timestamp = new Date().getTime();
 	var m_x_deg = 0;
@@ -35,9 +38,9 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			path = path.substr(1);
 		}
 		if(m_zip_entries[path]){
-			m_zip_entries[path].getData(null, callback);
+			m_zip_entries[path].getData(null, callback, error_callback);
 		}else{
-			error_callback({responseURL:path});
+			error_callback({code:"NO_ENTRY",responseURL:path});
 		}
 	}
 	
@@ -61,39 +64,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		};
 		req.send(null);
 	}
-	function request_new_frame(){
-		if((m_framecount % m_options.keyframe_interval) == 0) {
-			var q = m_get_view_quaternion();
-			
-			var v = new THREE.Vector3( 0, -1, 0 );
-			v.applyQuaternion( q );
-			v.r = Math.sqrt(v.x*v.x+v.z*v.z);
-			
-			var euler = {
-				x:Math.atan2(v.r, -v.y),
-				y:-Math.atan2(v.x, -v.z),
-			};
-			var x = parseInt(THREE.Math.radToDeg(euler.x));
-			var y = parseInt(THREE.Math.radToDeg(euler.y));
-			var p_angle = 90/m_options.num_per_quarter;
-			var p = Math.round(x/p_angle);
-			var _p = (p <= m_options.num_per_quarter) ? p : m_options.num_per_quarter * 2 - p;
-			var split_y = (_p == 0) ? 1 : 4 * _p;
-			var y_angle = 360/split_y;
-			
-			x = p*p_angle;
-			y = Math.round(y/y_angle)*y_angle;
-			x = (x+360)%360;
-			y = (y+360)%360;
-			if(x == 0 || x == 180) {
-				y = 0;
-			}
-			m_x_deg = x;
-			m_y_deg = y;
-		}
-		
-		++m_framecount;
-		var path = "/" + m_x_deg + "_" + m_y_deg + "/" + m_framecount + ".pif";
+	function request_frame(x_deg, y_deg, framecount, count){
+		var path = "/" + x_deg + "_" + y_deg + "/" + framecount + ".pif";
 		// console.log(path);
 		loadFile(m_url, path, (data) => {
 			if(m_loaded_framecount == 0){
@@ -103,36 +75,27 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				}
 			}
 			m_loaded_framecount++;
+			m_frames[framecount] = data;
 			
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			var wait_ms = 1000 / Math.max(m_options.fps, 0.1) - elapsed;
-			var delay_func = function(){
-				var now = new Date().getTime();
-				var elapsed = now - m_timestamp;
-				elapsed = Math.max(elapsed, 1);
-				{// bitrate
-					var mbps = 8 * data.byteLength / elapsed / 1000;
-					if(m_mbps == 0){
-						m_mbps = mbps;
-					}else{
-						m_mbps = m_mbps*0.9+mbps*0.1;
-					}
+			elapsed = Math.max(elapsed, 1);
+			{// bitrate
+				var mbps = 8 * data.byteLength / elapsed / 1000;
+				if(m_mbps == 0){
+					m_mbps = mbps;
+				}else{
+					m_mbps = m_mbps*0.9+mbps*0.1;
 				}
-				if(m_frame_callback){
-					m_frame_callback(data);
-				}
-				m_timestamp = now;
-				request_new_frame();
 			}
-			if(wait_ms <= 0){
-				delay_func();
-			}else{
-				setTimeout(delay_func, wait_ms);
+			m_timestamp = now;
+		}, (err) => {
+			if(err.code != "NO_ENTRY" && count < 10){
+				request_frame(x_deg, y_deg, framecount, count + 1);
+				return;
 			}
-		}, (req) => {
 			if(m_loaded_framecount == 0){
-				console.log("not found : " + req.responseURL);
+				console.log("not found : " + err.responseURL);
 				if(m_info_callback){
 					m_info_callback("not_found");
 				}
@@ -145,6 +108,60 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 		});
 	}
+	
+	function start_request_loop(){
+		m_request_loop_timer = setInterval(() => {
+			if(m_request_framecount > m_stream_framecount + 5){
+				return;
+			}
+			if((m_request_framecount % m_options.keyframe_interval) == 0) {
+				var q = m_get_view_quaternion();
+				
+				var v = new THREE.Vector3( 0, -1, 0 );
+				v.applyQuaternion( q );
+				v.r = Math.sqrt(v.x*v.x+v.z*v.z);
+				
+				var euler = {
+					x:Math.atan2(v.r, -v.y),
+					y:-Math.atan2(v.x, -v.z),
+				};
+				var x = parseInt(THREE.Math.radToDeg(euler.x));
+				var y = parseInt(THREE.Math.radToDeg(euler.y));
+				var p_angle = 90/m_options.num_per_quarter;
+				var p = Math.round(x/p_angle);
+				var _p = (p <= m_options.num_per_quarter) ? p : m_options.num_per_quarter * 2 - p;
+				var split_y = (_p == 0) ? 1 : 4 * _p;
+				var y_angle = 360/split_y;
+				
+				x = p*p_angle;
+				y = Math.round(y/y_angle)*y_angle;
+				x = (x+360)%360;
+				y = (y+360)%360;
+				if(x == 0 || x == 180) {
+					y = 0;
+				}
+				m_x_deg = x;
+				m_y_deg = y;
+			}
+			++m_request_framecount;// starts from 1
+			request_frame(m_x_deg, m_y_deg, m_request_framecount, 1);
+		}, 1000/m_options.fps);
+	}
+	
+	function start_stream_loop(){
+		m_stream_loop_timer = setInterval(() => {
+			if(m_frames[m_stream_framecount+1] == null){
+				return;
+			}
+			m_stream_framecount++;
+			var data = m_frames[m_stream_framecount];
+			m_frames[m_stream_framecount] = undefined;
+			if(m_frame_callback){
+				m_frame_callback(data);
+			}
+		}, 1000/m_options.fps);
+	}
+	
 	var init = function(){
 		loadFile(m_url, "/config.json", (data)=>{
 			var options = {};
@@ -153,9 +170,9 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				options = JSON.parse(txt);
 			}
 			m_options = Object.assign(m_options, options);
-			request_new_frame();
-			m_timer = setInterval(() => {
-			}, 1000/m_options.fps);
+			start_request_loop();
+			start_stream_loop();
+			// request_new_frame();
 		});
 	};
 	
