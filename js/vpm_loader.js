@@ -109,8 +109,23 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		});
 	}
 	
+	function parseBoolean(str) {
+		return str == "yes" || str == "on" || str == "true";
+	}
+	
 	function start_request_loop(){
 		m_request_loop_timer = setInterval(() => {
+			if(m_eos){
+				if(parseBoolean(url_query['loop'])){
+					m_eos = false;
+					m_request_framecount = 0;
+					m_stream_framecount = 0;
+				}else{
+					clearInterval(m_stream_loop_timer);
+					clearInterval(m_stream_loop_timer);
+				}
+				return;
+			}
 			if(m_request_framecount > m_stream_framecount + 5){
 				return;
 			}
