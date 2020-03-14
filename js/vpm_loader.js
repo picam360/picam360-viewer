@@ -20,6 +20,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	
 	var m_view_quat = new THREE.Quaternion();
 	var m_mbps = 0;
+	var m_bytes_in_1000ms = 0;
 	var m_timestamp = new Date().getTime();
 	var m_x_deg = 0;
 	var m_y_deg = 0;
@@ -77,18 +78,21 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			m_loaded_framecount++;
 			m_frames[framecount] = data;
 			
+			m_bytes_in_1000ms += data.byteLength;
+			
 			var now = new Date().getTime();
 			var elapsed = now - m_timestamp;
-			elapsed = Math.max(elapsed, 1);
+			if(elapsed > 1000)
 			{// bitrate
-				var mbps = 8 * data.byteLength / elapsed / 1000;
+				var mbps = 8 * m_bytes_in_1000ms / elapsed / 1000;
 				if(m_mbps == 0){
 					m_mbps = mbps;
 				}else{
 					m_mbps = m_mbps*0.9+mbps*0.1;
 				}
+				m_timestamp = now;
+				m_bytes_in_1000ms = 0;
 			}
-			m_timestamp = now;
 		}, (err) => {
 			if(err.code != "NO_ENTRY" && count < 10){
 				request_frame(x_deg, y_deg, framecount, count + 1);
