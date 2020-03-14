@@ -120,7 +120,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	function start_request_loop(){
 		m_request_loop_timer = setInterval(() => {
 			if(m_eos){
-				if(parseBoolean(url_query['loop'])){
+				if(m_options.loop){
 					m_eos = false;
 					m_request_framecount = 0;
 					m_stream_framecount = 0;
@@ -189,6 +189,12 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				options = JSON.parse(txt);
 			}
 			m_options = Object.assign(m_options, options);
+			if(url_query['loop']){
+				m_options.loop = parseBoolean(url_query['loop']);
+			}
+			if(url_query['fps']){
+				m_options.fps = parseFloat(url_query['fps']);
+			}
 			start_request_loop();
 			start_stream_loop();
 			// request_new_frame();
