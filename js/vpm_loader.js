@@ -197,7 +197,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			start_request_loop();
 			start_stream_loop();
-			// request_new_frame();
 		});
 	};
 	
