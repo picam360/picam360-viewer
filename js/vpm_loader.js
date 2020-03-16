@@ -117,6 +117,35 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		return str == "yes" || str == "on" || str == "true";
 	}
 	
+	function get_xy_deg(){
+		var q = m_get_view_quaternion();
+		
+		var v = new THREE.Vector3( 0, -1, 0 );
+		v.applyQuaternion( q );
+		v.r = Math.sqrt(v.x*v.x+v.z*v.z);
+		
+		var euler = {
+			x:Math.atan2(v.r, -v.y),
+			y:-Math.atan2(v.x, -v.z),
+		};
+		var x = parseInt(THREE.Math.radToDeg(euler.x));
+		var y = parseInt(THREE.Math.radToDeg(euler.y));
+		var p_angle = 90/m_options.num_per_quarter;
+		var p = Math.round(x/p_angle);
+		var _p = (p <= m_options.num_per_quarter) ? p : m_options.num_per_quarter * 2 - p;
+		var split_y = (_p == 0) ? 1 : 4 * _p;
+		var y_angle = 360/split_y;
+		
+		x = p*p_angle;
+		y = Math.round(y/y_angle)*y_angle;
+		x = (x+360)%360;
+		y = (y+360)%360;
+		if(x == 0 || x == 180) {
+			y = 0;
+		}
+		return {x,y};
+	}
+	
 	function start_request_loop(){
 		m_request_loop_timer = setInterval(() => {
 			if(m_eos){
@@ -125,8 +154,15 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					m_request_framecount = 0;
 					m_stream_framecount = 0;
 				}else{
-					clearInterval(m_stream_loop_timer);
-					clearInterval(m_stream_loop_timer);
+					var {x,y} = get_xy_deg();
+					if(x != m_x_deg || y != m_y_deg){
+						m_x_deg = x;
+						m_y_deg = y;
+						if(m_stream_framecount > m_request_framecount - 2){
+							m_stream_framecount = m_request_framecount - 2;
+						}
+						request_frame(m_x_deg, m_y_deg, m_request_framecount - 1, 1);
+					}
 				}
 				return;
 			}
@@ -134,31 +170,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				return;
 			}
 			if((m_request_framecount % m_options.keyframe_interval) == 0) {
-				var q = m_get_view_quaternion();
-				
-				var v = new THREE.Vector3( 0, -1, 0 );
-				v.applyQuaternion( q );
-				v.r = Math.sqrt(v.x*v.x+v.z*v.z);
-				
-				var euler = {
-					x:Math.atan2(v.r, -v.y),
-					y:-Math.atan2(v.x, -v.z),
-				};
-				var x = parseInt(THREE.Math.radToDeg(euler.x));
-				var y = parseInt(THREE.Math.radToDeg(euler.y));
-				var p_angle = 90/m_options.num_per_quarter;
-				var p = Math.round(x/p_angle);
-				var _p = (p <= m_options.num_per_quarter) ? p : m_options.num_per_quarter * 2 - p;
-				var split_y = (_p == 0) ? 1 : 4 * _p;
-				var y_angle = 360/split_y;
-				
-				x = p*p_angle;
-				y = Math.round(y/y_angle)*y_angle;
-				x = (x+360)%360;
-				y = (y+360)%360;
-				if(x == 0 || x == 180) {
-					y = 0;
-				}
+				var {x,y} = get_xy_deg();
 				m_x_deg = x;
 				m_y_deg = y;
 			}
