@@ -97,7 +97,7 @@ var app = (function() {
 	}
 	
 	function parseBoolean(str) {
-		return str == "yes" || str == "on" || str == "true";
+		return str == "yes" || str == "on" || str == "true" || str == "1";
 	}
 
 	function GetQueryString() {

@@ -10,6 +10,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			"keyframe_interval" : 1,
 			"keyframe_offset" : [],
 	};
+	var m_view_points = [];
 	var m_zip_entries = null;
 	var m_frames = {};
 	var m_loaded_framecount = 0;
@@ -22,8 +23,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_mbps = 0;
 	var m_bytes_in_1000ms = 0;
 	var m_timestamp = new Date().getTime();
-	var m_x_deg = 0;
-	var m_y_deg = 0;
+	var m_yaw = 0;
+	var m_pitch = 0;
 	var m_eos = false;
 
 	function loadFile(url, path, callback, error_callback) {
@@ -65,8 +66,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		};
 		req.send(null);
 	}
-	function request_frame(x_deg, y_deg, framecount, count){
-		var path = "/" + x_deg + "_" + y_deg + "/" + framecount + ".pif";
+	function request_frame(pitch, yaw, framecount, count){
+		var path = "/" + pitch + "_" + yaw + "/" + framecount + ".pif";
 		// console.log(path);
 		loadFile(m_url, path, (data) => {
 			if(m_loaded_framecount == 0){
@@ -95,7 +96,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 		}, (err) => {
 			if(err.code != "NO_ENTRY" && count < 10){
-				request_frame(x_deg, y_deg, framecount, count + 1);
+				request_frame(pitch, yaw, framecount, count + 1);
 				return;
 			}
 			if(m_loaded_framecount == 0){
@@ -114,36 +115,85 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	}
 	
 	function parseBoolean(str) {
-		return str == "yes" || str == "on" || str == "true";
+		return str == "yes" || str == "on" || str == "true" || str == "1";
 	}
 	
-	function get_xy_deg(){
+	function abs_diff_deg(deg1, deg2){
+		var ret = Math.abs(deg1 - deg2) % 360;
+		if(ret > 180){
+			ret = 360 - ret; 
+		}
+		return ret;
+	}
+	
+	function get_view_deg_raw(){
 		var q = m_get_view_quaternion();
 		
 		var v = new THREE.Vector3( 0, -1, 0 );
 		v.applyQuaternion( q );
 		v.r = Math.sqrt(v.x*v.x+v.z*v.z);
 		
-		var euler = {
-			x:Math.atan2(v.r, -v.y),
-			y:-Math.atan2(v.x, -v.z),
-		};
-		var x = parseInt(THREE.Math.radToDeg(euler.x));
-		var y = parseInt(THREE.Math.radToDeg(euler.y));
+		var pitch_rad = Math.atan2(v.r, -v.y);
+		var yaw_rad = v.r == 0 ? 0 : -Math.atan2(v.x, -v.z);
+		var pitch = parseInt(THREE.Math.radToDeg(pitch_rad));
+		var yaw = parseInt(THREE.Math.radToDeg(yaw_rad));
+		return {pitch, yaw};
+	}
+	
+	function get_view_deg(){
+		var {pitch, yaw} = get_view_deg_raw();
 		var p_angle = 90/m_options.num_per_quarter;
-		var p = Math.round(x/p_angle);
+		var p = Math.round(pitch/p_angle);
 		var _p = (p <= m_options.num_per_quarter) ? p : m_options.num_per_quarter * 2 - p;
 		var split_y = (_p == 0) ? 1 : 4 * _p;
 		var y_angle = 360/split_y;
 		
-		x = p*p_angle;
-		y = Math.round(y/y_angle)*y_angle;
-		x = (x+360)%360;
-		y = (y+360)%360;
-		if(x == 0 || x == 180) {
-			y = 0;
+		pitch = p*p_angle;
+		yaw = Math.round(yaw/y_angle)*y_angle;
+		pitch = (pitch+360)%360;
+		yaw = (yaw+360)%360;
+		if(pitch == 0 || pitch == 180) {
+			yaw = 0;
 		}
-		return {x,y};
+		return {pitch, yaw};
+	}
+	
+	function get_view_deg_candidates(){
+		var q_target = m_get_view_quaternion();
+		var v_target = new THREE.Vector3( 0, -1, 0 ).applyQuaternion( q_target );
+		var q_base = new THREE.Quaternion()
+			.setFromEuler(new THREE.Euler(
+				THREE.Math.degToRad(m_pitch),
+				THREE.Math.degToRad(m_yaw),
+				THREE.Math.degToRad(0.0), "YXZ"));
+		var v_base = new THREE.Vector3( 0, -1, 0 ).applyQuaternion( q_base );
+		var dot_base = v_target.dot(v_base);
+		var list = {};
+		for(var vp of m_view_points){
+			var q = new THREE.Quaternion()
+				.setFromEuler(new THREE.Euler(
+					THREE.Math.degToRad(vp.pitch),
+					THREE.Math.degToRad(vp.yaw),
+					THREE.Math.degToRad(0.0), "YXZ"));
+			var v = new THREE.Vector3( 0, -1, 0 ).applyQuaternion( q );
+			var dot = v_target.dot(v);
+			if(dot <= dot_base){
+				continue;
+			}
+			list[dot] = {pitch:vp.pitch, yaw:vp.yaw};
+		}
+		var sorted_key = [];
+		for (var key in list) {
+			sorted_key.push(key);
+		}
+		sorted_key.sort(function(a,b){
+			return(b-a);
+		}); 
+		var sorted = [];
+	    for (var key of sorted_key) {
+	    	sorted.push(list[key]);
+	    }
+	    return sorted;
 	}
 	
 	function start_request_loop(){
@@ -154,14 +204,14 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					m_request_framecount = 0;
 					m_stream_framecount = 0;
 				}else{
-					var {x,y} = get_xy_deg();
-					if(x != m_x_deg || y != m_y_deg){
-						m_x_deg = x;
-						m_y_deg = y;
+					var {pitch, yaw} = get_view_deg();
+					if(yaw != m_yaw || pitch != m_pitch){
+						m_yaw = yaw;
+						m_pitch = pitch;
 						if(m_stream_framecount > m_request_framecount - 2){
 							m_stream_framecount = m_request_framecount - 2;
 						}
-						request_frame(m_x_deg, m_y_deg, m_request_framecount - 1, 1);
+						request_frame(m_pitch, m_yaw, m_request_framecount - 1, 1);
 					}
 				}
 				return;
@@ -169,13 +219,21 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			if(m_request_framecount > m_stream_framecount + 5){
 				return;
 			}
-			if((m_request_framecount % m_options.keyframe_interval) == 0) {
-				var {x,y} = get_xy_deg();
-				m_x_deg = x;
-				m_y_deg = y;
+			var {pitch, yaw} = get_view_deg();
+			if(yaw != m_yaw || pitch != m_pitch){
+				var candidated = get_view_deg_candidates();
+			    for (var vp of candidated) {
+					var offset = m_options.keyframe_offset[vp.pitch + "_" + vp.yaw] || 0;
+					if(m_request_framecount >= offset && 
+							((m_request_framecount - offset) % m_options.keyframe_interval) == 0){
+						m_yaw = vp.yaw;
+						m_pitch = vp.pitch;
+						break;
+					}
+			    }
 			}
 			++m_request_framecount;// starts from 1
-			request_frame(m_x_deg, m_y_deg, m_request_framecount, 1);
+			request_frame(m_pitch, m_yaw, m_request_framecount, 1);
 		}, 1000/m_options.fps);
 	}
 	
@@ -206,6 +264,20 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			if(url_query['fps']){
 				m_options.fps = parseFloat(url_query['fps']);
+			}
+			{
+				m_view_points = [];
+				var n = m_options.num_per_quarter;
+				var split_p = n * 2;
+				for (var p = 0; p <= split_p; p++) {
+					var _p = (p <= n) ? p : n * 2 - p;
+					var split_y = (_p == 0) ? 1 : 4 * _p;
+					for (var y = 0; y < split_y; y++) {
+						var pitch = 180 * p / split_p;
+						var yaw = 360 * y / split_y;
+						m_view_points.push({pitch, yaw});
+					}
+				}
 			}
 			start_request_loop();
 			start_stream_loop();
