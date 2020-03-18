@@ -64,7 +64,7 @@ var app = (function() {
 	var mpu;
 
 	var server_url = window.location.href.split('?')[0];
-	var options = {};
+	var m_options = {};
 	var plugins = [];
 	var watches = [];
 	var statuses = [];
@@ -482,50 +482,10 @@ var app = (function() {
 			loadFile("common_config.json", function(chunk_array) {
 				var txt = (new TextDecoder).decode(chunk_array[0]);
 				if (txt) {
-					options = JSON.parse(txt);
+					m_options = JSON.parse(txt);
 				}
-				if (query['plugin_paths']) {
-					var plugin_paths = JSON.parse(query['plugin_paths']);
-					if(!options.plugin_paths){
-						options.plugin_paths = [];
-					}
-					options.plugin_paths = options.plugin_paths.concat(plugin_paths);
-				}
-				if (options.plugin_paths && options.plugin_paths.length != 0) {
-					function load_plugin(idx) {
-						var script = document.createElement('script');
-						script.onload = function() {
-							console
-								.log("loaded : " + options.plugin_paths[idx]);
-							if (create_plugin) {
-								var plugin = create_plugin(self.plugin_host);
-								plugins.push(plugin);
-								create_plugin = null;
-							}
-							if (idx + 1 < options.plugin_paths.length) {
-								load_plugin(idx + 1);
-							} else {
-								for (var i = 0; i < plugins.length; i++) {
-									if (plugins[i].init_options) {
-										plugins[i]
-											.init_options(options[plugins[i].name] || {});
-									}
-								}
-								if (callback) {
-									callback();
-								}
-							}
-						};
-						console.log("loding : " + options.plugin_paths[idx]);
-						script.src = options.plugin_paths[idx];
-
-						document.head.appendChild(script);
-					}
-					load_plugin(0);
-				} else {
-					if (callback) {
-						callback();
-					}
+				if(!m_options.plugin_paths){
+					m_options.plugin_paths = [];
 				}
 			});
 		},
@@ -547,65 +507,76 @@ var app = (function() {
 					if (_options.fov && !query.fov) {
 						self.plugin_host.set_fov(_options.fov);
 					}
-					if (_options.view_offset && !query['view-offset']) {
+					if(_options.plugin_paths){
+						_options.plugin_paths = m_options.plugin_paths.concat(_options.plugin_paths);
+					}
+					Object.assign(m_options, _options);
+					if (m_options.view_offset && !query['view-offset']) {
 						var euler = new THREE.Euler(THREE.Math
-							.degToRad(_options.view_offset[0]), THREE.Math
-							.degToRad(_options.view_offset[1]), THREE.Math
-							.degToRad(_options.view_offset[2]), "YXZ");
+							.degToRad(m_options.view_offset[0]), THREE.Math
+							.degToRad(m_options.view_offset[1]), THREE.Math
+							.degToRad(m_options.view_offset[2]), "YXZ");
 
 						view_offset = new THREE.Quaternion()
 							.setFromEuler(euler);
 					}
-					if (_options.plugin_paths &&
-						_options.plugin_paths.length != 0) {
-						function load_plugin(idx) {
-							self.plugin_host
-								.getFile(_options.plugin_paths[idx], function(
-									chunk_array) {
-									var script_str = (new TextDecoder)
-										.decode(chunk_array[0]);
-									var script = document
-										.createElement('script');
-									script.onload = function() {
-										console.log("loaded : " +
-											_options.plugin_paths[idx]);
-										if (create_plugin) {
-											var plugin = create_plugin(self.plugin_host);
-											plugins.push(plugin);
-											create_plugin = null;
-										}
-										if (idx + 1 < _options.plugin_paths.length) {
-											load_plugin(idx + 1);
-										} else {
-											for (var i = 0; i < plugins.length; i++) {
-												if (plugins[i].init_options) {
-													plugins[i]
-														.init_options(_options[plugins[i].name] || {});
-												}
-											}
-											if (callback) {
-												callback();
-											}
-										}
-									};
-									console.log("loding : " +
-										_options.plugin_paths[idx]);
-									var blob = new Blob(chunk_array, {
-										type: "text/javascript"
-									});
-									var url = window.URL || window.webkitURL;
-									script.src = url.createObjectURL(blob);
-
-									document.head.appendChild(script);
-								});
-						}
-						load_plugin(0);
-					} else {
-						if (callback) {
-							callback();
-						}
+					if (query['plugin_paths']) {
+						var plugin_paths = JSON.parse(query['plugin_paths']);
+						m_options.plugin_paths = m_options.plugin_paths.concat(plugin_paths);
 					}
+					self.init_plugins(callback);
 				});
+		},
+		
+		init_plugins: function(callback) {
+			if (!m_options.plugin_paths || m_options.plugin_paths.length == 0) {
+				if (callback) {
+					callback();
+				}
+				return;
+			}
+			function load_plugin(idx) {
+				self.plugin_host
+					.getFile(m_options.plugin_paths[idx], function(
+						chunk_array) {
+						var script_str = (new TextDecoder)
+							.decode(chunk_array[0]);
+						var script = document
+							.createElement('script');
+						script.onload = function() {
+							console.log("loaded : " +
+								m_options.plugin_paths[idx]);
+							if (create_plugin) {
+								var plugin = create_plugin(self.plugin_host);
+								plugins.push(plugin);
+								create_plugin = null;
+							}
+							if (idx + 1 < m_options.plugin_paths.length) {
+								load_plugin(idx + 1);
+							} else {
+								for (var i = 0; i < plugins.length; i++) {
+									if (plugins[i].init_options) {
+										plugins[i]
+											.init_options(m_options[plugins[i].name] || {});
+									}
+								}
+								if (callback) {
+									callback();
+								}
+							}
+						};
+						console.log("loding : " +
+							m_options.plugin_paths[idx]);
+						var blob = new Blob(chunk_array, {
+							type: "text/javascript"
+						});
+						var url = window.URL || window.webkitURL;
+						script.src = url.createObjectURL(blob);
+
+						document.head.appendChild(script);
+					});
+			}
+			load_plugin(0);
 		},
 
 		init_network: function(callback, err_callback) {

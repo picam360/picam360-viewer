@@ -106,10 +106,8 @@ var create_plugin = (function() {
 	function init(){
 		if(!m_query['tour']){
 			if(m_query['vpm']){
-				setTimeout(function(){
-					m_plugin_host.set_info("waiting image...");
-					m_plugin_host.load_vpm(m_query['vpm']);
-				}, 1000);
+				m_plugin_host.set_info("waiting image...");
+				m_plugin_host.load_vpm(m_query['vpm']);
 			}
 			return;
 		}
