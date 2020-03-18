@@ -480,9 +480,13 @@ var app = (function() {
 				this.init_common_options_done = true;
 			}
 			loadFile("common_config.json", function(chunk_array) {
-				var txt = (new TextDecoder).decode(chunk_array[0]);
-				if (txt) {
-					m_options = JSON.parse(txt);
+				try{
+					var txt = (new TextDecoder).decode(chunk_array[0]);
+					if (txt) {
+						m_options = JSON.parse(txt);
+					}
+				}catch{
+					m_options = {};
 				}
 				if(!m_options.plugin_paths){
 					m_options.plugin_paths = [];
@@ -499,10 +503,14 @@ var app = (function() {
 			// @data : uint8array
 			self.plugin_host
 				.getFile("config.json", function(chunk_array) {
-					var _options = [];
-					var txt = (new TextDecoder).decode(chunk_array[0]);
-					if (txt) {
-						_options = JSON.parse(txt);
+					var _options = {};
+					try{
+						var txt = (new TextDecoder).decode(chunk_array[0]);
+						if (txt) {
+							_options = JSON.parse(txt);
+						}
+					}catch{
+						_options = {};
 					}
 					if (_options.fov && !query.fov) {
 						self.plugin_host.set_fov(_options.fov);
