@@ -657,6 +657,11 @@
 			view_quat : new THREE.Quaternion(),
 			get_view_quaternion : function(){
 				// console.log(self.view_quat._x+":"+self.view_quat._y+":"+self.view_quat._z+";");
+				if(m_requestAnimationFrame_target == m_vr_display){
+					self.view_quat = self.get_view_quaternion_vr();
+				}else{
+					self.view_quat = self.get_view_quaternion_normal();
+				}
 				return self.view_quat.clone();// clone() necessary no to be
 												// changed
 			},
@@ -679,19 +684,15 @@
 						m_animate_tmp_time = now;
 					}
 				}
-				if(m_requestAnimationFrame_target == m_vr_display){
-					self.view_quat = self.get_view_quaternion_vr();
-				}else{
-					self.view_quat = self.get_view_quaternion_normal();
-				}
+				var view_quat = self.get_view_quaternion();
 				if (m_worker) {
 					m_worker.postMessage({
 						type : 'animate',
 						fov,
-						quat : self.view_quat,
+						quat : view_quat,
 					});
 				} else {
-					m_omvr.animate(fov, self.view_quat);
+					m_omvr.animate(fov, view_quat);
 				}
 				if(m_requestAnimationFrame_target == m_vr_display){
 					m_vr_display.submitFrame();
