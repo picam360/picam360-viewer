@@ -10,6 +10,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			"keyframe_interval" : 1,
 			"keyframe_offset" : [],
 	};
+	var m_preload = 5;
 	var m_view_points = [];
 	var m_zip_entries = null;
 	var m_frames = {};
@@ -216,11 +217,14 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				}
 				return;
 			}
-			if(m_request_framecount > m_stream_framecount + 5){
+			if(m_request_framecount > m_stream_framecount + m_preload){
 				return;
 			}
 			var {pitch, yaw} = get_view_deg();
-			if(yaw != m_yaw || pitch != m_pitch){
+			if(m_request_framecount == 0){
+				m_yaw = yaw;
+				m_pitch = pitch;
+			}else if(yaw != m_yaw || pitch != m_pitch){
 				var candidated = get_view_deg_candidates();
 			    for (var vp of candidated) {
 					var offset = m_options.keyframe_offset[vp.pitch + "_" + vp.yaw] || 0;
@@ -264,6 +268,9 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			if(url_query['fps']){
 				m_options.fps = parseFloat(url_query['fps']);
+			}
+			if(url_query['preload']){
+				m_preload = parseInt(url_query['preload']);
 			}
 			{
 				m_view_points = [];
