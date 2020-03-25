@@ -879,7 +879,7 @@ var app = (function() {
 				skip_frame : parseFloat(query['skip-frame'] || '2'),
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 				antialias : parseBoolean(query['antialias'] || 'true'),
-				fxaa_enabled : parseBoolean(query['fxaa'] || 'true'),
+				fxaa_enabled : parseBoolean(query['fxaa'] || 'false'),
 				mesh_resolution : parseFloat(query['mesh-resolution'] || '64'),
 				vr_margin : parseFloat(query['vr-margin'] || '0'),
 				eye_offset : parseFloat(query['eye-offset'] || '0'),
