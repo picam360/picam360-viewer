@@ -880,6 +880,7 @@ var app = (function() {
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 				antialias : parseBoolean(query['antialias'] || 'true'),
 				fxaa_enabled : parseBoolean(query['fxaa'] || 'false'),
+				p2v_enabled : parseBoolean(query['p2v'] || 'false'),
 				mesh_resolution : parseFloat(query['mesh-resolution'] || '64'),
 				vr_margin : parseFloat(query['vr-margin'] || '0'),
 				eye_offset : parseFloat(query['eye-offset'] || '0'),

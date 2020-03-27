@@ -404,6 +404,7 @@
 					devicePixelRatio : window.devicePixelRatio,
 					antialias : _options.antialias,
 					fxaa_enabled : _options.fxaa_enabled,
+					p2v_enabled : _options.p2v_enabled,
 					mesh_resolution : _options.mesh_resolution,
 					vr_margin : _options.vr_margin,
 					eye_offset : _options.eye_offset,
