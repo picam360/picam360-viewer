@@ -629,7 +629,7 @@
 				if (m_worker) {
 
 				} else {
-					m_omvr.setModel(vertex_type, fragment_type);
+					m_omvr.setModel(null, vertex_type, fragment_type);
 				}
 			},
 			
