@@ -92,7 +92,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		};
 		req.send(null);
 	}
-	function request_frame(pitch, yaw, framecount, count){
+	function request_frame(pitch, yaw, framecount, offset, num, try_count){
 		var path;
 		if(m_options.block_size){
 			var bnum = Math.floor((framecount-1)/m_options.block_size) + 1;
@@ -110,9 +110,9 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			if(m_options.block_size){
 				const ary = BSON.deserialize(data);
-				for(var i in ary){
+				for(var i=offset;i<offset+num&&ary[i];i++){
 					m_loaded_framecount++;
-					m_frames[framecount+parseInt(i)] = new Uint8Array(ary[i].buffer);
+					m_frames[framecount+i] = new Uint8Array(ary[i].buffer);
 			    }
 			}else{
 				m_loaded_framecount++;
@@ -135,8 +135,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				m_bytes_in_1000ms = 0;
 			}
 		}, (err) => {
-			if(err.code != "NO_ENTRY" && count < 10){
-				request_frame(pitch, yaw, framecount, count + 1);
+			if(err.code != "NO_ENTRY" && try_count > 0){
+				request_frame(pitch, yaw, framecount, offset, num, try_count - 1);
 				return;
 			}
 			if(m_loaded_framecount == 0){
@@ -251,7 +251,11 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 						if(m_stream_framecount > m_request_framecount - 2){
 							m_stream_framecount = m_request_framecount - 2;
 						}
-						request_frame(m_pitch, m_yaw, m_request_framecount - 1, 1);
+						request_frame(m_pitch, m_yaw,
+								m_request_framecount - 1,
+								m_request_framecount - 1,
+								m_request_framecount - 1,
+								10);
 					}
 				}
 				return;
@@ -259,6 +263,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			if(m_request_framecount > m_stream_framecount + m_preload){
 				return;
 			}
+			var nk_offset = 0;
+			var range = m_options.block_size || 1;
 			var {pitch, yaw} = get_view_deg();
 			if(m_request_framecount == 0){
 				m_yaw = yaw;
@@ -267,17 +273,22 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				var candidated = get_view_deg_candidates();
 			    for (var vp of candidated) {
 					var offset = m_options.keyframe_offset[vp.pitch + "_" + vp.yaw] || 0;
-					if(m_request_framecount >= offset && 
-							((m_request_framecount - offset) % m_options.keyframe_interval) == 0){
+					var nk = Math.ceil((m_request_framecount - offset) / m_options.keyframe_interval) * m_options.keyframe_interval + offset;
+					var _nk_offset = nk - m_request_framecount;
+					if(m_request_framecount >= offset && _nk_offset < range){
+						nk_offset = _nk_offset;
+						if(m_options.block_size && nk_offset != 0){
+							request_frame(m_pitch, m_yaw, m_request_framecount + 1, 0, nk_offset, 10);// starts from 1
+						}
 						m_yaw = vp.yaw;
 						m_pitch = vp.pitch;
 						break;
 					}
 			    }
 			}
-			request_frame(m_pitch, m_yaw, m_request_framecount + 1, 1);// starts from 1
+			request_frame(m_pitch, m_yaw, m_request_framecount + 1, nk_offset, range - nk_offset, 10);// starts from 1
 			if(m_options.block_size){
-				m_request_framecount+=m_options.block_size;
+				m_request_framecount += m_options.block_size;
 			}else{
 				m_request_framecount++;
 			}
@@ -291,7 +302,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			m_stream_framecount++;
 			var data = m_frames[m_stream_framecount];
-			m_frames[m_stream_framecount] = undefined;
+			delete m_frames[m_stream_framecount];
 			if(m_frame_callback){
 				m_frame_callback(data);
 			}
