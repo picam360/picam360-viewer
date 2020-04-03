@@ -36,12 +36,37 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		}
 	}
 
+	function Uint8ArrayWriter() {
+		var data;
+		var that = this
+
+		function init(callback) {
+			callback();
+		}
+
+		function writeUint8Array(array, callback) {
+			data = array;
+			callback();
+		}
+
+		function getData(callback) {
+			callback(data);
+		}
+
+		that.init = init;
+		that.writeUint8Array = writeUint8Array;
+		that.getData = getData;
+	}
+	Uint8ArrayWriter.prototype = new zip.Writer();
+	Uint8ArrayWriter.prototype.constructor = Uint8ArrayWriter;
+
 	function loadFile_from_zip(url, path, callback, error_callback) {
 		if(path[0] == '/'){
 			path = path.substr(1);
 		}
 		if(m_zip_entries[path]){
-			m_zip_entries[path].getData(null, callback, error_callback);
+			m_zip_entries[path].getData(null, callback, error_callback); // decrease request count
+			//m_zip_entries[path].getData(new Uint8ArrayWriter(), callback, error_callback);
 		}else{
 			error_callback({code:"NO_ENTRY",responseURL:path});
 		}
@@ -68,7 +93,13 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		req.send(null);
 	}
 	function request_frame(pitch, yaw, framecount, count){
-		var path = "/" + pitch + "_" + yaw + "/" + framecount + ".pif";
+		var path;
+		if(m_options.block_size){
+			var bnum = Math.floor((framecount-1)/m_options.block_size) + 1;
+			path = "/" + pitch + "_" + yaw + "/" + bnum + ".bson";
+		}else {
+			path = "/" + pitch + "_" + yaw + "/" + framecount + ".pif";
+		}
 		// console.log(path);
 		loadFile(m_url, path, (data) => {
 			if(m_loaded_framecount == 0){
@@ -77,8 +108,16 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					m_info_callback("sos");
 				}
 			}
-			m_loaded_framecount++;
-			m_frames[framecount] = data;
+			if(m_options.block_size){
+				const ary = BSON.deserialize(data);
+				for(var i in ary){
+					m_loaded_framecount++;
+					m_frames[framecount+parseInt(i)] = new Uint8Array(ary[i].buffer);
+			    }
+			}else{
+				m_loaded_framecount++;
+				m_frames[framecount] = data;
+			}
 			
 			m_bytes_in_1000ms += data.byteLength;
 			
@@ -236,8 +275,12 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					}
 			    }
 			}
-			++m_request_framecount;// starts from 1
-			request_frame(m_pitch, m_yaw, m_request_framecount, 1);
+			request_frame(m_pitch, m_yaw, m_request_framecount + 1, 1);// starts from 1
+			if(m_options.block_size){
+				m_request_framecount+=m_options.block_size;
+			}else{
+				m_request_framecount++;
+			}
 		}, 1000/m_options.fps);
 	}
 	
