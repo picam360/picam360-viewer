@@ -1265,6 +1265,8 @@ var app = (function() {
 								status += "packet<br/>";
 								status += "bitrate:" + mbps.toFixed(3) +
 									"Mbit/s<br/>";
+								var [preload_act, preload] = m_vpm_loader.get_preload();
+								status += "preload:" + preload_act + "/" + preload;
 								status += "<br/>";
 							} else if(m_pc){
 								status += "packet<br/>";
