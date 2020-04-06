@@ -410,6 +410,11 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		get_bitrate_mbps : () => {
 			return m_mbps;
 		},
+		get_preload : () => {
+			var preload = m_preload + (m_options.block_size ? m_options.block_size : 0);
+			var preload_act = m_request_framecount - m_stream_framecount;
+			return [preload_act, preload];
+		},
 	}; // self
 	return self;
 }
