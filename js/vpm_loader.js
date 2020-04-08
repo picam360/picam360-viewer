@@ -27,7 +27,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_pitch = 0;
 	var m_eos = false;
 
-	var m_preload_factor = 2;//2sigma:95%
+	var m_preload_factor = 2;// 2sigma:95%
 	var m_preload = 30;
 	var m_loading_count_in_1000ms = 0;
 	var m_loading_total_in_1000ms = 0;
@@ -104,8 +104,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	}
 	function request_frame(pitch, yaw, framecount, offset, num, try_count){
 		var path;
-		if(m_options.block_size){
-			var bnum = Math.floor((framecount-1)/m_options.block_size) + 1;
+		if(m_options.frame_pack_size){
+			var bnum = Math.floor((framecount-1)/m_options.frame_pack_size) + 1;
 			path = "/" + pitch + "_" + yaw + "/" + bnum + ".bson";
 		}else {
 			path = "/" + pitch + "_" + yaw + "/" + framecount + ".pif";
@@ -121,7 +121,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					m_info_callback("sos");
 				}
 			}
-			if(m_options.block_size){
+			if(m_options.frame_pack_size){
 				const ary = BSON.deserialize(data);
 				for(var i=offset;i<offset+num&&ary[i];i++){
 					m_loaded_framecount++;
@@ -304,7 +304,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				return;
 			}
 			var nk_offset = 0;
-			var range = m_options.block_size || 1;
+			var range = m_options.frame_pack_size || 1;
 			var {pitch, yaw} = get_view_deg();
 			if(m_request_framecount == 0){
 				m_yaw = yaw;
@@ -317,7 +317,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					var _nk_offset = nk - m_request_framecount;
 					if(m_request_framecount >= offset && _nk_offset < range){
 						nk_offset = _nk_offset;
-						if(m_options.block_size && nk_offset != 0){
+						if(m_options.frame_pack_size && nk_offset != 0){
 							request_frame(m_pitch, m_yaw, m_request_framecount + 1, 0, nk_offset, 10);// starts
 																										// from
 																										// 1
@@ -328,11 +328,9 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					}
 			    }
 			}
-			request_frame(m_pitch, m_yaw, m_request_framecount + 1, nk_offset, range - nk_offset, 10);// starts
-																										// from
-																										// 1
-			if(m_options.block_size){
-				m_request_framecount += m_options.block_size;
+			request_frame(m_pitch, m_yaw, m_request_framecount + 1, nk_offset, range - nk_offset, 10);// starts_from_1
+			if(m_options.frame_pack_size){
+				m_request_framecount += m_options.frame_pack_size;
 			}else{
 				m_request_framecount++;
 			}
@@ -411,7 +409,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			return m_mbps;
 		},
 		get_preload : () => {
-			var preload = m_preload + (m_options.block_size ? m_options.block_size : 0);
+			var preload = m_preload + (m_options.frame_pack_size ? m_options.frame_pack_size : 0);
 			var preload_act = m_request_framecount - m_stream_framecount;
 			return [preload_act, preload];
 		},
