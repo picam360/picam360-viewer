@@ -123,9 +123,13 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}
 			if(m_options.frame_pack_size){
 				const ary = BSON.deserialize(data);
-				for(var i=offset;i<offset+num&&ary[i];i++){
+				for(var i=offset;i<offset+num;i++){
 					m_loaded_framecount++;
-					m_frames[framecount+i] = new Uint8Array(ary[i].buffer);
+					if(ary[i]){
+						m_frames[framecount+i] = new Uint8Array(ary[i].buffer);
+					}else{
+						m_frames[framecount+i] = null;
+					}
 			    }
 			}else{
 				m_loaded_framecount++;
@@ -339,12 +343,15 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	
 	function start_stream_loop(){
 		m_stream_loop_timer = setInterval(() => {
-			if(m_frames[m_stream_framecount+1] == null){
+			if(m_frames[m_stream_framecount+1] === undefined){
 				return;
 			}
 			m_stream_framecount++;
 			var data = m_frames[m_stream_framecount];
 			delete m_frames[m_stream_framecount];
+			if(data === null){
+				return;
+			}
 			if(m_frame_callback){
 				m_frame_callback(data);
 			}
