@@ -2,6 +2,7 @@
 const int STEPNUM = 32;
 
 uniform float eye_offset;
+uniform float edge_r;
 uniform float frame_scalex;
 uniform float frame_scaley;
 uniform float pixel_size_x;
@@ -40,7 +41,9 @@ void main(void) {
 	float pitch = acos(z);
 	float roll = atan(y, x);
 	float r = get_y(pitch, pitch_table, r_table);
-	if (r > 1.0) {
+	float edge_r_s = 1.0 - edge_r;
+	float edge_r_e = sqrt(1.0*1.0 + edge_r*edge_r);
+	if (r > edge_r_s) {
 		float roll_base;
 		if (material_index == 0.0) {
 			roll_base = M_PI_DIV_4;
@@ -60,8 +63,27 @@ void main(void) {
 			roll_base = -M_PI_DIV_4;
 		}
 		float roll_diff = roll - roll_base;
-		float roll_gain = (M_PI - 4.0 * acos(1.0 / r)) / M_PI;
-		roll = roll_diff * roll_gain + roll_base;
+		float protrusion;
+		if(r < edge_r_e) {
+			float ox = 1.0 - edge_r;
+			float oy = edge_r;
+			float a = -ox / oy;
+			float b = (ox*ox + r*r) / (2.0*oy);
+			float x_edge = (-a*b + sqrt(r*r * (1.0 + a*a) - b*b)) / (1.0 + a*a);
+			if(x_edge >= r){
+				protrusion = 0.0;
+			}else{
+				protrusion = acos(x_edge / r);
+			}
+		} else {
+			protrusion = acos(1.0 / r);
+		}
+		float roll_gain = (M_PI - 4.0 * protrusion) / M_PI;
+		roll_diff *= roll_gain;
+		if(abs(roll_diff) > M_PI_DIV_4){
+			roll_diff = roll_diff > 0.0 ? M_PI_DIV_4 : -M_PI_DIV_4;
+		}
+		roll = roll_diff + roll_base;
 	}
 
 	if (z == 1.0) {
