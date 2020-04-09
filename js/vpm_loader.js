@@ -122,7 +122,13 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				}
 			}
 			if(m_options.frame_pack_size){
-				const ary = BSON.deserialize(data);
+				var ary;
+				try{
+					ary = BSON.deserialize(data);
+				}catch{
+					console.log("bson coruption");
+					ary = {};
+				}
 				for(var i=offset;i<offset+num;i++){
 					m_loaded_framecount++;
 					if(ary[i]){
