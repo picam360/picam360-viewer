@@ -89,8 +89,8 @@ void main(void) {
 	float tex_x = r * cos(roll); //[-1:1]
 	float tex_y = r * sin(roll); //[-1:1]
 	tcoord = (vec2(tex_x, tex_y) + vec2(1, 1)) * vec2(0.5, 0.5);
-	//tcoord.y = (tcoord.y - 0.5) * (1.0 - pixel_size_y) + 0.5;
-	//tcoord.x = (tcoord.x - 0.5) * (1.0 - pixel_size_y) + 0.5;
+	tcoord.y = (tcoord.y - 0.5) * (1.0 - pixel_size_y) + 0.5;
+	tcoord.x = (tcoord.x - 0.5) * (1.0 - pixel_size_y) + 0.5;
 	if (tcoord.x < 0.0) {
 		tcoord.x = 0.0;
 	} else if (tcoord.x > 1.0) {
