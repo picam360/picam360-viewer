@@ -21,6 +21,7 @@ const float M_PI_DIV_4 = M_PI / 4.0;
 const float M_SQRT_2 = 1.4142135623;
 
 varying vec2 tcoord;
+varying float resolution;
 
 float get_y(float x, float x_table[STEPNUM], float y_table[STEPNUM]) {
 	%GET_Y%
@@ -120,5 +121,11 @@ void main(void) {
 		//}
 	} else {
 		gl_Position = vec4(0, 0, 2.0, 1.0);
+	}
+	
+	if(r < 0.8){
+		resolution = 1.0;
+	}else{
+		resolution = 0.0;
 	}
 }
