@@ -1,4 +1,5 @@
 function ImageDecoder(callback) {
+	var m_decoded_count = 0;
 	var m_active_frame = null;
 	var m_frame_callback = null;
 
@@ -12,6 +13,8 @@ function ImageDecoder(callback) {
 	var m_receiver = null;
 	var m_need_to_push = null;
 
+	var m_decode_time = 0;
+	
 	// video decoder
 	var m_video_decoder = {
 		'H264' : H264Decoder(),
@@ -32,7 +35,21 @@ function ImageDecoder(callback) {
 		}
 	});
 	m_video_decoder['H265'].set_frame_callback((image) => {
+		var now = new Date().getTime();
 		var frame_info = m_frame_info_ary.shift();
+		m_decoded_count++;
+		
+		var decode_time = now - frame_info.before_decode;
+		if(m_decode_time == 0){
+			m_decode_time = decode_time;
+		}else{
+			m_decode_time = m_decode_time*0.9 + decode_time*0.1;
+		}
+		if((m_decoded_count % 50) == 0){
+			console.log("decode time: " + m_decode_time + "ms: " + decode_time + "ms");
+		}
+		delete frame_info.before_decode;
+		
 		if(m_frame_callback){
 			m_frame_callback("yuv", image, frame_info);
 		}
@@ -106,6 +123,7 @@ function ImageDecoder(callback) {
 							.subarray(0, meta_size), 0);
 				}
 				{//frame_info
+					var now = new Date().getTime();
 					var width = m_active_frame.width.slice(2,5);
 					var stride = m_active_frame.stride.slice(2,5);
 					var height = m_active_frame.height.slice(2,5);
@@ -120,6 +138,7 @@ function ImageDecoder(callback) {
 						meta : m_active_frame['meta'],
 						uuid : uuid,
 						timestamp : timestamp,
+						before_decode : now,
 						img_type : m_active_frame["img_type"][2],
 					};
 				}

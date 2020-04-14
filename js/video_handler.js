@@ -333,7 +333,7 @@
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							frame_info,
-						}, [data]);
+						}, [data.pixels]);
 					}else{
 						m_omvr.setTextureRawYuv(vertex_type, data, m_tex_quat, m_texture_fov, frame_info);
 					}
