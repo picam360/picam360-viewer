@@ -43,6 +43,7 @@ function H265Decoder(callback) {
 					m_frame_callback({
 						pixels : data.buf,
 						width : data.width,
+						stride : Math.ceil(data.width/32)*32,
 						height : data.height,
 						});
 				}
@@ -58,6 +59,7 @@ function H265Decoder(callback) {
 						m_frame_callback({
 							pixels : image.get_yuv(),
 							width : image.get_width(),
+							stride : Math.ceil(data.width/32)*32,
 							height : image.get_height(),
 							});
 					}

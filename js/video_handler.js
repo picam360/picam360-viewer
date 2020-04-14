@@ -256,7 +256,7 @@
 				}
 			},
 
-			handle_frame : function(type, data, width, height, frame_info) {
+			handle_frame : function(type, data, frame_info) {
 				m_texture_num++;
 
 				var now = new Date().getTime();
@@ -330,14 +330,12 @@
 							type : 'setTextureRawYuv',
 							vertex_type, 
 							data,
-							width,
-							height,
 							quat : m_tex_quat,
 							fov : m_texture_fov,
 							frame_info,
 						}, [data]);
 					}else{
-						m_omvr.setTextureRawYuv(vertex_type, data, width, height, m_tex_quat, m_texture_fov, frame_info);
+						m_omvr.setTextureRawYuv(vertex_type, data, m_tex_quat, m_texture_fov, frame_info);
 					}
 				} else if (type == "rgb") {
 					if(m_worker){

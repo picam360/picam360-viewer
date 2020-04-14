@@ -22,25 +22,25 @@ function ImageDecoder(callback) {
 	m_video_decoder['JPEG'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("image", image, 0, 0, frame_info);
+			m_frame_callback("image", image, frame_info);
 		}
 	});
 	m_video_decoder['H264'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image, frame_info);
 		}
 	});
 	m_video_decoder['H265'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image, frame_info);
 		}
 	});
 	m_video_decoder['I420'].set_frame_callback((image) => {
 		var frame_info = m_frame_info_ary.shift();
 		if(m_frame_callback){
-			m_frame_callback("yuv", image.pixels, image.width, image.height, frame_info);
+			m_frame_callback("yuv", image, frame_info);
 		}
 	});
 

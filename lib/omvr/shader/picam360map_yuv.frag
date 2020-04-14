@@ -5,6 +5,8 @@ uniform mat4 YUV2RGB;
 uniform float eye_index;
 uniform float pixel_size_x;
 uniform float pixel_size_y;
+uniform float xstart;
+uniform float xend;
 
 varying vec2 tcoord;
 varying float resolution;
@@ -52,9 +54,17 @@ float h1(float a)
     return 1.0 + w3(a) / (w2(a) + w3(a));
 }
 vec4 texture2D_yuv(vec2 uv){
-	float y = texture2D(tex_y, uv).r;
-	float u = texture2D(tex_u, uv).r;
-	float v = texture2D(tex_v, uv).r;
+	vec2 uv_y = uv;
+	vec2 uv_uv = uv;
+	if(uv_uv.x > xend - pixel_size_x){
+		uv_uv.x = xend - pixel_size_x;
+		if(uv_y.x > xend - pixel_size_x/2.0){
+			uv_y.x = xend - pixel_size_x/2.0;
+		}
+	}
+	float y = texture2D(tex_y, uv_y).r;
+	float u = texture2D(tex_u, uv_uv).r;
+	float v = texture2D(tex_v, uv_uv).r;
 	return vec4(y, u, v, 1) * YUV2RGB;
 }
 
@@ -83,11 +93,15 @@ vec4 texture2D_bicubic(vec2 uv, vec2 res)
 }
 
 void main(void) {
+	float y = 1.0 - tcoord.y;
 #ifdef STEREO_SIDE_BY_SIDE
-	vec2 _tcoord = vec2(tcoord.x / 2.0 + eye_index * 0.5, 1.0 - tcoord.y);
+	float x = tcoord.x / 2.0 + eye_index * 0.5;
 #else
-	vec2 _tcoord = vec2(tcoord.x, 1.0 - tcoord.y);
+	float x = tcoord.x;
 #endif
+	x = x * (xend - xstart) + xstart;
+	vec2 _tcoord = vec2(x, y);
+	
 	//gl_FragColor = texture2D_yuv(_tcoord);
 	if(resolution == 1.0){
 		gl_FragColor = texture2D_yuv(_tcoord);
