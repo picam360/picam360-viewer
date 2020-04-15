@@ -55,41 +55,33 @@ float h1(float a)
     return 1.0 + w3(a) / (w2(a) + w3(a));
 }
 
-vec2 validate_uv(vec2 uv){
-	for(int i=0;i<2;i++){
-		if(uv[i] < 0.0){
-			uv[i] = 0.0 - uv[i];
-			uv[1-i] = 1.0 - uv[1-i];
-			//return vec2(0.5,0.5);
-		}
-		if(uv[i] > 1.0){
-			uv[i] = 2.0 - uv[i];
-			uv[1-i] = 1.0 - uv[1-i];
-			//return vec2(0.5,0.5);
-		}
-	}
-	return uv;
-}
-
-vec4 texture2D_yuv(vec2 uv, int border){
-	if(border == 1){
-		uv = validate_uv(uv);
-	}
+vec4 texture2D_yuv(vec2 uv){
+	
 	vec2 res = vec2(texture_width, texture_height);//change coodinates
 	uv = (uv - 0.5) / (1.0 + 1.0/res) + 0.5;//change coodinates
+	vec2 uv_uv = (uv - 0.5) / (1.0 + 2.0/res) + 0.5;//change coodinates
 	
 	uv.y = 1.0 - uv.y;
-//#ifdef STEREO_SIDE_BY_SIDE
-//	uv_y.x = uv_y.x / 2.0 + eye_index * 0.5;
-//#endif
-//	uv_y.x = uv_y.x * (xend - xstart) + xstart;
-//	if(uv_y.x > xend){
-//		uv_y.x = xend;
-//	}
+#ifdef STEREO_SIDE_BY_SIDE
+	uv.x = uv.x / 2.0 + eye_index * 0.5;
+#endif
+	uv.x = uv.x * (xend - xstart) + xstart;
+	if(uv.x > xend){
+		uv.x = xend;
+	}
+	
+	uv_uv.y = 1.0 - uv_uv.y;
+#ifdef STEREO_SIDE_BY_SIDE
+	uv_uv.x = uv_uv.x / 2.0 + eye_index * 0.5;
+#endif
+	uv_uv.x = uv_uv.x * (xend - xstart) + xstart;
+	if(uv_uv.x > xend){
+		uv_uv.x = xend;
+	}
 	
 	float y = texture2D(tex_y, uv).r;
-	float u = texture2D(tex_u, uv).r;
-	float v = texture2D(tex_v, uv).r;
+	float u = texture2D(tex_u, uv_uv).r;
+	float v = texture2D(tex_v, uv_uv).r;
 	return vec4(y, u, v, 1.0) * YUV2RGB;
 }
 
@@ -112,7 +104,7 @@ void texture2D_4x4(vec4 out_pixels[16], float out_x[1], float out_y[1], float x,
 			if(y2 >= int(texture_height)){
 				y2 = int(texture_height) - 1;
 			}
-			out_pixels[4*i + j] = texture2D_yuv(vec2(float(x2)/(texture_width - 1.0), float(y2)/(texture_height - 1.0)), 0);
+			out_pixels[4*i + j] = texture2D_yuv(vec2(float(x2)/(texture_width - 1.0), float(y2)/(texture_height - 1.0)));
 		}
 	}
 	out_x[0] = x - float(xbi) - 1.5;
@@ -165,20 +157,16 @@ vec4 texture2D_border(vec2 uv)
 		if(iuv[i] < 0.0){
 			iuv[i] = 0.0;
 			fuv[i] = 0.0;
-			//return vec4(0.0,0.0,0.0,1.0);
 		}else if(iuv[i] < 1.5 && iuv[i] >= 1.0){
 			iuv[i] = 0.0;
 			fuv[i] = 1.0;
-			//return vec4(0.0,0.0,0.0,1.0);
 		}
 		if(iuv[i] >= res[i]){
 			iuv[i] = res[i] - 1.0;
 			fuv[i] = 1.0;
-			//return vec4(0.0,0.0,0.0,1.0);
 		}else if(iuv[i] >= res[i] - 2.5 && iuv[i] <= res[i] - 2.0){
 			iuv[i] = res[i] - 1.0;
 			fuv[i] = 0.0;
-			//return vec4(0.0,0.0,0.0,1.0);
 		}
 	}
 	vec4 ypixels[4];
@@ -209,57 +197,21 @@ vec4 texture2D_border(vec2 uv)
 			}
 			float px = float(x2)/(texture_width - 1.0);
 			float py = float(y2)/(texture_height - 1.0);
-			if(x2 == 0){
-				xpixels[j] = texture2D_yuv(vec2(0.0, py), 0);
-				xpixels[j] += texture2D_yuv(vec2(0.0, 1.0 - py), 0);
+			if(x2 == 0 || x2 == int(texture_width) - 1){
+				xpixels[j] = texture2D_yuv(vec2(px, py));
+				xpixels[j] += texture2D_yuv(vec2(px, 1.0 - py));
 				xpixels[j] /= 2.0;
-			}else if(x2 == int(texture_width) - 1){
-				xpixels[j] = texture2D_yuv(vec2(1.0, py), 0);
-				xpixels[j] += texture2D_yuv(vec2(1.0, 1.0 - py), 0);
-				xpixels[j] /= 2.0;
-			}else if(y2 == 0){
-				xpixels[j] = texture2D_yuv(vec2(px, 0.0), 0);
-				xpixels[j] += texture2D_yuv(vec2(1.0 - px, 0.0), 0);
-				xpixels[j] /= 2.0;
-			}else if(y2 == int(texture_height) - 1){
-				xpixels[j] = texture2D_yuv(vec2(px, 1.0), 0);
-				xpixels[j] += texture2D_yuv(vec2(1.0 - px, 1.0), 0);
+			}else if(y2 == 0 || y2 == int(texture_height) - 1){
+				xpixels[j] = texture2D_yuv(vec2(px, py));
+				xpixels[j] += texture2D_yuv(vec2(1.0 - px, py));
 				xpixels[j] /= 2.0;
 			}else{
-				xpixels[j] = texture2D_yuv(vec2(px, py), 0);
+				xpixels[j] = texture2D_yuv(vec2(px, py));
 			}
 		}
 		ypixels[i] = cubic_interpolation(_x, BICUBIC_A, xpixels);
 	}
 	return cubic_interpolation(_y, BICUBIC_A, ypixels);
-	
-//	vec2 p0 = vec2(iuv.x + 0.0, iuv.y + 0.0) / res;
-//	vec2 p1 = vec2(iuv.x + 0.0, iuv.y + 1.0) / res;
-//	vec2 p2 = vec2(iuv.x + 1.0, iuv.y + 0.0) / res;
-//	vec2 p3 = vec2(iuv.x + 1.0, iuv.y + 1.0) / res;
-//	
-//	vec4 v1 = (1.0 - fuv.y) * texture2D_yuv(p0, 1) + fuv.y * texture2D_yuv(p1, 1);
-//	vec4 v2 = (1.0 - fuv.y) * texture2D_yuv(p2, 1) + fuv.y * texture2D_yuv(p3, 1);
-//    return (1.0 - fuv.x) * v1 + fuv.x * v2;
-
-    
-
-//    float g0x = g0(fuv.x);
-//    float g1x = g1(fuv.x);
-//    float h0x = h0(fuv.x);
-//    float h1x = h1(fuv.x);
-//    float h0y = h0(fuv.y);
-//    float h1y = h1(fuv.y);
-//
-//	vec2 p0 = (vec2(iuv.x + h0x, iuv.y + h0y) - of) / res;
-//	vec2 p1 = (vec2(iuv.x + h1x, iuv.y + h0y) - of) / res;
-//	vec2 p2 = (vec2(iuv.x + h0x, iuv.y + h1y) - of) / res;
-//	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - of) / res;
-//	
-//    return g0(fuv.y) * (g0x * texture2D_yuv(p0, 1)  +
-//                        g1x * texture2D_yuv(p1, 1)) +
-//           g1(fuv.y) * (g0x * texture2D_yuv(p2, 1)  +
-//                        g1x * texture2D_yuv(p3, 1));
 }
 
 vec4 texture2D_bicubic(vec2 uv)
@@ -282,22 +234,18 @@ vec4 texture2D_bicubic(vec2 uv)
 	vec2 p2 = (vec2(iuv.x + h0x, iuv.y + h1y) - of) / res;
 	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - of) / res;
 	
-    return g0(fuv.y) * (g0x * texture2D_yuv(p0, 0)  +
-                        g1x * texture2D_yuv(p1, 0)) +
-           g1(fuv.y) * (g0x * texture2D_yuv(p2, 0)  +
-                        g1x * texture2D_yuv(p3, 0));
+    return g0(fuv.y) * (g0x * texture2D_yuv(p0)  +
+                        g1x * texture2D_yuv(p1)) +
+           g1(fuv.y) * (g0x * texture2D_yuv(p2)  +
+                        g1x * texture2D_yuv(p3));
 }
 
 void main(void) {	
-	//gl_FragColor = texture2D_yuv(_tcoord);
 	if(boundary >= 1.0){
-		//gl_FragColor = texture2D_bicubic(tcoord);
 		gl_FragColor = texture2D_border(tcoord);
-		//gl_FragColor = vec4(0.0,0.0,0.0,1.0);
 	}else if(resolution == 1.0){
-		gl_FragColor = texture2D_yuv(tcoord, 0);
+		gl_FragColor = texture2D_yuv(tcoord);
 	}else{
-		//gl_FragColor = texture2D_border(tcoord);
 		gl_FragColor = texture2D_bicubic(tcoord);
 	}
 }
