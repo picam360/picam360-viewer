@@ -5,8 +5,8 @@ uniform float eye_offset;
 uniform float edge_r;
 uniform float frame_scalex;
 uniform float frame_scaley;
-uniform float pixel_size_x;
-uniform float pixel_size_y;
+uniform float texture_width;
+uniform float texture_height;
 //angular map params
 uniform float r_table[STEPNUM];
 uniform float pitch_table[STEPNUM];
@@ -22,6 +22,7 @@ const float M_SQRT_2 = 1.4142135623;
 
 varying vec2 tcoord;
 varying float resolution;
+varying float boundary;
 
 float get_y(float x, float x_table[STEPNUM], float y_table[STEPNUM]) {
 	%GET_Y%
@@ -90,18 +91,29 @@ void main(void) {
 	float tex_x = r * cos(roll); //[-1:1]
 	float tex_y = r * sin(roll); //[-1:1]
 	tcoord = (vec2(tex_x, tex_y) + vec2(1, 1)) * vec2(0.5, 0.5);
-	tcoord.y = (tcoord.y - 0.5) * (1.0 - pixel_size_y) + 0.5;//stereo_strange_without_this
-	tcoord.x = (tcoord.x - 0.5) * (1.0 - pixel_size_y) + 0.5;//stereo_strange_without_this
-	if (tcoord.x < 0.0) {
-		tcoord.x = 0.0;
-	} else if (tcoord.x > 1.0) {
-		tcoord.x = 1.0;
+	if(r > 0.8){//only for p2v(pixel to vector)
+		vec2 iuv = floor(tcoord * vec2(texture_width - 1.0, texture_height - 1.0)+0.5);
+		tcoord.x = iuv.x/(texture_width - 1.0);
+		tcoord.y = iuv.y/(texture_height - 1.0);
+		if (iuv.x <= 1.0 || iuv.y <= 1.0
+		 || iuv.x >= texture_width - 2.0 || iuv.y >= texture_height - 2.0) {
+			boundary = 1.0;
+		}else{
+			boundary = 0.0;
+		}
+	} else{
+		boundary = 0.0;
 	}
-	if (tcoord.y < 0.0) {
-		tcoord.y = 0.0;
-	} else if (tcoord.y > 1.0) {
-		tcoord.y = 1.0;
-	}
+//	if (tcoord.x < 0.0) {
+//		tcoord.x = 0.0;
+//	} else if (tcoord.x > 1.0) {
+//		tcoord.x = 1.0;
+//	}
+//	if (tcoord.y < 0.0) {
+//		tcoord.y = 0.0;
+//	} else if (tcoord.y > 1.0) {
+//		tcoord.y = 1.0;
+//	}
 
 	vec4 pos = unif_matrix * vec4(x, y, z, 1.0);
 	pos /= sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
