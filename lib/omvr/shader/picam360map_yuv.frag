@@ -241,11 +241,12 @@ vec4 texture2D_bicubic(vec2 uv)
 }
 
 void main(void) {	
-	if(boundary >= 1.0){
-		gl_FragColor = texture2D_border(tcoord);
-	}else if(resolution == 1.0){
+	if(resolution == 1.0){
 		gl_FragColor = texture2D_yuv(tcoord);
 	}else{
 		gl_FragColor = texture2D_bicubic(tcoord);
+	}
+	if(boundary >= 1.0){
+		gl_FragColor = texture2D_border(tcoord);
 	}
 }
