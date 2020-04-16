@@ -657,7 +657,9 @@
 			get_view_quaternion : function(){
 				// console.log(self.view_quat._x+":"+self.view_quat._y+":"+self.view_quat._z+";");
 				if(m_requestAnimationFrame_target == m_vr_display){
-					self.view_quat = self.get_view_quaternion_vr();
+					if(arguments.callee.caller.name == 'animate'){//update only from animation loop
+						self.view_quat = self.get_view_quaternion_vr();
+					}
 				}else{
 					self.view_quat = self.get_view_quaternion_normal();
 				}
