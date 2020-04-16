@@ -144,7 +144,7 @@ function ImageDecoder(callback) {
 				}
 				if (m_active_frame['img_type'][2] == 'WRTC') {
 					if(m_frame_callback){
-						m_frame_callback("frame_info", null, 0, 0, m_active_frame['frame_info']);
+						m_frame_callback("frame_info", null, m_active_frame['frame_info']);
 					}
 					m_active_frame = null;
 					return;
