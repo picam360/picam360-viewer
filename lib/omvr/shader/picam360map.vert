@@ -65,11 +65,7 @@ void main(void) {
 		}
 		float roll_diff = roll - roll_base;
 		
-		if(gain_theta != 0.0){
-			//float k_r = 0.7;
-			//float roll_diff_ratio = abs(roll_diff)/M_PI_DIV_4;
-			//r = pow((r-edge_r_s)/(M_SQRT_2-edge_r_s), 1.0/(1.0 + k_r*roll_diff_ratio*roll_diff_ratio))*(M_SQRT_2-edge_r_s) + edge_r_s;
-
+		{
 			float blend = 1.0;
 			if(r < 1.0){
 				blend = (r - edge_r_s)/(1.0 - edge_r_s);
@@ -77,6 +73,11 @@ void main(void) {
 			if(abs(roll_diff) < M_PI_DIV_4){
 				roll_diff = (1.0 - pow(1.0 - abs(roll_diff)/M_PI_DIV_4, 1.0/(1.0 + gain_theta*blend)))*M_PI_DIV_4*(roll_diff>0.0?1.0:-1.0);
 			}
+			
+			float gain_r1 = floor(gain_r);
+			float gain_r2 = gain_r - gain_r1;
+			float roll_diff_ratio = pow(abs(roll_diff)/M_PI_DIV_4, gain_r1);
+			r = pow((r-edge_r_s)/(M_SQRT_2-edge_r_s), 1.0/(1.0 + gain_r2*roll_diff_ratio))*(M_SQRT_2-edge_r_s) + edge_r_s;
 		}
 		
 		float protrusion;
