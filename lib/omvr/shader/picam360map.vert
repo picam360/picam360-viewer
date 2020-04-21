@@ -3,6 +3,8 @@ const int STEPNUM = 32;
 
 uniform float eye_offset;
 uniform float edge_r;
+uniform float gain_r;
+uniform float gain_theta;
 uniform float frame_scalex;
 uniform float frame_scaley;
 uniform float texture_width;
@@ -62,6 +64,21 @@ void main(void) {
 			roll_base = -M_PI_DIV_4;
 		}
 		float roll_diff = roll - roll_base;
+		
+		if(gain_theta != 0.0){
+			//float k_r = 0.7;
+			//float roll_diff_ratio = abs(roll_diff)/M_PI_DIV_4;
+			//r = pow((r-edge_r_s)/(M_SQRT_2-edge_r_s), 1.0/(1.0 + k_r*roll_diff_ratio*roll_diff_ratio))*(M_SQRT_2-edge_r_s) + edge_r_s;
+
+			float blend = 1.0;
+			if(r < 1.0){
+				blend = (r - edge_r_s)/(1.0 - edge_r_s);
+			}
+			if(abs(roll_diff) < M_PI_DIV_4){
+				roll_diff = (1.0 - pow(1.0 - abs(roll_diff)/M_PI_DIV_4, 1.0/(1.0 + gain_theta*blend)))*M_PI_DIV_4*(roll_diff>0.0?1.0:-1.0);
+			}
+		}
+		
 		float protrusion;
 		if(r < edge_r_e) {
 			float ox = 1.0 - edge_r;
