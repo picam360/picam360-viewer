@@ -65,7 +65,7 @@ void main(void) {
 		}
 		float roll_diff = roll - roll_base;
 		
-		{
+		if(gain_theta != 0.0){
 			float blend = 1.0;
 			if(r < 1.0){
 				blend = (r - edge_r_s)/(1.0 - edge_r_s);
@@ -73,7 +73,8 @@ void main(void) {
 			if(abs(roll_diff) < M_PI_DIV_4){
 				roll_diff = (1.0 - pow(1.0 - abs(roll_diff)/M_PI_DIV_4, 1.0/(1.0 + gain_theta*blend)))*M_PI_DIV_4*(roll_diff>0.0?1.0:-1.0);
 			}
-			
+		}
+		if(gain_r != 0.0){
 			float gain_r1 = floor(gain_r);
 			float gain_r2 = gain_r - gain_r1;
 			float roll_diff_ratio = pow(abs(roll_diff)/M_PI_DIV_4, gain_r1);
