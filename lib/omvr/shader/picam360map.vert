@@ -154,7 +154,7 @@ void main(void) {
 		gl_Position = vec4(0, 0, 2.0, 1.0);
 	}
 	
-	if(r < 0.5){
+	if(r < edge_r_s){
 		resolution = 1.0;
 	}else{
 		resolution = 0.0;
