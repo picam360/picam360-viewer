@@ -31,10 +31,14 @@ function H265Decoder(callback) {
 
 	var worker = null;
 	if (true) {
-		worker = new Worker("js/libde265_worker.js");
-		worker
+		var _worker = new Worker("lib/libde265/libde265_worker.js");
+		_worker
 			.addEventListener('message', function(e) {
 				var data = e.data;
+				if (data.ready) {
+					worker = _worker;
+					return;
+				}
 				if (data.consoleLog) {
 					console.log(data.consoleLog);
 					return;
@@ -51,19 +55,21 @@ function H265Decoder(callback) {
 	} else {
 		var script = document.createElement('script');
 		script.onload = function() {
-			decoder = new libde265.Decoder(options);
-			decoder.disable_filters(true);
-			decoder
-				.set_image_callback(function(image) {
-					if (m_frame_callback) {
-						m_frame_callback({
-							pixels : image.get_yuv(),
-							width : image.get_width(),
-							stride : Math.ceil(data.width/32)*32,
-							height : image.get_height(),
-							});
-					}
-				});
+			setTimeout(() => {
+				decoder = new libde265.Decoder(options);
+				decoder.disable_filters(true);
+				decoder
+					.set_image_callback(function(image) {
+						if (m_frame_callback) {
+							m_frame_callback({
+								pixels : image.get_yuv(),
+								width : image.get_width(),
+								stride : Math.ceil(image.get_width()/32)*32,
+								height : image.get_height(),
+								});
+						}
+					});
+			}, 500);//wait wasm load
 		};
 		script.src = decoder_file;
 
