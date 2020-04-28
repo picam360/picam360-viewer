@@ -876,7 +876,7 @@ var app = (function() {
 			m_video_handler.init({
 				canvas,
 				offscreen : parseBoolean(query['offscreen'] || 'false'),
-				skip_frame : parseFloat(query['skip-frame'] || '2'),
+				skip_frame : parseFloat(query['skip-frame'] || '1'),
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 				antialias : parseBoolean(query['antialias'] || 'true'),
 				fxaa_enabled : parseBoolean(query['fxaa'] || 'false'),
