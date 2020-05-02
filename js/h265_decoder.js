@@ -99,10 +99,10 @@ function H265Decoder(callback) {
 				packet_pool.push({data, end_of_frame});
 				return;
 			} else if (packet_pool.length != 0) {
-				for (var i = 0; packet_pool.length; i++) {
-					self._decode(packet_pool[i].data, packet_pool[i],end_of_frame);
-					packet_pool = [];
+				for (var i = 0; i < packet_pool.length; i++) {
+					self._decode(packet_pool[i].data, packet_pool[i].end_of_frame);
 				}
+				packet_pool = [];
 			}
 			self._decode(data, end_of_frame);
 		},
