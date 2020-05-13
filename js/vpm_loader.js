@@ -102,7 +102,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		};
 		req.send(null);
 	}
-	function request_frame(pitch, yaw, framecount, offset, num, try_count){
+	function request_frame(pitch, yaw, framecount, offset, num, try_count, callback){
 		var path;
 		if(m_options.frame_pack_size){
 			var bnum = Math.floor((framecount-1)/m_options.frame_pack_size) + 1;
@@ -184,9 +184,12 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				m_bytes_in_1000ms = 0;
 				m_timestamp = now;
 			}
+			if(callback){
+				callback();
+			}
 		}, (err) => {
 			if(err.code != "NO_ENTRY" && try_count > 0){
-				request_frame(pitch, yaw, framecount, offset, num, try_count - 1);
+				request_frame(pitch, yaw, framecount, offset, num, try_count - 1, callback);
 				return;
 			}
 			if(m_loaded_framecount == 0){
@@ -299,14 +302,16 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					if(yaw != m_yaw || pitch != m_pitch){
 						m_yaw = yaw;
 						m_pitch = pitch;
-						if(m_stream_framecount > m_request_framecount - range - 1){
-							m_stream_framecount = m_request_framecount - range - 1;
-						}
 						request_frame(m_pitch, m_yaw,
 								m_request_framecount - range,
 								0,
 								range,
-								10);
+								10,
+								() => {
+									if(m_stream_framecount > m_request_framecount - range - 1){
+										m_stream_framecount = m_request_framecount - range - 1;
+									}
+								});
 					}
 				}
 				return;
@@ -328,9 +333,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					if(m_request_framecount >= offset && _nk_offset < range){
 						nk_offset = _nk_offset;
 						if(m_options.frame_pack_size && nk_offset != 0){
-							request_frame(m_pitch, m_yaw, m_request_framecount + 1, 0, nk_offset, 10);// starts
-																										// from
-																										// 1
+							request_frame(m_pitch, m_yaw, m_request_framecount + 1, 0, nk_offset, 10);// starts_from_1
 						}
 						m_yaw = vp.yaw;
 						m_pitch = vp.pitch;
