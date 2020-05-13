@@ -22,13 +22,14 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_view_quat = new THREE.Quaternion();
 	var m_mbps = 0;
 	var m_bytes_in_1000ms = 0;
-	var m_timestamp = new Date().getTime();
+	var m_timestamp_mbps = new Date().getTime();
 	var m_yaw = 0;
 	var m_pitch = 0;
 	var m_eos = false;
 
+	var m_timestamp_preload = new Date().getTime();
 	var m_preload_factor = 2;// 2sigma:95%
-	var m_preload = 30;
+	var m_preload = 0;
 	var m_loading_count_in_1000ms = 0;
 	var m_loading_total_in_1000ms = 0;
 	var m_loading_total2_in_1000ms = 0;
@@ -36,9 +37,16 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_loading_ave2 = 0;
 	
 	var m_url_without_query = url.split('?')[0];
-	//caches.delete(m_url_without_query);
+	
+	if(url_query['clear-cache']){
+		caches.delete(m_url_without_query);
+	}
 
 	function loadFile(url, path, callback, error_callback) {
+		if(url_query['no-cache']){
+			loadFile_from_www(url, path, callback, error_callback);
+			return;
+		}
 		caches.open(m_url_without_query).then(function (cache) {
 			cache.match(url + path).then(function(response) {
 				if(response){
@@ -53,14 +61,58 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 							callback(data);
 						});
 					};
-					if(m_zip_entries){
-						loadFile_from_zip(url, path, _callback, error_callback);
-					}else{
-						loadFile_from_dir(url, path, _callback, error_callback);
-					}
+					loadFile_from_www(url, path, _callback, error_callback);
 				}
 			});
 		});
+	}
+	
+	function loadFile_from_www(url, path, callback, error_callback) {
+		var st = new Date().getTime();
+		var _callback = function(data){
+			var now = new Date().getTime();
+			var loading_time = now - st;
+			m_loading_count_in_1000ms++;
+			m_loading_total_in_1000ms += loading_time;
+			m_loading_total2_in_1000ms += loading_time*loading_time;
+			var elapsed = now - m_timestamp_preload;
+			if(m_preload == 0){
+				var one_frame_time = 1000/m_options.fps;
+				m_preload = Math.ceil(loading_time/one_frame_time);
+			}else if(elapsed > 1000){
+				if(url_query['preload']){// fixed preload
+					m_preload = parseInt(url_query['preload']);
+				} else {// dynamic preload
+					var preload_factor = m_preload_factor;
+					if(url_query['preload-factor']){
+						preload_factor = parseFloat(url_query['preload-factor']);
+					}
+					var ave = m_loading_total_in_1000ms / m_loading_count_in_1000ms;
+					var ave2 = m_loading_total2_in_1000ms / m_loading_count_in_1000ms;
+					if(m_loading_ave == 0){
+						m_loading_ave = ave;
+						m_loading_ave2 = ave2;
+					}else{
+						m_loading_ave = m_loading_ave*0.9+ave*0.1;
+						m_loading_ave2 = m_loading_ave2*0.9+ave2*0.1;
+					}
+					var dev = Math.sqrt(m_loading_ave2 - m_loading_ave*m_loading_ave);
+					var max_loading_time = Math.min(m_loading_ave+preload_factor*dev, 2000);
+					var one_frame_time = 1000/m_options.fps;
+					m_preload = Math.ceil(max_loading_time/one_frame_time);
+				}
+				m_loading_count_in_1000ms = 0;
+				m_loading_total_in_1000ms = 0;
+				m_loading_total2_in_1000ms = 0;
+				m_timestamp_preload = now;
+			}
+			callback(data);
+		};
+		if(m_zip_entries){
+			loadFile_from_zip(url, path, _callback, error_callback);
+		}else{
+			loadFile_from_dir(url, path, _callback, error_callback);
+		}
 	}
 
 	function Uint8ArrayWriter() {
@@ -134,7 +186,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		// console.log(path);
 		loadFile(m_url, path, (data) => {
 			var now = new Date().getTime();
-			
 			if(m_loaded_framecount == 0){
 				console.log("start");
 				if(m_info_callback){
@@ -162,47 +213,18 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				m_frames[framecount] = data;
 			}
 			var loading_time = now - st;
-			m_loading_count_in_1000ms++;
-			m_loading_total_in_1000ms += loading_time;
-			m_loading_total2_in_1000ms += loading_time*loading_time;
 			m_bytes_in_1000ms += data.byteLength;
-			var elapsed = now - m_timestamp;
-			if(elapsed > 1000)
-			{
-				if(url_query['preload']){// fixed preload
-					m_preload = parseInt(url_query['preload']);
-				} else {// dynamic preload
-					var preload_factor = m_preload_factor;
-					if(url_query['preload-factor']){
-						preload_factor = parseFloat(url_query['preload-factor']);
-					}
-					var ave = m_loading_total_in_1000ms / m_loading_count_in_1000ms;
-					var ave2 = m_loading_total2_in_1000ms / m_loading_count_in_1000ms;
-					if(m_loading_ave == 0){
-						m_loading_ave = ave;
-						m_loading_ave2 = ave2;
-					}else{
-						m_loading_ave = m_loading_ave*0.9+ave*0.1;
-						m_loading_ave2 = m_loading_ave2*0.9+ave2*0.1;
-					}
-					var dev = Math.sqrt(m_loading_ave2 - m_loading_ave*m_loading_ave);
-					var max_loading_time = Math.min(m_loading_ave+preload_factor*dev, 2000);
-					var one_frame_time = 1000/m_options.fps;
-					m_preload = Math.ceil(max_loading_time/one_frame_time);
+			var elapsed = now - m_timestamp_mbps;
+			if(elapsed > 1000){
+				var mbps = 8 * m_bytes_in_1000ms / elapsed / 1000;
+				if(m_mbps == 0){
+					m_mbps = mbps;
+				}else{
+					m_mbps = m_mbps*0.9+mbps*0.1;
 				}
-				{// bitrate
-					var mbps = 8 * m_bytes_in_1000ms / elapsed / 1000;
-					if(m_mbps == 0){
-						m_mbps = mbps;
-					}else{
-						m_mbps = m_mbps*0.9+mbps*0.1;
-					}
-				}				
-				m_loading_count_in_1000ms = 0;
-				m_loading_total_in_1000ms = 0;
-				m_loading_total2_in_1000ms = 0;
+
 				m_bytes_in_1000ms = 0;
-				m_timestamp = now;
+				m_timestamp_mbps = now;
 			}
 			if(callback){
 				callback();
@@ -397,7 +419,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			if(url_query['fps']){
 				m_options.fps = parseFloat(url_query['fps']);
 			}
-			m_preload = m_options.fps;// 1sec
 			{
 				m_view_points = [];
 				var n = m_options.num_per_quarter;
