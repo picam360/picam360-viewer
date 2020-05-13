@@ -288,6 +288,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	
 	function start_request_loop(){
 		m_request_loop_timer = setInterval(() => {
+			var range = m_options.frame_pack_size || 1;
 			if(m_eos){
 				if(m_options.loop){
 					m_eos = false;
@@ -298,13 +299,13 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 					if(yaw != m_yaw || pitch != m_pitch){
 						m_yaw = yaw;
 						m_pitch = pitch;
-						if(m_stream_framecount > m_request_framecount - 2){
-							m_stream_framecount = m_request_framecount - 2;
+						if(m_stream_framecount > m_request_framecount - range - 1){
+							m_stream_framecount = m_request_framecount - range - 1;
 						}
 						request_frame(m_pitch, m_yaw,
-								m_request_framecount - 1,
-								m_request_framecount - 1,
-								m_request_framecount - 1,
+								m_request_framecount - range,
+								0,
+								range,
 								10);
 					}
 				}
@@ -314,7 +315,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				return;
 			}
 			var nk_offset = 0;
-			var range = m_options.frame_pack_size || 1;
 			var {pitch, yaw} = get_view_deg();
 			if(m_request_framecount == 0){
 				m_yaw = yaw;
@@ -339,11 +339,7 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			    }
 			}
 			request_frame(m_pitch, m_yaw, m_request_framecount + 1, nk_offset, range - nk_offset, 10);// starts_from_1
-			if(m_options.frame_pack_size){
-				m_request_framecount += m_options.frame_pack_size;
-			}else{
-				m_request_framecount++;
-			}
+			m_request_framecount += range;
 		}, 1000/m_options.fps);
 	}
 	
