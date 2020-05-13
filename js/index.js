@@ -802,10 +802,24 @@ var app = (function() {
 						err_callback();
 					});
 			} else {
-				self.plugin_host.set_info("connecting via websocket...");
-				self.start_ws(connection_callback, function() {
-					err_callback();
-				});
+				var req = new XMLHttpRequest();
+				req.responseType = "arraybuffer";
+
+				req.addEventListener("readystatechange", function() {//check_if_direct_access_available
+					if (this.readyState === 4) {
+						if (this.status == 200) {
+							self.plugin_host.set_info("connecting via websocket...");
+							self.start_ws(connection_callback, function() {
+								err_callback();
+							});
+						}else{
+							err_callback();
+						}
+					}
+				}, false);
+
+				req.open("HEAD", "config.json", true);
+				req.send(null);
 			}
 		},
 
