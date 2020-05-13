@@ -34,13 +34,33 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	var m_loading_total2_in_1000ms = 0;
 	var m_loading_ave = 0;
 	var m_loading_ave2 = 0;
+	
+	var m_url_without_query = url.split('?')[0];
+	//caches.delete(m_url_without_query);
 
 	function loadFile(url, path, callback, error_callback) {
-		if(m_zip_entries){
-			loadFile_from_zip(url, path, callback, error_callback);
-		}else{
-			loadFile_from_dir(url, path, callback, error_callback);
-		}
+		caches.open(m_url_without_query).then(function (cache) {
+			cache.match(url + path).then(function(response) {
+				if(response){
+					response.arrayBuffer().then(function(data) {
+						callback(new Uint8Array(data));
+					});
+				}else{
+					var _callback = function(data){
+						caches.open(m_url_without_query).then(function (cache) {
+							cache.put(url + path, new Response(data, 
+									{ "status" : 200 , "statusText" : "OK" }));
+							callback(data);
+						});
+					};
+					if(m_zip_entries){
+						loadFile_from_zip(url, path, _callback, error_callback);
+					}else{
+						loadFile_from_dir(url, path, _callback, error_callback);
+					}
+				}
+			});
+		});
 	}
 
 	function Uint8ArrayWriter() {
