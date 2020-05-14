@@ -43,28 +43,51 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	}
 
 	function loadFile(url, path, callback, error_callback) {
-		if(url_query['no-cache']){
-			loadFile_from_www(url, path, callback, error_callback);
-			return;
-		}
-		caches.open(m_url_without_query).then(function (cache) {
-			cache.match(url + path).then(function(response) {
-				if(response){
-					response.arrayBuffer().then(function(data) {
-						callback(new Uint8Array(data));
-					});
+		var st = new Date().getTime();
+		var _callback = function(data){
+			var now = new Date().getTime();
+			var loading_time = now - st;
+			var loading_time = now - st;
+			m_bytes_in_1000ms += data.byteLength;
+			var elapsed = now - m_timestamp_mbps;
+			if(elapsed > 1000){
+				var mbps = 8 * m_bytes_in_1000ms / elapsed / 1000;
+				if(m_mbps == 0){
+					m_mbps = mbps;
 				}else{
-					var _callback = function(data){
-						caches.open(m_url_without_query).then(function (cache) {
-							cache.put(url + path, new Response(data, 
-									{ "status" : 200 , "statusText" : "OK" }));
-							callback(data);
-						});
-					};
-					loadFile_from_www(url, path, _callback, error_callback);
+					m_mbps = m_mbps*0.9+mbps*0.1;
 				}
+
+				m_bytes_in_1000ms = 0;
+				m_timestamp_mbps = now;
+				
+				m_preload = Math.max(m_preload - 1, 0);//for_high_cache_dense
+			}
+			if(url_query['no-cache']){
+				callback(data);
+			}else{
+				caches.open(m_url_without_query).then(function (cache) {
+					cache.put(url + path, new Response(data, 
+							{ "status" : 200 , "statusText" : "OK" }));
+					callback(data);
+				});
+			}
+		}
+		if(url_query['no-cache']){
+			loadFile_from_www(url, path, _callback, error_callback);
+		}else{
+			caches.open(m_url_without_query).then(function (cache) {
+				cache.match(url + path).then(function(response) {
+					if(response){
+						response.arrayBuffer().then(function(data) {
+							_callback(new Uint8Array(data));
+						});
+					}else{
+						loadFile_from_www(url, path, _callback, error_callback);
+					}
+				});
 			});
-		});
+		}
 	}
 	
 	function loadFile_from_www(url, path, callback, error_callback) {
@@ -182,10 +205,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 		}else {
 			path = "/" + pitch + "_" + yaw + "/" + framecount + ".pif";
 		}
-		var st = new Date().getTime();
 		// console.log(path);
 		loadFile(m_url, path, (data) => {
-			var now = new Date().getTime();
 			if(m_loaded_framecount == 0){
 				console.log("start");
 				if(m_info_callback){
@@ -211,20 +232,6 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 			}else{
 				m_loaded_framecount++;
 				m_frames[framecount] = data;
-			}
-			var loading_time = now - st;
-			m_bytes_in_1000ms += data.byteLength;
-			var elapsed = now - m_timestamp_mbps;
-			if(elapsed > 1000){
-				var mbps = 8 * m_bytes_in_1000ms / elapsed / 1000;
-				if(m_mbps == 0){
-					m_mbps = mbps;
-				}else{
-					m_mbps = m_mbps*0.9+mbps*0.1;
-				}
-
-				m_bytes_in_1000ms = 0;
-				m_timestamp_mbps = now;
 			}
 			if(callback){
 				callback();
