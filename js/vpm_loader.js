@@ -38,8 +38,8 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 	
 	var m_url_without_query = url.split('?')[0];
 	
-	if(url_query['clear-cache']){
-		caches.delete(m_url_without_query);
+	if(window.caches && url_query['clear-cache']){
+		window.caches.delete(m_url_without_query);
 	}
 
 	function loadFile(url, path, callback, error_callback) {
@@ -63,20 +63,20 @@ function VpmLoader(url, url_query, get_view_quaternion, callback, info_callback)
 				
 				m_preload = Math.max(m_preload - 1, 0);//for_high_cache_dense
 			}
-			if(url_query['no-cache']){
+			if(!window.caches || url_query['no-cache']){
 				callback(data);
 			}else{
-				caches.open(m_url_without_query).then(function (cache) {
+				window.caches.open(m_url_without_query).then(function (cache) {
 					cache.put(url + path, new Response(data, 
 							{ "status" : 200 , "statusText" : "OK" }));
 					callback(data);
 				});
 			}
 		}
-		if(url_query['no-cache']){
+		if(!window.caches || url_query['no-cache']){
 			loadFile_from_www(url, path, _callback, error_callback);
 		}else{
-			caches.open(m_url_without_query).then(function (cache) {
+			window.caches.open(m_url_without_query).then(function (cache) {
 				cache.match(url + path).then(function(response) {
 					if(response){
 						response.arrayBuffer().then(function(data) {
