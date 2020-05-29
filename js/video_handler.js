@@ -407,6 +407,7 @@
 					vr_margin : _options.vr_margin,
 					eye_offset : _options.eye_offset,
 					pglcore : _options.pglcore,
+					skip_frame : _options.skip_frame,
 				};
 				if (!m_vr_display && _options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
