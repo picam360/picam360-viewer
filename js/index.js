@@ -1263,7 +1263,7 @@ var app = (function() {
 					
 					frame_count = 0;
 					start_time = new Date().getTime();
-					if(raf_fps > 30){
+					if(raf_fps > 45){
 						m_video_handler.requestAnimationFrame(redraw);
 					}else{
 						setTimeout(() => {
