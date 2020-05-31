@@ -1247,27 +1247,37 @@ var app = (function() {
 			return (socket != null || m_pc != null);
 		},
 		start_animate: function() {
-			var state = 0;
 			var raf_fps;
 			var frame_count = 0;
 			var start_time = new Date().getTime();
 			var last_time = new Date().getTime();
 
+			function pre_redraw() {
+				var now = new Date().getTime();
+				var _raf_fps = Math.round(1000.0/(now-last_time)/15)*15;
+				last_time = now;
+				frame_count++;
+				if(now - start_time > 1000){
+					raf_fps = Math.round(frame_count*1000.0/(now-start_time));
+					console.log("raf_fps=" + raf_fps);
+					
+					frame_count = 0;
+					start_time = new Date().getTime();
+					if(raf_fps > 30){
+						m_video_handler.requestAnimationFrame(redraw);
+					}else{
+						setTimeout(() => {
+							m_video_handler.requestAnimationFrame(pre_redraw);
+						}, 1000);
+					}
+				}else{
+					m_video_handler.requestAnimationFrame(pre_redraw);
+				}
+			}
+			m_video_handler.requestAnimationFrame(pre_redraw);
 			function redraw() {
 				try{
-					var now = new Date().getTime();
-					var _raf_fps = Math.round(1000.0/(now-last_time)/15)*15;
-					last_time = now;
 					frame_count++;
-					if(state == 0){
-						if(now - start_time > 1000){
-							state = 1;
-							raf_fps = Math.round(frame_count*1000.0/(now-start_time));
-							console.log("raf_fps=" + raf_fps);
-						}
-						return;
-					}
-					
 					if ((frame_count % 30) == 0) {
 						var divStatus = document.getElementById("divStatus");
 						if (divStatus) {
@@ -1368,7 +1378,6 @@ var app = (function() {
 					m_video_handler.requestAnimationFrame(redraw);
 				}
 			}
-			m_video_handler.requestAnimationFrame(redraw);
 		},
 	};
 	return self;
