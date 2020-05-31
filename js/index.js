@@ -1261,17 +1261,9 @@ var app = (function() {
 					raf_fps = Math.round(frame_count*1000.0/(now-start_time));
 					console.log("raf_fps=" + raf_fps);
 					
-					if(raf_fps > 60*0.9){
-						frame_count = 0;
-						start_time = new Date().getTime();
-						m_video_handler.requestAnimationFrame(redraw);
-					}else{
-						setTimeout(() => {
-							frame_count = 0;
-							start_time = new Date().getTime();
-							m_video_handler.requestAnimationFrame(pre_redraw);
-						}, 1000);
-					}
+					frame_count = 0;
+					start_time = new Date().getTime();
+					m_video_handler.requestAnimationFrame(redraw);
 				}else{
 					m_video_handler.requestAnimationFrame(pre_redraw);
 				}
