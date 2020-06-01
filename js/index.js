@@ -890,7 +890,7 @@ var app = (function() {
 			m_video_handler.init({
 				canvas,
 				offscreen : parseBoolean(query['offscreen'] || 'false'),
-				skip_frame : parseFloat(query['skip-frame'] || '1'),
+				skip_frame : parseFloat(query['skip-frame'] || '0'),
 				offscreen_skip_frame : parseFloat(query['offscreen-skip-frame'] || '0'),
 				antialias : parseBoolean(query['antialias'] || 'true'),
 				fxaa_enabled : parseBoolean(query['fxaa'] || 'false'),
@@ -899,7 +899,7 @@ var app = (function() {
 				vr_margin : parseFloat(query['vr-margin'] || '0'),
 				eye_offset : parseFloat(query['eye-offset'] || '0'),
 				pglcore : parseBoolean(query['pglcore'] || 'true'),
-				p2s_mode : parseFloat(query['p2s-mode'] || '0'),
+				p2s_mode : parseFloat(query['p2s-mode'] || '1'),
 				webgl : parseFloat(query['webgl'] || '0'),
 			}, function() {
 				if (default_image_url) {
