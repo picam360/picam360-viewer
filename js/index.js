@@ -900,6 +900,7 @@ var app = (function() {
 				eye_offset : parseFloat(query['eye-offset'] || '0'),
 				pglcore : parseBoolean(query['pglcore'] || 'true'),
 				p2s_mode : parseFloat(query['p2s-mode'] || '0'),
+				webgl : parseFloat(query['webgl'] || '0'),
 			}, function() {
 				if (default_image_url) {
 					m_frame_active = true;

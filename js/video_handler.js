@@ -409,6 +409,7 @@
 					pglcore : _options.pglcore,
 					p2s_mode : _options.p2s_mode,
 					skip_frame : _options.skip_frame,
+					webgl : _options.webgl,
 				};
 				if (!m_vr_display && _options.offscreen && 'transferControlToOffscreen' in m_canvas) {
 					console.log('webgl in worker supported');
