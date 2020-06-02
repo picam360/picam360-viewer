@@ -57,7 +57,7 @@ function H265Decoder(callback) {
 		script.onload = function() {
 			setTimeout(() => {
 				decoder = new libde265.Decoder(options);
-				decoder.disable_filters(true);
+				//decoder.disable_filters(true);
 				decoder
 					.set_image_callback(function(image) {
 						if (m_frame_callback) {
